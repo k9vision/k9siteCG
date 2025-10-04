@@ -4,62 +4,146 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K9 Vision - Admin Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#3B82F6",
+              "background-light": "#F9FAFB",
+              "background-dark": "#111827",
+              "text-light": "#1F2937",
+              "text-dark": "#F9FAFB",
+              "card-light": "#FFFFFF",
+              "card-dark": "#1F2937",
+              "border-light": "#E5E7EB",
+              "border-dark": "#374151"
+            },
+            fontFamily: {
+              display: ["Poppins", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
 </head>
-<body class="bg-gray-100">
-    <nav class="bg-blue-600 text-white p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold">K9 Vision - Admin Dashboard</h1>
-            <button onclick="logout()" class="bg-red-500 hover:bg-red-700 px-4 py-2 rounded">Logout</button>
+<body class="bg-background-dark dark:bg-background-light font-display text-text-dark dark:text-text-light antialiased">
+    <nav class="bg-card-dark dark:bg-card-light border-b border-border-dark dark:border-border-light">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-text-dark dark:text-text-light">K9 Vision - Admin</h1>
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors">Logout</button>
         </div>
     </nav>
 
     <div class="container mx-auto p-8">
-        <div id="admin-content">
-            <h2 class="text-3xl font-bold mb-6">Welcome, Admin!</h2>
+        <h2 class="text-3xl font-bold mb-6">Welcome, Admin!</h2>
 
-            <div class="grid md:grid-cols-3 gap-6 mb-8">
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="text-xl font-bold mb-2">Total Clients</h3>
-                    <p class="text-4xl font-bold text-blue-600" id="client-count">Loading...</p>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="text-xl font-bold mb-2">Media Files</h3>
-                    <p class="text-4xl font-bold text-green-600" id="media-count">Loading...</p>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="text-xl font-bold mb-2">Total Notes</h3>
-                    <p class="text-4xl font-bold text-purple-600" id="notes-count">Loading...</p>
-                </div>
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light">
+                <h3 class="text-xl font-semibold mb-2">Total Clients</h3>
+                <p class="text-4xl font-bold text-primary" id="client-count">0</p>
             </div>
+            <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light">
+                <h3 class="text-xl font-semibold mb-2">Media Files</h3>
+                <p class="text-4xl font-bold text-green-500" id="media-count">0</p>
+            </div>
+            <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light">
+                <h3 class="text-xl font-semibold mb-2">Total Notes</h3>
+                <p class="text-4xl font-bold text-purple-500" id="notes-count">0</p>
+            </div>
+        </div>
 
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-2xl font-bold mb-4">Quick Actions</h3>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded">
-                        Add New Client
-                    </button>
-                    <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded">
-                        Upload Media
-                    </button>
-                    <button class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded">
-                        Create Note
-                    </button>
-                    <button class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded">
-                        View All Clients
-                    </button>
-                </div>
+        <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow mb-8 border border-border-dark dark:border-border-light">
+            <h3 class="text-2xl font-bold mb-4">Quick Actions</h3>
+            <div class="grid md:grid-cols-2 gap-4">
+                <button onclick="showClients()" class="bg-primary hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                    View All Clients
+                </button>
+                <button onclick="showUploadMedia()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                    Upload Media
+                </button>
+                <button onclick="showCreateNote()" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                    Create Note
+                </button>
+            </div>
+        </div>
+
+        <!-- Clients List -->
+        <div id="clients-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
+            <h3 class="text-2xl font-bold mb-4">All Clients</h3>
+            <div id="clients-list" class="space-y-4"></div>
+        </div>
+
+        <!-- Upload Media Modal -->
+        <div id="upload-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+                <h3 class="text-2xl font-bold mb-4">Upload Media</h3>
+                <form id="upload-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Select Client</label>
+                        <select id="upload-client-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                            <option value="">Choose a client...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Media Type</label>
+                        <select id="media-type" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                            <option value="photo">Photo</option>
+                            <option value="video">Video</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">File</label>
+                        <input type="file" id="media-file" accept="image/*,video/*" class="w-full" required>
+                    </div>
+                    <div class="flex gap-4">
+                        <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Upload</button>
+                        <button type="button" onclick="closeUploadModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Create Note Modal -->
+        <div id="note-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+                <h3 class="text-2xl font-bold mb-4">Create Note</h3>
+                <form id="note-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Select Client</label>
+                        <select id="note-client-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                            <option value="">Choose a client...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Title</label>
+                        <input type="text" id="note-title" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Note</label>
+                        <textarea id="note-content" rows="4" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required></textarea>
+                    </div>
+                    <div class="flex gap-4">
+                        <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Create</button>
+                        <button type="button" onclick="closeNoteModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
     <script>
+        const API_BASE = '/api';
+
         function checkAuth() {
             const token = localStorage.getItem('token');
             const user = JSON.parse(localStorage.getItem('user') || '{}');
-
             if (!token || user.role !== 'admin') {
-                window.location.href = '/login';
+                window.location.href = '/portal.html';
                 return false;
             }
             return true;
@@ -71,13 +155,158 @@
             window.location.href = '/';
         }
 
+        function getAuthHeaders() {
+            return {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
         async function loadDashboard() {
             if (!checkAuth()) return;
 
-            // Placeholder counts - you can fetch real data from API
-            document.getElementById('client-count').textContent = '5';
-            document.getElementById('media-count').textContent = '12';
-            document.getElementById('notes-count').textContent = '8';
+            try {
+                const [clientsRes, mediaRes, notesRes] = await Promise.all([
+                    fetch(`${API_BASE}/clients`, { headers: getAuthHeaders() }),
+                    fetch(`${API_BASE}/api/media`, { headers: getAuthHeaders() }),
+                    fetch(`${API_BASE}/notes`, { headers: getAuthHeaders() })
+                ]);
+
+                const clients = await clientsRes.json();
+                document.getElementById('client-count').textContent = clients.length || 0;
+                document.getElementById('media-count').textContent = 0;
+                document.getElementById('notes-count').textContent = 0;
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        async function showClients() {
+            try {
+                const res = await fetch(`${API_BASE}/clients`, { headers: getAuthHeaders() });
+                const clients = await res.json();
+
+                const clientsList = document.getElementById('clients-list');
+                clientsList.innerHTML = clients.map(client => `
+                    <div class="border border-border-dark dark:border-border-light rounded p-4">
+                        <h4 class="font-bold text-lg">${client.dog_name || 'Unknown'}</h4>
+                        <p class="text-gray-400 dark:text-gray-600">Breed: ${client.breed || 'N/A'}</p>
+                        <p class="text-gray-400 dark:text-gray-600">Age: ${client.age || 'N/A'} years</p>
+                        <button onclick="viewClient(${client.id})" class="mt-2 bg-primary text-white px-4 py-1 rounded text-sm">View Details</button>
+                    </div>
+                `).join('');
+
+                document.getElementById('clients-section').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading clients:', error);
+                alert('Failed to load clients');
+            }
+        }
+
+        async function loadClientSelects() {
+            try {
+                const res = await fetch(`${API_BASE}/clients`, { headers: getAuthHeaders() });
+                const clients = await res.json();
+
+                const uploadSelect = document.getElementById('upload-client-select');
+                const noteSelect = document.getElementById('note-client-select');
+
+                const options = clients.map(c => `<option value="${c.id}">${c.dog_name || 'Client ' + c.id}</option>`).join('');
+                uploadSelect.innerHTML = '<option value="">Choose a client...</option>' + options;
+                noteSelect.innerHTML = '<option value="">Choose a client...</option>' + options;
+            } catch (error) {
+                console.error('Error loading clients:', error);
+            }
+        }
+
+        function showUploadMedia() {
+            loadClientSelects();
+            document.getElementById('upload-modal').classList.remove('hidden');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('upload-modal').classList.add('hidden');
+            document.getElementById('upload-form').reset();
+        }
+
+        function showCreateNote() {
+            loadClientSelects();
+            document.getElementById('note-modal').classList.remove('hidden');
+        }
+
+        function closeNoteModal() {
+            document.getElementById('note-modal').classList.add('hidden');
+            document.getElementById('note-form').reset();
+        }
+
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const clientId = document.getElementById('upload-client-select').value;
+            const type = document.getElementById('media-type').value;
+            const file = document.getElementById('media-file').files[0];
+
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('client_id', clientId);
+            formData.append('type', type);
+
+            try {
+                const res = await fetch(`${API_BASE}/media/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    alert('Media uploaded successfully!');
+                    closeUploadModal();
+                    loadDashboard();
+                } else {
+                    alert('Upload failed');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Upload failed');
+            }
+        });
+
+        document.getElementById('note-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const clientId = document.getElementById('note-client-select').value;
+            const title = document.getElementById('note-title').value;
+            const content = document.getElementById('note-content').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/notes`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ client_id: clientId, title, content })
+                });
+
+                if (res.ok) {
+                    alert('Note created successfully!');
+                    closeNoteModal();
+                    loadDashboard();
+                } else {
+                    alert('Failed to create note');
+                }
+            } catch (error) {
+                console.error('Note error:', error);
+                alert('Failed to create note');
+            }
+        });
+
+        function viewClient(clientId) {
+            window.location.href = `/client-view.html?id=${clientId}`;
         }
 
         loadDashboard();

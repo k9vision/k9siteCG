@@ -3,55 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K9 Vision - Client Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>K9 Vision - My Portal</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#3B82F6",
+              "background-light": "#F9FAFB",
+              "background-dark": "#111827",
+              "text-light": "#1F2937",
+              "text-dark": "#F9FAFB",
+              "card-light": "#FFFFFF",
+              "card-dark": "#1F2937",
+              "border-light": "#E5E7EB",
+              "border-dark": "#374151"
+            },
+            fontFamily: {
+              display: ["Poppins", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
 </head>
-<body class="bg-gray-100">
-    <nav class="bg-blue-600 text-white p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold">K9 Vision - My Portal</h1>
-            <button onclick="logout()" class="bg-red-500 hover:bg-red-700 px-4 py-2 rounded">Logout</button>
+<body class="bg-background-dark dark:bg-background-light font-display text-text-dark dark:text-text-light antialiased">
+    <nav class="bg-card-dark dark:bg-card-light border-b border-border-dark dark:border-border-light">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-text-dark dark:text-text-light">K9 Vision - My Portal</h1>
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors">Logout</button>
         </div>
     </nav>
 
     <div class="container mx-auto p-8">
-        <div id="client-content">
-            <h2 class="text-3xl font-bold mb-6">Welcome to Your Training Portal!</h2>
+        <h2 class="text-3xl font-bold mb-6">Welcome to Your Training Portal!</h2>
 
-            <div class="bg-white p-6 rounded-lg shadow mb-6">
-                <h3 class="text-2xl font-bold mb-4">My Dog's Information</h3>
-                <div id="dog-info" class="space-y-2">
-                    <p><strong>Name:</strong> <span id="dog-name">Loading...</span></p>
-                    <p><strong>Breed:</strong> <span id="dog-breed">Loading...</span></p>
-                    <p><strong>Age:</strong> <span id="dog-age">Loading...</span></p>
+        <!-- Dog Photo & Info Center -->
+        <div class="bg-card-dark dark:bg-card-light p-8 rounded-lg shadow mb-8 border border-border-dark dark:border-border-light">
+            <div class="flex flex-col items-center">
+                <div class="mb-6">
+                    <img id="dog-photo" src="https://images.unsplash.com/photo-1633722715463-d30f4f325e24?w=400&h=400&fit=crop" alt="Your Dog" class="w-64 h-64 rounded-full object-cover border-4 border-primary shadow-lg">
+                </div>
+                <h3 class="text-2xl font-bold mb-2" id="dog-name">Loading...</h3>
+                <p class="text-lg text-gray-400 dark:text-gray-600 mb-1"><strong>Breed:</strong> <span id="dog-breed">Loading...</span></p>
+                <p class="text-lg text-gray-400 dark:text-gray-600"><strong>Age:</strong> <span id="dog-age">Loading...</span> years</p>
+            </div>
+        </div>
+
+        <!-- Fun Facts -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-500 p-6 rounded-lg shadow mb-8 text-white">
+            <h3 class="text-2xl font-bold mb-4 flex items-center">
+                <span class="material-icons mr-2">lightbulb</span>
+                Fun Dog Facts!
+            </h3>
+            <div id="fun-fact" class="text-lg italic"></div>
+            <button onclick="getNewFact()" class="mt-4 bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100 transition-colors">
+                Get Another Fact
+            </button>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <!-- Training Media -->
+            <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light">
+                <h3 class="text-xl font-bold mb-4 flex items-center">
+                    <span class="material-icons mr-2 text-primary">photo_library</span>
+                    Training Photos & Videos
+                </h3>
+                <div id="media-list" class="space-y-4">
+                    <p class="text-gray-400 dark:text-gray-600">No media files yet</p>
                 </div>
             </div>
 
-            <div class="grid md:grid-cols-2 gap-6 mb-6">
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="text-xl font-bold mb-4">Training Photos & Videos</h3>
-                    <div id="media-list" class="space-y-2">
-                        <p class="text-gray-600">No media files yet</p>
-                    </div>
+            <!-- Training Notes -->
+            <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light">
+                <h3 class="text-xl font-bold mb-4 flex items-center">
+                    <span class="material-icons mr-2 text-primary">note</span>
+                    Training Notes
+                </h3>
+                <div id="notes-list" class="space-y-4 max-h-64 overflow-y-auto mb-4">
+                    <p class="text-gray-400 dark:text-gray-600">No notes yet</p>
                 </div>
+                <button onclick="showAddNote()" class="w-full bg-primary text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors">
+                    Add Note / Message
+                </button>
+            </div>
+        </div>
 
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="text-xl font-bold mb-4">Training Notes</h3>
-                    <div id="notes-list" class="space-y-2">
-                        <p class="text-gray-600">No notes yet</p>
-                    </div>
-                </div>
+        <!-- Conversation / Notes Thread -->
+        <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light">
+            <h3 class="text-xl font-bold mb-4 flex items-center">
+                <span class="material-icons mr-2 text-primary">chat</span>
+                Training Conversation
+            </h3>
+            <div id="conversation" class="space-y-4 mb-4 max-h-96 overflow-y-auto">
+                <p class="text-gray-400 dark:text-gray-600">Start a conversation with your trainer!</p>
             </div>
         </div>
     </div>
 
+    <!-- Add Note Modal -->
+    <div id="add-note-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+            <h3 class="text-2xl font-bold mb-4">Add Note / Message</h3>
+            <form id="add-note-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Subject</label>
+                    <input type="text" id="note-subject" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Message</label>
+                    <textarea id="note-message" rows="4" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required></textarea>
+                </div>
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Send</button>
+                    <button type="button" onclick="closeAddNote()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        const API_BASE = '/api';
+
+        const dogFacts = [
+            "Dogs have a sense of time and can tell how long you've been away!",
+            "A dog's nose print is unique, just like a human's fingerprint.",
+            "Dogs can understand up to 250 words and gestures!",
+            "Puppies are born blind, deaf, and toothless.",
+            "Dogs dream just like humans - you might see their paws twitch!",
+            "A dog's sense of smell is 10,000 to 100,000 times better than humans.",
+            "Dogs can learn through observation - they watch and learn from other dogs.",
+            "The Basenji is the only dog breed that doesn't bark!",
+            "Dogs have three eyelids - an upper, lower, and third protective lid.",
+            "Your dog can smell your feelings through chemical changes in your body!"
+        ];
+
         function checkAuth() {
             const token = localStorage.getItem('token');
             const user = JSON.parse(localStorage.getItem('user') || '{}');
-
             if (!token || user.role !== 'client') {
-                window.location.href = '/login';
+                window.location.href = '/portal.html';
                 return false;
             }
             return true;
@@ -63,16 +158,165 @@
             window.location.href = '/';
         }
 
+        function getAuthHeaders() {
+            return {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
+        function getNewFact() {
+            const fact = dogFacts[Math.floor(Math.random() * dogFacts.length)];
+            document.getElementById('fun-fact').textContent = fact;
+        }
+
         async function loadClientData() {
             if (!checkAuth()) return;
 
             const user = JSON.parse(localStorage.getItem('user'));
 
-            // Placeholder data - you can fetch real data from API
-            document.getElementById('dog-name').textContent = 'Buddy';
-            document.getElementById('dog-breed').textContent = 'Golden Retriever';
-            document.getElementById('dog-age').textContent = '2 years';
+            try {
+                // Load client info
+                const clientRes = await fetch(`${API_BASE}/clients/user/${user.id}`, {
+                    headers: getAuthHeaders()
+                });
+                const client = await clientRes.json();
+
+                if (client) {
+                    document.getElementById('dog-name').textContent = client.dog_name || 'Your Dog';
+                    document.getElementById('dog-breed').textContent = client.breed || 'N/A';
+                    document.getElementById('dog-age').textContent = client.age || 'N/A';
+
+                    if (client.photo_url) {
+                        document.getElementById('dog-photo').src = client.photo_url;
+                    }
+
+                    // Load media
+                    loadMedia(client.id);
+
+                    // Load notes/conversation
+                    loadNotes(client.id);
+                }
+            } catch (error) {
+                console.error('Error loading client data:', error);
+            }
+
+            // Show a random fun fact
+            getNewFact();
         }
+
+        async function loadMedia(clientId) {
+            try {
+                const res = await fetch(`${API_BASE}/media/client/${clientId}`, {
+                    headers: getAuthHeaders()
+                });
+                const media = await res.json();
+
+                const mediaList = document.getElementById('media-list');
+                if (media && media.length > 0) {
+                    mediaList.innerHTML = media.map(item => `
+                        <div class="border border-border-dark dark:border-border-light rounded p-3">
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center">
+                                    <span class="material-icons text-primary mr-2">${item.type === 'video' ? 'videocam' : 'photo'}</span>
+                                    <span>${item.filename}</span>
+                                </span>
+                                <a href="${item.url}" target="_blank" class="text-primary hover:underline text-sm">View</a>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    mediaList.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No media files yet</p>';
+                }
+            } catch (error) {
+                console.error('Error loading media:', error);
+            }
+        }
+
+        async function loadNotes(clientId) {
+            try {
+                const res = await fetch(`${API_BASE}/notes/client/${clientId}`, {
+                    headers: getAuthHeaders()
+                });
+                const notes = await res.json();
+
+                const notesList = document.getElementById('notes-list');
+                const conversation = document.getElementById('conversation');
+
+                if (notes && notes.length > 0) {
+                    notesList.innerHTML = notes.slice(0, 3).map(note => `
+                        <div class="border border-border-dark dark:border-border-light rounded p-3">
+                            <h4 class="font-semibold">${note.title}</h4>
+                            <p class="text-sm text-gray-400 dark:text-gray-600 mt-1">${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''}</p>
+                            <p class="text-xs text-gray-500 mt-2">${new Date(note.created_at).toLocaleDateString()}</p>
+                        </div>
+                    `).join('');
+
+                    conversation.innerHTML = notes.map(note => `
+                        <div class="border-l-4 border-primary pl-4 py-2">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <h4 class="font-semibold text-primary">${note.title}</h4>
+                                    <p class="text-sm mt-1">${note.content}</p>
+                                </div>
+                                <span class="text-xs text-gray-500">${new Date(note.created_at).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    notesList.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No notes yet</p>';
+                    conversation.innerHTML = '<p class="text-gray-400 dark:text-gray-600">Start a conversation with your trainer!</p>';
+                }
+            } catch (error) {
+                console.error('Error loading notes:', error);
+            }
+        }
+
+        function showAddNote() {
+            document.getElementById('add-note-modal').classList.remove('hidden');
+        }
+
+        function closeAddNote() {
+            document.getElementById('add-note-modal').classList.add('hidden');
+            document.getElementById('add-note-form').reset();
+        }
+
+        document.getElementById('add-note-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const user = JSON.parse(localStorage.getItem('user'));
+            const subject = document.getElementById('note-subject').value;
+            const message = document.getElementById('note-message').value;
+
+            try {
+                // Get client ID first
+                const clientRes = await fetch(`${API_BASE}/clients/user/${user.id}`, {
+                    headers: getAuthHeaders()
+                });
+                const client = await clientRes.json();
+
+                const res = await fetch(`${API_BASE}/notes`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        client_id: client.id,
+                        title: subject,
+                        content: message
+                    })
+                });
+
+                if (res.ok) {
+                    alert('Message sent successfully!');
+                    closeAddNote();
+                    loadNotes(client.id);
+                } else {
+                    alert('Failed to send message');
+                }
+            } catch (error) {
+                console.error('Error sending note:', error);
+                alert('Failed to send message');
+            }
+        });
 
         loadClientData();
     </script>
