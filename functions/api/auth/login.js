@@ -1,5 +1,5 @@
 // Login endpoint for Cloudflare Pages Function
-import bcrypt from 'bcryptjs';
+const bcrypt = require('bcryptjs');
 
 // Helper function to generate JWT (simplified for edge runtime)
 async function generateToken(payload, secret) {
@@ -19,7 +19,7 @@ async function generateToken(payload, secret) {
   return `${header}.${body}.${btoa(String.fromCharCode(...new Uint8Array(signature)))}`;
 }
 
-export async function onRequestPost(context) {
+exports.onRequestPost = async function(context) {
   try {
     const { username, password } = await context.request.json();
 
@@ -82,4 +82,4 @@ export async function onRequestPost(context) {
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
-}
+};

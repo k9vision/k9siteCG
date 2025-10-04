@@ -1,6 +1,6 @@
 // Shared middleware for all Pages Functions
 
-export async function onRequest(context) {
+exports.onRequest = async function(context) {
   // Add CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -24,4 +24,4 @@ export async function onRequest(context) {
   });
 
   return response;
-}
+};

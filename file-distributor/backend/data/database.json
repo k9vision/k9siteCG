@@ -1,0 +1,44 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin36cg",
+      "password": "$2a$10$aZFyWbvAz4b3SbdkF..0W.cww.W0AzgKx/CA.Pf1wZKsYu3uio99G",
+      "role": "admin",
+      "createdAt": "2025-10-03T22:00:31.016Z"
+    },
+    {
+      "id": 2,
+      "username": "testclient",
+      "password": "$2a$10$cM2OsLoKPzFK5Z2fKZwbXOMvkvxk7dASfFqBw/YIJVatUg55HLSqq",
+      "role": "client",
+      "createdAt": "2025-10-03T22:00:31.144Z"
+    }
+  ],
+  "clients": [
+    {
+      "id": 1,
+      "userId": 2,
+      "dogName": "Max",
+      "dogBreed": "German Shepherd",
+      "dogAge": "3 years",
+      "dogImage": "",
+      "clientName": "Test Client",
+      "notes": "Test client for demonstration",
+      "createdAt": "2025-10-03T22:00:31.016Z"
+    },
+    {
+      "id": 2,
+      "userId": 2,
+      "dogName": "Max",
+      "dogBreed": "German Shepherd",
+      "dogAge": "3 years",
+      "dogImage": "",
+      "clientName": "Test Client",
+      "notes": "This is a test client account for demonstration purposes.",
+      "createdAt": "2025-10-03T22:00:31.145Z"
+    }
+  ],
+  "media": [],
+  "notes": []
+}
