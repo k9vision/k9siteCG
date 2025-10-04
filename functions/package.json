@@ -1,6 +1,7 @@
 {
   "name": "k9-vision-functions",
   "version": "1.0.0",
+  "type": "module",
   "dependencies": {
     "bcryptjs": "^2.4.3"
   }
