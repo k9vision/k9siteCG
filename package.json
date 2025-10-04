@@ -4,5 +4,8 @@
   "description": "K9 Vision Dog Training Website",
   "scripts": {
     "build": "echo 'No build needed - static site'"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3"
   }
 }
