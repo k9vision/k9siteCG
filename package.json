@@ -1,0 +1,8 @@
+{
+  "name": "k9-vision",
+  "version": "1.0.0",
+  "description": "K9 Vision Dog Training Website",
+  "scripts": {
+    "build": "echo 'No build needed - static site'"
+  }
+}
