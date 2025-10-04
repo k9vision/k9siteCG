@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K9 Vision - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">K9 Vision - Admin Dashboard</h1>
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-700 px-4 py-2 rounded">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-8">
+        <div id="admin-content">
+            <h2 class="text-3xl font-bold mb-6">Welcome, Admin!</h2>
+
+            <div class="grid md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-bold mb-2">Total Clients</h3>
+                    <p class="text-4xl font-bold text-blue-600" id="client-count">Loading...</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-bold mb-2">Media Files</h3>
+                    <p class="text-4xl font-bold text-green-600" id="media-count">Loading...</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-bold mb-2">Total Notes</h3>
+                    <p class="text-4xl font-bold text-purple-600" id="notes-count">Loading...</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-2xl font-bold mb-4">Quick Actions</h3>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded">
+                        Add New Client
+                    </button>
+                    <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded">
+                        Upload Media
+                    </button>
+                    <button class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded">
+                        Create Note
+                    </button>
+                    <button class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded">
+                        View All Clients
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+            if (!token || user.role !== 'admin') {
+                window.location.href = '/login';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+
+        async function loadDashboard() {
+            if (!checkAuth()) return;
+
+            // Placeholder counts - you can fetch real data from API
+            document.getElementById('client-count').textContent = '5';
+            document.getElementById('media-count').textContent = '12';
+            document.getElementById('notes-count').textContent = '8';
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>

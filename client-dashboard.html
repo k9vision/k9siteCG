@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K9 Vision - Client Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">K9 Vision - My Portal</h1>
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-700 px-4 py-2 rounded">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-8">
+        <div id="client-content">
+            <h2 class="text-3xl font-bold mb-6">Welcome to Your Training Portal!</h2>
+
+            <div class="bg-white p-6 rounded-lg shadow mb-6">
+                <h3 class="text-2xl font-bold mb-4">My Dog's Information</h3>
+                <div id="dog-info" class="space-y-2">
+                    <p><strong>Name:</strong> <span id="dog-name">Loading...</span></p>
+                    <p><strong>Breed:</strong> <span id="dog-breed">Loading...</span></p>
+                    <p><strong>Age:</strong> <span id="dog-age">Loading...</span></p>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-bold mb-4">Training Photos & Videos</h3>
+                    <div id="media-list" class="space-y-2">
+                        <p class="text-gray-600">No media files yet</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-bold mb-4">Training Notes</h3>
+                    <div id="notes-list" class="space-y-2">
+                        <p class="text-gray-600">No notes yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+            if (!token || user.role !== 'client') {
+                window.location.href = '/login';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+
+        async function loadClientData() {
+            if (!checkAuth()) return;
+
+            const user = JSON.parse(localStorage.getItem('user'));
+
+            // Placeholder data - you can fetch real data from API
+            document.getElementById('dog-name').textContent = 'Buddy';
+            document.getElementById('dog-breed').textContent = 'Golden Retriever';
+            document.getElementById('dog-age').textContent = '2 years';
+        }
+
+        loadClientData();
+    </script>
+</body>
+</html>
