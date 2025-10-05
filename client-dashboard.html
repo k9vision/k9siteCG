@@ -233,11 +233,11 @@
 
                 if (client) {
                     document.getElementById('dog-name').textContent = client.dog_name || 'Your Dog';
-                    document.getElementById('dog-breed').textContent = client.breed || 'N/A';
-                    document.getElementById('dog-age').textContent = client.age || 'N/A';
+                    document.getElementById('dog-breed').textContent = client.dog_breed || 'N/A';
+                    document.getElementById('dog-age').textContent = client.dog_age || 'N/A';
 
-                    if (client.photo_url) {
-                        document.getElementById('dog-photo').src = client.photo_url;
+                    if (client.dog_image) {
+                        document.getElementById('dog-photo').src = client.dog_image;
                     }
 
                     // Load fun facts
