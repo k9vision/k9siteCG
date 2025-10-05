@@ -229,9 +229,10 @@
                 const clientRes = await fetch(`${API_BASE}/clients/user/${user.id}`, {
                     headers: getAuthHeaders()
                 });
-                const client = await clientRes.json();
+                const data = await clientRes.json();
+                const client = data.client || data;
 
-                if (client) {
+                if (client && client.id) {
                     document.getElementById('dog-name').textContent = client.dog_name || 'Your Dog';
                     document.getElementById('dog-breed').textContent = client.dog_breed || 'N/A';
                     document.getElementById('dog-age').textContent = client.dog_age || 'N/A';
@@ -351,7 +352,8 @@
                 const clientRes = await fetch(`${API_BASE}/clients/user/${user.id}`, {
                     headers: getAuthHeaders()
                 });
-                const client = await clientRes.json();
+                const data = await clientRes.json();
+                const client = data.client || data;
 
                 const res = await fetch(`${API_BASE}/notes`, {
                     method: 'POST',
@@ -388,7 +390,8 @@
                 const clientRes = await fetch(`${API_BASE}/clients/user/${user.id}`, {
                     headers: getAuthHeaders()
                 });
-                const client = await clientRes.json();
+                const data = await clientRes.json();
+                const client = data.client || data;
 
                 const res = await fetch(`${API_BASE}/notes`, {
                     method: 'POST',
