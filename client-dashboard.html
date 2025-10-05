@@ -40,7 +40,13 @@
     </nav>
 
     <div class="container mx-auto p-8">
-        <h2 class="text-3xl font-bold mb-6">Welcome to Your Training Portal!</h2>
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-3xl font-bold">Welcome to Your Training Portal!</h2>
+            <button onclick="showRequestService()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center">
+                <span class="material-icons mr-2">add_circle</span>
+                Request Additional Service
+            </button>
+        </div>
 
         <!-- Dog Photo & Info Center -->
         <div class="bg-card-dark dark:bg-card-light p-8 rounded-lg shadow mb-8 border border-border-dark dark:border-border-light">
@@ -126,21 +132,39 @@
         </div>
     </div>
 
+    <!-- Request Service Modal -->
+    <div id="request-service-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+            <h3 class="text-2xl font-bold mb-4">Request Additional Service</h3>
+            <form id="request-service-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Service Type</label>
+                    <select id="service-type" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                        <option value="">Select a service...</option>
+                        <option value="Puppy Foundation">Puppy Foundation</option>
+                        <option value="Obedience Training">Obedience Training</option>
+                        <option value="Behavioral Consultation">Behavioral Consultation</option>
+                        <option value="Advanced Training">Advanced Training</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Details</label>
+                    <textarea id="service-details" rows="4" placeholder="Please describe what you need help with..." class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required></textarea>
+                </div>
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-700">Send Request</button>
+                    <button type="button" onclick="closeRequestService()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         const API_BASE = '/api';
 
-        const dogFacts = [
-            "Dogs have a sense of time and can tell how long you've been away!",
-            "A dog's nose print is unique, just like a human's fingerprint.",
-            "Dogs can understand up to 250 words and gestures!",
-            "Puppies are born blind, deaf, and toothless.",
-            "Dogs dream just like humans - you might see their paws twitch!",
-            "A dog's sense of smell is 10,000 to 100,000 times better than humans.",
-            "Dogs can learn through observation - they watch and learn from other dogs.",
-            "The Basenji is the only dog breed that doesn't bark!",
-            "Dogs have three eyelids - an upper, lower, and third protective lid.",
-            "Your dog can smell your feelings through chemical changes in your body!"
-        ];
+        let funFacts = [];
+        let currentFactIndex = 0;
 
         function checkAuth() {
             const token = localStorage.getItem('token');
@@ -166,8 +190,33 @@
         }
 
         function getNewFact() {
-            const fact = dogFacts[Math.floor(Math.random() * dogFacts.length)];
-            document.getElementById('fun-fact').textContent = fact;
+            if (funFacts.length === 0) {
+                document.getElementById('fun-fact').textContent = 'No fun facts added yet by your trainer!';
+                return;
+            }
+
+            currentFactIndex = (currentFactIndex + 1) % funFacts.length;
+            document.getElementById('fun-fact').textContent = funFacts[currentFactIndex].fact;
+        }
+
+        async function loadFunFacts(clientId) {
+            try {
+                const res = await fetch(`${API_BASE}/fun-facts/client/${clientId}`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+
+                if (data.success && data.facts && data.facts.length > 0) {
+                    funFacts = data.facts;
+                    document.getElementById('fun-fact').textContent = funFacts[0].fact;
+                } else {
+                    funFacts = [];
+                    document.getElementById('fun-fact').textContent = 'No fun facts added yet by your trainer!';
+                }
+            } catch (error) {
+                console.error('Error loading fun facts:', error);
+                document.getElementById('fun-fact').textContent = 'No fun facts available';
+            }
         }
 
         async function loadClientData() {
@@ -191,6 +240,9 @@
                         document.getElementById('dog-photo').src = client.photo_url;
                     }
 
+                    // Load fun facts
+                    loadFunFacts(client.id);
+
                     // Load media
                     loadMedia(client.id);
 
@@ -200,9 +252,6 @@
             } catch (error) {
                 console.error('Error loading client data:', error);
             }
-
-            // Show a random fun fact
-            getNewFact();
         }
 
         async function loadMedia(clientId) {
@@ -281,6 +330,15 @@
             document.getElementById('add-note-form').reset();
         }
 
+        function showRequestService() {
+            document.getElementById('request-service-modal').classList.remove('hidden');
+        }
+
+        function closeRequestService() {
+            document.getElementById('request-service-modal').classList.add('hidden');
+            document.getElementById('request-service-form').reset();
+        }
+
         document.getElementById('add-note-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -315,6 +373,43 @@
             } catch (error) {
                 console.error('Error sending note:', error);
                 alert('Failed to send message');
+            }
+        });
+
+        document.getElementById('request-service-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const user = JSON.parse(localStorage.getItem('user'));
+            const serviceType = document.getElementById('service-type').value;
+            const details = document.getElementById('service-details').value;
+
+            try {
+                // Get client ID first
+                const clientRes = await fetch(`${API_BASE}/clients/user/${user.id}`, {
+                    headers: getAuthHeaders()
+                });
+                const client = await clientRes.json();
+
+                const res = await fetch(`${API_BASE}/notes`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        client_id: client.id,
+                        title: `SERVICE REQUEST: ${serviceType}`,
+                        content: details
+                    })
+                });
+
+                if (res.ok) {
+                    alert('Service request sent successfully! Your trainer will contact you soon.');
+                    closeRequestService();
+                    loadNotes(client.id);
+                } else {
+                    alert('Failed to send service request');
+                }
+            } catch (error) {
+                console.error('Error sending service request:', error);
+                alert('Failed to send service request');
             }
         });
 
