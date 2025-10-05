@@ -64,7 +64,7 @@
         <div class="bg-gradient-to-r from-blue-500 to-purple-500 p-6 rounded-lg shadow mb-8 text-white">
             <h3 class="text-2xl font-bold mb-4 flex items-center">
                 <span class="material-icons mr-2">lightbulb</span>
-                Fun Dog Facts!
+                <span id="fun-facts-title">Fun Dog Facts!</span>
             </h3>
             <div id="fun-fact" class="text-lg italic"></div>
             <button onclick="getNewFact()" class="mt-4 bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100 transition-colors">
@@ -233,9 +233,13 @@
                 const client = data.client || data;
 
                 if (client && client.id) {
-                    document.getElementById('dog-name').textContent = client.dog_name || 'Your Dog';
+                    const dogName = client.dog_name || 'Your Dog';
+                    document.getElementById('dog-name').textContent = dogName;
                     document.getElementById('dog-breed').textContent = client.dog_breed || 'N/A';
                     document.getElementById('dog-age').textContent = client.dog_age || 'N/A';
+
+                    // Update fun facts title with dog name
+                    document.getElementById('fun-facts-title').textContent = `Fun Dog Facts about ${dogName}`;
 
                     if (client.dog_image) {
                         document.getElementById('dog-photo').src = client.dog_image;
