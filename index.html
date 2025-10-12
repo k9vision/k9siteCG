@@ -146,6 +146,64 @@
 </div>
 </div>
 </section>
+<section class="py-20 sm:py-24 bg-background-dark dark:bg-background-light" id="testimonials">
+<div class="container mx-auto px-4 sm:px-6 lg:px-8">
+<div class="text-center mb-12">
+<h2 class="text-3xl sm:text-4xl font-bold text-text-dark dark:text-text-light">What Our Clients Say</h2>
+<p class="mt-4 max-w-2xl mx-auto text-lg text-gray-400 dark:text-gray-600">Don't just take our word for it - hear from happy clients and their well-trained dogs!</p>
+</div>
+<div id="reviews-container" class="grid md:grid-cols-3 gap-8 mb-8">
+<!-- Static reviews - will be replaced by live Yelp reviews if API is configured -->
+<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light">
+<div class="flex items-center mb-4">
+<div class="flex text-yellow-400">
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+</div>
+</div>
+<p class="text-gray-400 dark:text-gray-600 mb-4">"K9 Vision transformed our anxious rescue dog into a confident, well-behaved companion. The trainer's patience and expertise made all the difference!"</p>
+<p class="font-semibold text-text-dark dark:text-text-light">- Sarah M.</p>
+</div>
+<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light">
+<div class="flex items-center mb-4">
+<div class="flex text-yellow-400">
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+</div>
+</div>
+<p class="text-gray-400 dark:text-gray-600 mb-4">"Best investment we made for our family! Our puppy learned basic commands in just a few weeks. Highly recommend K9 Vision!"</p>
+<p class="font-semibold text-text-dark dark:text-text-light">- Mike & Jennifer K.</p>
+</div>
+<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light">
+<div class="flex items-center mb-4">
+<div class="flex text-yellow-400">
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+</div>
+</div>
+<p class="text-gray-400 dark:text-gray-600 mb-4">"Professional, caring, and incredibly effective. Our dog's behavioral issues are completely resolved. Thank you K9 Vision!"</p>
+<p class="font-semibold text-text-dark dark:text-text-light">- David R.</p>
+</div>
+</div>
+<div class="text-center">
+<a href="https://www.yelp.com/writeareview/biz/EQ0-Z3EPhDjkDcTWeibv_Q" target="_blank" rel="noopener noreferrer" class="inline-flex items-center bg-red-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-red-700 transition-transform transform hover:scale-105 shadow-lg">
+<svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
+<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+</svg>
+Review Us on Yelp
+</a>
+</div>
+</div>
+</section>
 <section class="py-20 sm:py-24 bg-card-dark dark:bg-card-light" id="contact">
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
 <div class="grid md:grid-cols-2 gap-12 items-center">
@@ -239,7 +297,47 @@ document.addEventListener('DOMContentLoaded', function() {
             mobileMenu.classList.add('hidden');
         });
     });
+
+    // Load Yelp reviews
+    loadYelpReviews();
 });
+
+// Function to load Yelp reviews from API
+async function loadYelpReviews() {
+    try {
+        const response = await fetch('/api/yelp/reviews');
+        const data = await response.json();
+
+        // If we have live reviews, replace static ones
+        if (data.success && data.reviews && data.reviews.length > 0 && !data.static) {
+            const reviewsContainer = document.getElementById('reviews-container');
+            reviewsContainer.innerHTML = data.reviews.map(review => {
+                const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+                const reviewDate = new Date(review.time_created).toLocaleDateString();
+
+                return `
+                    <div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex text-yellow-400 text-xl">
+                                ${stars}
+                            </div>
+                            <span class="text-xs text-gray-500">${reviewDate}</span>
+                        </div>
+                        <p class="text-gray-400 dark:text-gray-600 mb-4">"${review.text}"</p>
+                        <div class="flex items-center">
+                            ${review.user.image_url ? `<img src="${review.user.image_url}" alt="${review.user.name}" class="w-10 h-10 rounded-full mr-3">` : ''}
+                            <p class="font-semibold text-text-dark dark:text-text-light">- ${review.user.name}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        // Otherwise, keep the static reviews that are already in the HTML
+    } catch (error) {
+        console.log('Using static reviews:', error.message);
+        // Static reviews remain visible, no need to do anything
+    }
+}
 </script>
 
 </body>
