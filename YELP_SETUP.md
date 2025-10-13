@@ -17,16 +17,25 @@ Your website now has Yelp testimonials integration! Currently showing static rev
 3. Example: `https://www.yelp.com/biz/k9-vision-san-diego`
 
 ### Step 2: Get Free Yelp API Key
-1. Go to https://www.yelp.com/developers/v3/manage_app
-2. Sign in with your Yelp business account
-3. Click **"Create New App"**
-4. Fill in the form:
+
+**IMPORTANT: This is a DIFFERENT website from your Yelp Business Dashboard!**
+
+1. **Open a new tab** and go to: https://www.yelp.com/developers/v3/manage_app
+   - This is the Yelp Developers Portal (NOT biz.yelp.com)
+2. Sign in with your Yelp account (same login as business)
+3. You'll see "Manage App" page
+4. Click **"Create New App"** button (top right or center of page)
+5. Fill in the form:
    - App Name: `K9 Vision Website`
    - Industry: `Pet Services`
    - Contact Email: Your email
    - Description: `Display reviews on K9 Vision website`
-5. Agree to terms and click **"Create New App"**
-6. Copy your **API Key** (looks like: `xxxxxxxxxxxxxxxxxxxxxxxxxxx`)
+6. Agree to terms and click **"Create New App"**
+7. Copy your **API Key** (looks like: `xxxxxxxxxxxxxxxxxxxxxxxxxxx`)
+
+**Don't see "Create New App"?**
+- Make sure you're on developers.yelp.com (NOT biz.yelp.com)
+- You may need to first agree to developer terms
 
 ### Step 3: Get Your Yelp Business ID
 From your Yelp business page URL, extract the business alias:

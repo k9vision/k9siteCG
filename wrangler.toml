@@ -15,3 +15,5 @@ bucket_name = "k9-vision-media"
 # Environment variables
 [vars]
 JWT_SECRET = "your-secret-key-change-this-in-production"
+YELP_API_KEY = "xe40YcedlEJ_rUf4HIcOgEJLX7MdCy7r9qfxLhAasoCzL3_yznjI0klZ48sucvQCLQSh61uH-0_ODkXdqzSt-X0sxFRUijWr4NXY29wDnhYy61ESGXLsgT1K60PsaHYx"
+YELP_BUSINESS_ID = "1nJ-cltkfxtWTAbRrKYJpA"  # Replace with your actual business ID
