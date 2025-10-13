@@ -39,6 +39,13 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
     </style>
 </head>
 <body class="bg-background-dark dark:bg-background-light font-display text-text-dark dark:text-text-light antialiased">
@@ -152,9 +159,11 @@
 <h2 class="text-3xl sm:text-4xl font-bold text-text-dark dark:text-text-light">What Our Clients Say</h2>
 <p class="mt-4 max-w-2xl mx-auto text-lg text-gray-400 dark:text-gray-600">Don't just take our word for it - hear from happy clients and their well-trained dogs!</p>
 </div>
-<div id="reviews-container" class="grid md:grid-cols-3 gap-8 mb-8">
+<div class="relative mb-8">
+<div id="reviews-container" class="overflow-x-auto scrollbar-hide scroll-smooth pb-4">
+<div class="flex gap-6 min-w-max md:min-w-0 md:grid md:grid-cols-3 md:gap-8">
 <!-- Static reviews - will be replaced by live Yelp reviews if API is configured -->
-<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light">
+<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light flex-shrink-0 w-80 md:w-auto">
 <div class="flex items-center mb-4">
 <div class="flex text-yellow-400">
 <span class="material-icons">star</span>
@@ -167,7 +176,7 @@
 <p class="text-gray-400 dark:text-gray-600 mb-4">"K9 Vision transformed our anxious rescue dog into a confident, well-behaved companion. The trainer's patience and expertise made all the difference!"</p>
 <p class="font-semibold text-text-dark dark:text-text-light">- Sarah M.</p>
 </div>
-<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light">
+<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light flex-shrink-0 w-80 md:w-auto">
 <div class="flex items-center mb-4">
 <div class="flex text-yellow-400">
 <span class="material-icons">star</span>
@@ -180,7 +189,7 @@
 <p class="text-gray-400 dark:text-gray-600 mb-4">"Best investment we made for our family! Our puppy learned basic commands in just a few weeks. Highly recommend K9 Vision!"</p>
 <p class="font-semibold text-text-dark dark:text-text-light">- Mike & Jennifer K.</p>
 </div>
-<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light">
+<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light flex-shrink-0 w-80 md:w-auto">
 <div class="flex items-center mb-4">
 <div class="flex text-yellow-400">
 <span class="material-icons">star</span>
@@ -192,6 +201,55 @@
 </div>
 <p class="text-gray-400 dark:text-gray-600 mb-4">"Professional, caring, and incredibly effective. Our dog's behavioral issues are completely resolved. Thank you K9 Vision!"</p>
 <p class="font-semibold text-text-dark dark:text-text-light">- David R.</p>
+</div>
+<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light flex-shrink-0 w-80 md:w-auto">
+<div class="flex items-center mb-4">
+<div class="flex text-yellow-400">
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+</div>
+</div>
+<p class="text-gray-400 dark:text-gray-600 mb-4">"Amazing results! Our German Shepherd went from pulling on the leash to walking perfectly by our side. The training methods really work!"</p>
+<p class="font-semibold text-text-dark dark:text-text-light">- Robert T.</p>
+</div>
+<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light flex-shrink-0 w-80 md:w-auto">
+<div class="flex items-center mb-4">
+<div class="flex text-yellow-400">
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+</div>
+</div>
+<p class="text-gray-400 dark:text-gray-600 mb-4">"We were struggling with our dog's aggression issues. K9 Vision helped us understand our dog better and gave us tools to create a peaceful home. Highly recommended!"</p>
+<p class="font-semibold text-text-dark dark:text-text-light">- Jessica L.</p>
+</div>
+<div class="bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light flex-shrink-0 w-80 md:w-auto">
+<div class="flex items-center mb-4">
+<div class="flex text-yellow-400">
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+<span class="material-icons">star</span>
+</div>
+</div>
+<p class="text-gray-400 dark:text-gray-600 mb-4">"Outstanding service from start to finish. Our puppy is now the star of the dog park! Thank you for your dedication and expertise."</p>
+<p class="font-semibold text-text-dark dark:text-text-light">- Carlos & Maria G.</p>
+</div>
+</div>
+</div>
+<div class="flex justify-center gap-2 mt-4 md:hidden">
+<span class="w-2 h-2 rounded-full bg-gray-400"></span>
+<span class="w-2 h-2 rounded-full bg-gray-400"></span>
+<span class="w-2 h-2 rounded-full bg-gray-400"></span>
+<span class="w-2 h-2 rounded-full bg-gray-400"></span>
+<span class="w-2 h-2 rounded-full bg-gray-400"></span>
+<span class="w-2 h-2 rounded-full bg-gray-400"></span>
 </div>
 </div>
 <div class="text-center">
