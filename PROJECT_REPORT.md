@@ -1,7 +1,7 @@
 # K9 Vision Website - Comprehensive Project Report
-**Last Updated:** October 13, 2025
+**Last Updated:** February 16, 2026
 **Project:** K9 Vision Dog Training Platform
-**Live URL:** https://k9sitecg.pages.dev
+**Live URL:** https://k9visiontx.com
 **GitHub:** https://github.com/k9vision/k9siteCG
 
 ---
@@ -48,10 +48,11 @@ npx wrangler pages deploy . --project-name=k9sitecg
 
 ### Key Metrics
 - **Pages**: 4 main pages (Landing, Portal Login, Admin Dashboard, Client Dashboard)
-- **API Endpoints**: 15+ serverless functions
-- **Database Tables**: 6 (users, clients, media, notes, fun_facts, service_requests)
-- **Authentication**: Role-based (admin/client)
-- **Deployment**: Automated via GitHub push
+- **API Endpoints**: 22+ serverless functions
+- **Database Tables**: 8 (users, clients, media, notes, fun_facts, services, invoices, invoice_items)
+- **Authentication**: Role-based (admin/client) with JWT
+- **Email System**: Resend integration (Brevo option for SMS/campaigns)
+- **Deployment**: Manual via wrangler CLI
 - **Performance**: Global edge deployment (sub-100ms response times)
 
 ---
@@ -71,7 +72,9 @@ npx wrangler pages deploy . --project-name=k9sitecg
 │  │  ├─ client-dashboard.html (Client Portal)                │  │
 │  │  └─ functions/ (Serverless API)                          │  │
 │  │      ├─ api/auth/ (Login, Register)                      │  │
-│  │      ├─ api/clients/ (Client Management)                 │  │
+│  │      ├─ api/clients/ (Client Management + Email)         │  │
+│  │      ├─ api/services/ (Services CRUD)                    │  │
+│  │      ├─ api/invoices/ (Invoicing + Email)                │  │
 │  │      ├─ api/media/ (Media Upload/Retrieval)              │  │
 │  │      ├─ api/notes/ (Training Notes)                      │  │
 │  │      ├─ api/fun-facts/ (Custom Facts)                    │  │
@@ -108,6 +111,9 @@ k9siteCG/
 ├── package.json                  # Dependencies
 ├── YELP_SETUP.md                # Yelp API setup guide
 ├── SETUP_DATABASE.md            # Database setup guide
+├── RESEND_SETUP.md              # Email setup guide
+├── migrations/                   # Database migrations
+│   └── 002_add_email_and_new_tables.sql
 ├── functions/                    # Serverless API
 │   ├── _middleware.js           # CORS middleware
 │   ├── api/
@@ -117,7 +123,15 @@ k9siteCG/
 │   │   ├── clients/
 │   │   │   ├── index.js         # List/create clients
 │   │   │   ├── [userId].js      # Update client
-│   │   │   └── user/[userId].js # Get client by user
+│   │   │   ├── user/[userId].js # Get client by user
+│   │   │   └── create-with-email.js # Create client with email
+│   │   ├── services/
+│   │   │   ├── index.js         # List/create services
+│   │   │   └── [id].js          # Update/delete service
+│   │   ├── invoices/
+│   │   │   ├── index.js         # List/create invoices
+│   │   │   ├── [id].js          # Get/update/delete invoice
+│   │   │   └── [id]/email.js    # Email invoice to client
 │   │   ├── media/
 │   │   │   ├── upload.js        # Upload to R2
 │   │   │   ├── [id].js          # Get/delete media
@@ -272,11 +286,15 @@ Border (Light): #E5E7EB (Light gray)
   - Total Clients (blue)
   - Media Files (green)
   - Total Notes (purple)
-- Quick Actions (4 buttons):
+- Quick Actions (8 buttons):
   - View All Clients
+  - Create Client (with email)
   - Upload Media
   - Create Note
   - Add Fun Fact
+  - Manage Services
+  - Create Invoice
+  - View Invoices
 
 **Sections**:
 
@@ -306,6 +324,41 @@ Border (Light): #E5E7EB (Light gray)
    - Client selector dropdown
    - Fact text field
    - Submit button
+
+5. **Create Client Modal** ⭐ NEW
+   - Client name and email (required)
+   - Dog name, breed, age
+   - Username (auto-generated or manual)
+   - Password options:
+     - Auto-generate secure password
+     - Manual password entry
+   - Email credentials checkbox
+   - Displays credentials after creation
+
+6. **Services Management** ⭐ NEW
+   - List all training services
+   - Add/edit/delete services
+   - Each service: name, description, price
+   - Used in invoice creation
+
+7. **Invoices Section** ⭐ NEW
+   - List all invoices with status
+   - Filter by status (pending/paid/overdue)
+   - Email invoice button
+   - View invoice details
+
+8. **Create Invoice Modal** ⭐ NEW
+   - Client selector dropdown
+   - Trainer name field
+   - Date and due date pickers
+   - Dynamic line items:
+     - Service dropdown (populated from services)
+     - Quantity and price fields
+     - Add/remove line items
+   - Manual tax rate entry
+   - Real-time total calculation
+   - Invoice number auto-generated (YY+DD+Client+Dog)
+   - Notes field
 
 **JavaScript Features**:
 - Auth check on page load (redirect if not admin)
@@ -567,6 +620,128 @@ Pages Functions are serverless edge workers that run alongside static pages. Wri
 
 ---
 
+#### **Services Management APIs** ⭐ NEW
+
+**17. `/api/services` (GET)**
+- **Auth**: Public (lists active services only)
+- **Purpose**: List all active training services
+- **Query**: `SELECT * FROM services WHERE active = 1`
+- **Output**: `{ success: true, services: [...] }`
+- **Used By**: Invoice creation form, client portal
+
+**18. `/api/services` (POST)**
+- **Auth**: Admin only
+- **Purpose**: Create new service
+- **Input**: `{ name, description, price }`
+- **Output**: `{ success: true, service: {...} }`
+
+**19. `/api/services/[id]` (GET/PUT/DELETE)**
+- **Auth**: Admin only (write), Public (read)
+- **Purpose**: Get, update, or soft-delete service
+- **Soft Delete**: Sets `active = 0` instead of deleting
+- **Output**: `{ success: true, service: {...} }`
+
+---
+
+#### **Invoice APIs** ⭐ NEW
+
+**20. `/api/invoices` (GET)**
+- **Auth**: Admin only
+- **Purpose**: List all invoices with client details
+- **Query**: JOIN invoices + clients tables
+- **Output**: `{ success: true, invoices: [...] }`
+
+**21. `/api/invoices` (POST)**
+- **Auth**: Admin only
+- **Purpose**: Create new invoice with line items
+- **Input**:
+  ```json
+  {
+    "client_id": 1,
+    "trainer_name": "CG",
+    "date": "2025-10-13",
+    "due_date": "2025-10-27",
+    "tax_rate": 8.25,
+    "items": [
+      { "service_id": 1, "service_name": "Obedience Training", "quantity": 4, "price": 200.00 }
+    ],
+    "notes": "Optional notes"
+  }
+  ```
+- **Process**:
+  1. Generate invoice number: YY + DD + Client(2) + Dog(2)
+  2. Calculate subtotal from line items
+  3. Calculate tax amount (subtotal × tax_rate / 100)
+  4. Calculate total (subtotal + tax_amount)
+  5. Create invoice record
+  6. Create invoice_items records
+- **Output**: `{ success: true, invoice: {..., items: [...]} }`
+
+**22. `/api/invoices/[id]` (GET/PUT/DELETE)**
+- **Auth**: Admin only
+- **Purpose**: Get, update status/notes, or delete invoice
+- **GET**: Returns invoice with all items
+- **PUT**: Update status (pending/paid/overdue) or notes
+- **DELETE**: Cascade deletes invoice items
+- **Output**: `{ success: true, invoice: {...} }`
+
+**23. `/api/invoices/[id]/email` (POST)**
+- **Auth**: Admin only
+- **Purpose**: Email professional HTML invoice to client
+- **Process**:
+  1. Fetch invoice with client email
+  2. Fetch all invoice items
+  3. Generate HTML email template
+  4. Send via Resend API
+- **Email From**: trainercg@k9visiontx.com
+- **Email Template**: Professional branded HTML
+- **Output**: `{ success: true, message: 'Invoice sent successfully' }`
+- **Error Handling**: Returns detailed error if Resend fails
+
+---
+
+#### **Client Creation with Email API** ⭐ NEW
+
+**24. `/api/clients/create-with-email` (POST)**
+- **Auth**: Admin only
+- **Purpose**: Create client with user account and email credentials
+- **Input**:
+  ```json
+  {
+    "client_name": "John Doe",
+    "email": "john@example.com",
+    "dog_name": "Max",
+    "breed": "Golden Retriever",
+    "age": 2,
+    "username": "johndoe123", // optional (auto-generated if not provided)
+    "password": "SecurePass123", // optional if auto_generate_password is true
+    "auto_generate_password": true,
+    "send_email": true
+  }
+  ```
+- **Process**:
+  1. Generate username if not provided (client name + random number)
+  2. Generate or use provided password
+  3. Hash password with bcrypt
+  4. Create user account
+  5. Create client profile with email
+  6. Send welcome email with credentials (if requested)
+- **Email Template**: Branded HTML with login credentials
+- **Output**:
+  ```json
+  {
+    "success": true,
+    "client": {...},
+    "credentials": {
+      "username": "johndoe123",
+      "password": "SecurePass123" // returned for admin to save
+    },
+    "email_sent": true
+  }
+  ```
+
+---
+
 ### Middleware & Utilities
 
 **`functions/_middleware.js`**
@@ -627,10 +802,12 @@ INDEX: idx_users_username ON users(username)
 CREATE TABLE clients (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER UNIQUE,
+  client_name TEXT,
+  email TEXT,
   dog_name TEXT,
-  breed TEXT,
-  age INTEGER,
-  photo_url TEXT,
+  dog_breed TEXT,
+  dog_age TEXT,
+  dog_image TEXT,
   notes TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -642,6 +819,7 @@ INDEX: idx_clients_user_id ON clients(user_id)
 **Relationships**:
 - One-to-one with users
 - Cascade delete (deleting user deletes client)
+- Email field used for invoicing and communication
 
 ---
 
@@ -690,7 +868,7 @@ INDEX: idx_notes_client_id ON notes(client_id)
 
 ---
 
-#### **5. fun_facts** ⭐ NEW
+#### **5. fun_facts**
 ```sql
 CREATE TABLE fun_facts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -704,6 +882,89 @@ INDEX: idx_fun_facts_client_id ON fun_facts(client_id)
 ```
 
 **Purpose**: Personalized fun facts about each dog
+
+---
+
+#### **6. services** ⭐ NEW
+```sql
+CREATE TABLE services (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT,
+  price REAL NOT NULL,
+  active INTEGER DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+INDEX: idx_services_active ON services(active)
+```
+
+**Purpose**: Training services catalog for invoicing
+
+**Default Services**:
+- Puppy Foundation - $150.00
+- Obedience Training - $200.00
+- Behavioral Consultation - $175.00
+- Board and Train (30 days) - $2,500.00
+- Private Lesson - $100.00
+- Group Class - $75.00
+
+---
+
+#### **7. invoices** ⭐ NEW
+```sql
+CREATE TABLE invoices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  invoice_number TEXT UNIQUE NOT NULL,
+  client_id INTEGER NOT NULL,
+  trainer_name TEXT NOT NULL,
+  date DATE NOT NULL,
+  due_date DATE,
+  subtotal REAL NOT NULL,
+  tax_rate REAL NOT NULL,
+  tax_amount REAL NOT NULL,
+  total REAL NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'paid', 'overdue', 'cancelled')),
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+);
+
+INDEX: idx_invoices_client_id ON invoices(client_id)
+INDEX: idx_invoices_number ON invoices(invoice_number)
+```
+
+**Invoice Number Format**: YY + DD + Client(2 chars) + Dog(2 chars)
+- Example: `2513JoAc` (year 25, day 13, Joe's dog Ace)
+
+**Status Values**:
+- `pending`: Not yet paid
+- `paid`: Payment received
+- `overdue`: Past due date
+- `cancelled`: Invoice cancelled
+
+---
+
+#### **8. invoice_items** ⭐ NEW
+```sql
+CREATE TABLE invoice_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  invoice_id INTEGER NOT NULL,
+  service_id INTEGER,
+  service_name TEXT NOT NULL,
+  quantity INTEGER NOT NULL,
+  price REAL NOT NULL,
+  total REAL NOT NULL,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+  FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE SET NULL
+);
+
+INDEX: idx_invoice_items_invoice_id ON invoice_items(invoice_id)
+```
+
+**Purpose**: Line items for each invoice
+**Cascade**: Deleting invoice deletes all items
+**Soft Reference**: If service deleted, item preserved (SET NULL)
 
 ---
 
@@ -816,7 +1077,7 @@ Files TRACKED:
 ### Pages Project Setup
 
 **Project Name**: `k9sitecg`
-**Production Domain**: `k9sitecg.pages.dev`
+**Production Domain**: `k9visiontx.com` (custom domain) / `k9sitecg.pages.dev` (Cloudflare Pages)
 **Git Integration**: Connected to GitHub (`k9vision/k9siteCG`)
 
 **Build Settings**:
@@ -842,7 +1103,20 @@ YELP_BUSINESS_ID = "k9-vision-houston-2"
 # Set via wrangler CLI
 wrangler pages secret put YELP_API_KEY --project-name=k9sitecg
 wrangler pages secret put YELP_BUSINESS_ID --project-name=k9sitecg
+
+# Email integration (Resend) ⭐ NEW
+wrangler pages secret put RESEND_API_KEY --project-name=k9sitecg
 ```
+
+**Email Services:**
+- **Current**: Resend (transactional emails - invoices, credentials)
+  - Setup guide: See RESEND_SETUP.md
+  - From address: trainercg@k9visiontx.com
+  - 100 emails/day free
+- **Future**: Brevo (for bulk email and SMS campaigns)
+  - Use for marketing campaigns
+  - SMS capabilities
+  - More robust for high-volume sending
 
 ### D1 Database Binding
 
@@ -933,6 +1207,107 @@ c3dda79d - Production - f7d437f8b
 
 ## Recent Updates
 
+### February 16, 2026 - Custom Domain Go-Live
+
+**Summary:**
+Custom domain `k9visiontx.com` is now live and serving the production site.
+
+**Configuration:**
+- Apex domain: `k9visiontx.com` (CNAME flattened, proxied via Cloudflare)
+- WWW domain: `www.k9visiontx.com` (CNAME, proxied via Cloudflare)
+- SSL: Auto-provisioned by Cloudflare (Google CA)
+- DNS: Resolves to Cloudflare edge IPs (172.67.x.x / 104.21.x.x)
+
+**Verified Routes:**
+- `https://k9visiontx.com` — 200 OK
+- `https://www.k9visiontx.com` — 200 OK
+- `https://k9visiontx.com/login` — 308 → /portal — 200 OK
+- `https://k9visiontx.com/admin` — 308 → /admin-dashboard — 200 OK
+- `https://k9visiontx.com/client` — 308 → /client-dashboard — 200 OK
+
+---
+
+### October 13, 2025 - Business Management System ⭐⭐⭐ MAJOR UPDATE
+
+**Deployment:** 9d155fd1
+
+**Summary:**
+Complete overhaul of admin dashboard with client management, invoicing system, services management, and email integration.
+
+**Major Features Added:**
+
+1. **Client Creation with Email**
+   - Create client accounts with auto-generated credentials
+   - Option for auto-generated OR manual passwords
+   - Welcome emails with login credentials
+   - Email: trainercg@k9visiontx.com
+   - Professional branded HTML email templates
+
+2. **Invoicing System**
+   - Create professional invoices with line items
+   - Custom invoice number format: YY+DD+Client+Dog
+   - Manual tax rate entry per invoice
+   - Email invoices to clients (branded HTML)
+   - Invoice status tracking (pending/paid/overdue/cancelled)
+   - Real-time total calculation in UI
+
+3. **Services Management**
+   - CRUD operations for training services
+   - 6 default services pre-loaded
+   - Used in invoice creation dropdown
+   - Soft delete (preserves historical data)
+
+4. **Database Enhancements**
+   - Added `email` field to clients table
+   - New `services` table with 6 default services
+   - New `invoices` table with comprehensive fields
+   - New `invoice_items` table for line items
+   - Migrations applied to local and remote databases
+
+5. **Admin Dashboard Updates**
+   - Expanded from 4 to 8 quick action buttons
+   - New modals: Create Client, Manage Services, Create Invoice, View Invoices
+   - Credentials display after client creation
+   - Dynamic service selection in invoices
+   - Real-time calculations
+
+**Email Integration:**
+- Service: Resend (with RESEND_SETUP.md guide)
+- Alternative: Brevo (for future SMS/email campaigns)
+- From Address: trainercg@k9visiontx.com
+- Templates: Welcome emails, Invoice emails
+
+**API Endpoints Added:**
+- `/api/clients/create-with-email` - Create client with email
+- `/api/services` (GET/POST) - List/create services
+- `/api/services/[id]` (GET/PUT/DELETE) - Manage services
+- `/api/invoices` (GET/POST) - List/create invoices
+- `/api/invoices/[id]` (GET/PUT/DELETE) - Manage invoices
+- `/api/invoices/[id]/email` (POST) - Email invoices
+
+**Documentation:**
+- Created RESEND_SETUP.md with complete email setup guide
+- Created migrations/002_add_email_and_new_tables.sql
+- Updated PROJECT_REPORT.md
+
+**Deployment Commands:**
+```bash
+# Apply database migrations
+npx wrangler d1 execute DB --file=migrations/002_add_email_and_new_tables.sql --local
+npx wrangler d1 execute DB --file=migrations/002_add_email_and_new_tables.sql --remote
+
+# Deploy to production
+npx wrangler pages deploy . --project-name=k9sitecg
+```
+
+**Next Steps:**
+1. Set up Resend API key (see RESEND_SETUP.md)
+2. Test client creation with email
+3. Create first invoice
+4. Consider Brevo for SMS campaigns
+
+---
+
 ### October 13, 2025 - Real Yelp Reviews Integration ⭐
 
 **Commit:** a1cd205ba
@@ -1000,6 +1375,10 @@ Integrated Yelp testimonials with hybrid static/live review system, expanded to 
 
 **Admin Dashboard**:
 - ✅ Client management (CRUD)
+- ✅ Client creation with email credentials ⭐ NEW
+- ✅ Services management (CRUD) ⭐ NEW
+- ✅ Invoice creation and management ⭐ NEW
+- ✅ Email invoices to clients ⭐ NEW
 - ✅ Media upload (R2)
 - ✅ Training notes
 - ✅ Fun facts system
@@ -1017,11 +1396,12 @@ Integrated Yelp testimonials with hybrid static/live review system, expanded to 
 **Infrastructure**:
 - ✅ JWT authentication
 - ✅ Role-based access control
-- ✅ D1 database (edge)
+- ✅ D1 database (edge) with 8 tables
 - ✅ R2 file storage
-- ✅ API endpoints (14)
+- ✅ API endpoints (24+) ⭐ UPDATED
+- ✅ Email integration (Resend) ⭐ NEW
 - ✅ GitHub integration
-- ✅ Auto-deployment
+- ✅ Manual deployment (wrangler)
 - ✅ Global CDN
 - ✅ SSL/TLS
 
@@ -1031,9 +1411,11 @@ Integrated Yelp testimonials with hybrid static/live review system, expanded to 
 
 **Short-term**:
 - [ ] Live Yelp reviews (when API enabled)
-- [ ] Email notifications
+- [x] ~~Email notifications~~ ✅ COMPLETED (Oct 13, 2025)
+- [x] ~~Invoice system~~ ✅ COMPLETED (Oct 13, 2025)
 - [ ] Calendar/booking system
 - [ ] Payment integration (Stripe)
+- [ ] SMS notifications (via Brevo)
 - [ ] Progress tracking charts
 
 **Medium-term**:
@@ -1088,7 +1470,7 @@ npx wrangler pages deploy . --project-name=k9sitecg
 1. Run the deploy command
 2. Wait 30-60 seconds
 3. Hard refresh browser: `Ctrl+Shift+R` (Windows) or `Cmd+Shift+R` (Mac)
-4. Or open incognito window: https://k9sitecg.pages.dev
+4. Or open incognito window: https://k9visiontx.com
 
 ### Deployment Checklist
 
@@ -1219,14 +1601,16 @@ if (auth.user.role !== 'admin' && auth.user.id !== userId) {
 - Show actual star ratings
 - Update every 48 hours (cached)
 
-### Phase 2: Email Notifications
-**Timeline**: 1-2 weeks
-**Technology**: SendGrid or Resend API
-**Features**:
-- Welcome emails for new clients
-- Notification when trainer adds note
-- Notification when media uploaded
-- Booking confirmations
+### Phase 2: Email Notifications ✅ COMPLETED
+**Completed**: October 13, 2025
+**Technology**: Resend API
+**Features Implemented**:
+- ✅ Welcome emails for new clients with credentials
+- ✅ Professional HTML invoice emails
+- ✅ Branded email templates with K9 Vision styling
+- 🚧 Future: Trainer note notifications
+- 🚧 Future: Media upload notifications
+- 🚧 Future: SMS notifications (via Brevo)
 
 ### Phase 3: Booking System
 **Timeline**: 1 month
@@ -1307,7 +1691,8 @@ if (auth.user.role !== 'admin' && auth.user.id !== userId) {
 1. **README.md**: Basic project info
 2. **SETUP_DATABASE.md**: Database initialization
 3. **YELP_SETUP.md**: Yelp API integration guide
-4. **PROJECT_REPORT.md**: This comprehensive report
+4. **RESEND_SETUP.md**: Email integration guide ⭐ NEW
+5. **PROJECT_REPORT.md**: This comprehensive report
 
 ### Contact Information
 
@@ -1322,9 +1707,10 @@ if (auth.user.role !== 'admin' && auth.user.id !== userId) {
 
 ### Useful Links
 
-- **Live Site**: https://www.k9visiontx.com(NOT PUBLISHED YET)
-- **Development Site**: https://k9sitecg.pages.dev
-- **Admin Login**: https://k9sitecg.pages.dev/login
+- **Live Site**: https://k9visiontx.com
+- **Live Site (www)**: https://www.k9visiontx.com
+- **Pages Dev URL**: https://k9sitecg.pages.dev
+- **Admin Login**: https://k9visiontx.com/login
 - **Yelp Page**: https://www.yelp.com/biz/k9-vision-houston-2
 - **Cloudflare Dashboard**: https://dash.cloudflare.com
 - **Yelp Developers**: https://www.yelp.com/developers/v3/manage_app
@@ -1333,27 +1719,52 @@ if (auth.user.role !== 'admin' && auth.user.id !== userId) {
 
 ## Conclusion
 
-The K9 Vision platform is a modern, scalable dog training management system built on Cloudflare's edge infrastructure. The website now features authentic customer testimonials from real Yelp reviews, improving credibility and social proof.
+The K9 Vision platform is a comprehensive dog training business management system built on Cloudflare's edge infrastructure. Major updates on October 13, 2025 transformed the platform from a client portal into a full-featured business management system with invoicing, client management, and email automation.
 
 ### Latest Achievements (October 13, 2025):
+✅ Complete invoicing system with email delivery
+✅ Client creation with automated credential emails
+✅ Services management for streamlined invoicing
+✅ 3 new database tables (services, invoices, invoice_items)
+✅ 8 new API endpoints for business operations
+✅ Email integration (Resend) with Brevo option for campaigns
 ✅ 6 real Yelp customer reviews integrated
-✅ Smart truncation with "See more on Yelp" links
-✅ Responsive mobile/desktop layouts
-✅ Manual deployment workflow documented
+✅ Professional branded email templates
 
 ### Technical Highlights:
-- **Global edge** performance (<100ms)
+- **24+ API endpoints** covering all business operations
+- **8 database tables** with comprehensive relationships
+- **Email automation** for invoices and credentials
+- **Global edge** performance (<100ms response times)
 - **Secure authentication** (JWT + bcrypt)
 - **Serverless infrastructure** (Cloudflare Pages Functions)
 - **Real customer testimonials** (not generic placeholders)
+
+### Business Features:
+- ✅ Create clients with auto-generated or manual passwords
+- ✅ Email welcome credentials to new clients
+- ✅ Manage training services catalog
+- ✅ Create professional invoices with custom numbers
+- ✅ Email branded HTML invoices to clients
+- ✅ Track invoice status (pending/paid/overdue)
+- ✅ Upload media and training notes
+- ✅ Two-way client communication
 
 ### Critical Reminders:
 - 🚨 **Always run** `npx wrangler pages deploy . --project-name=k9sitecg` **after commits**
 - GitHub push alone does NOT deploy changes
 - Hard refresh browser after deployment to see changes
+- Set up RESEND_API_KEY for email functionality (see RESEND_SETUP.md)
+- Consider Brevo for future SMS and bulk email campaigns
+
+### Next Steps:
+1. Configure Resend API key in Cloudflare
+2. Test client creation with email
+3. Create and send first invoice
+4. Evaluate Brevo for marketing campaigns and SMS
 
 ---
 
 **Report End**
-**Last Updated**: October 13, 2025
-**Estimated Tokens**: ~18,000
+**Last Updated**: February 16, 2026
+**Estimated Tokens**: ~23,500
