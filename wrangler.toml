@@ -1,18 +1,12 @@
-name = "k9-vision"
+name = "k9sitecg"
 pages_build_output_dir = "."
-compatibility_date = "2024-01-01"
+compatibility_date = "2025-09-27"
 
-# D1 Database binding
-[[d1_databases]]
-binding = "DB"
-database_name = "k9-vision-db"
+[[env.production.d1_databases]]
 database_id = "97b70e72-63b3-4196-8f07-e1f9e9e789bd"
+binding = "DB"
+database_name = "DB"
 
-# R2 bucket for media uploads
-[[r2_buckets]]
-binding = "MEDIA_BUCKET"
+[[env.production.r2_buckets]]
 bucket_name = "k9-vision-media"
-
-# Environment variables
-[vars]
-JWT_SECRET = "adababio3909kldasdasdkfl4asddfafa4753"
+binding = "MEDIA_BUCKET"
