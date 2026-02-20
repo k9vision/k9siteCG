@@ -114,6 +114,7 @@ function generateInvoiceHTML(invoice, items) {
     </head>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px;">
       <div style="background: #3B82F6; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+        <img src="https://k9visiontx.com/k9visionlogo.jpeg" alt="K9 Vision Logo" style="max-width: 120px; height: auto; display: block; margin: 0 auto 15px auto; border-radius: 8px;" />
         <h1 style="margin: 0; font-size: 32px;">K9 Vision</h1>
         <p style="margin: 10px 0 0 0; font-size: 18px;">Dog Training Services</p>
       </div>
@@ -160,6 +161,7 @@ function generateInvoiceHTML(invoice, items) {
         ` : ''}
 
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280;">
+          <img src="https://k9visiontx.com/k9visionlogo.jpeg" alt="K9 Vision" style="max-width: 80px; height: auto; display: block; margin: 0 auto 10px auto; border-radius: 6px; opacity: 0.85;" />
           <p style="margin: 5px 0;">Thank you for choosing K9 Vision!</p>
           <p style="margin: 5px 0;">For questions, contact us at trainercg@k9visiontx.com</p>
         </div>
