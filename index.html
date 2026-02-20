@@ -271,7 +271,7 @@ Review Us on Yelp
 </div>
 <div class="bg-background-dark dark:bg-background-light p-8 rounded-lg shadow-lg border border-border-dark dark:border-border-light">
 <h3 class="text-2xl font-semibold mb-6 text-text-dark dark:text-text-light">Book a Consultation</h3>
-<form action="https://formsubmit.co/k9vision@yahoo.com" class="space-y-6" method="POST" onsubmit="return validateForm()">
+<form class="space-y-6" id="contact-form">
 <div>
 <label class="block text-sm font-medium text-gray-300 dark:text-gray-700" for="name">Your Name</label>
 <input autocomplete="name" class="mt-1 block w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white shadow-sm focus:border-primary focus:ring-primary text-text-dark dark:text-text-light sm:text-sm" id="name" name="name" type="text"/>
@@ -327,20 +327,57 @@ Review Us on Yelp
 </footer>
 
 <script>
-function validateForm() {
-    const phone = document.getElementById('phone').value.trim();
-    const email = document.getElementById('email').value.trim();
-
-    if (!phone && !email) {
-        alert('Please provide either a phone number or email address so we can contact you.');
-        return false;
-    }
-
-    return true;
-}
-
-// Mobile menu toggle
 document.addEventListener('DOMContentLoaded', function() {
+    // Contact form submission
+    const form = document.getElementById('contact-form');
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const name = document.getElementById('name').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const dogName = document.getElementById('dog-name').value.trim();
+        const message = document.getElementById('message').value.trim();
+
+        if (!name) {
+            alert('Please provide your name.');
+            return;
+        }
+
+        if (!phone && !email) {
+            alert('Please provide either a phone number or email address so we can contact you.');
+            return;
+        }
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+
+        try {
+            const res = await fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, phone, email, dogName, message })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Something went wrong');
+            }
+
+            form.reset();
+            alert('Thank you! Your consultation request has been sent. We will be in touch soon.');
+        } catch (err) {
+            alert(err.message || 'Failed to send your request. Please try again or call us directly.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    });
+
+    // Mobile menu toggle
     const mobileMenuButton = document.getElementById('mobile-menu-button');
     const mobileMenu = document.getElementById('mobile-menu');
 
@@ -348,7 +385,6 @@ document.addEventListener('DOMContentLoaded', function() {
         mobileMenu.classList.toggle('hidden');
     });
 
-    // Close mobile menu when clicking on a link
     const mobileMenuLinks = mobileMenu.querySelectorAll('a');
     mobileMenuLinks.forEach(link => {
         link.addEventListener('click', function() {
