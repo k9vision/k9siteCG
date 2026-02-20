@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K9 Vision - Email Verification</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#3B82F6",
+              "background-light": "#F9FAFB",
+              "background-dark": "#111827",
+              "text-light": "#1F2937",
+              "text-dark": "#F9FAFB",
+              "card-light": "#FFFFFF",
+              "card-dark": "#1F2937",
+              "border-light": "#E5E7EB",
+              "border-dark": "#374151"
+            },
+            fontFamily: {
+              display: ["Poppins", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+            },
+          },
+        },
+      };
+    </script>
+</head>
+<body class="bg-background-dark dark:bg-background-light font-display text-text-dark dark:text-text-light antialiased min-h-screen flex items-center justify-center">
+    <div class="bg-card-dark dark:bg-card-light p-8 rounded-lg shadow-lg max-w-md w-full border border-border-dark dark:border-border-light">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-text-dark dark:text-text-light mb-2">Email Verification</h1>
+        </div>
+
+        <!-- Loading state -->
+        <div id="loading-state" class="text-center py-8">
+            <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+            <p class="text-gray-400 dark:text-gray-600 mt-4">Verifying your email...</p>
+        </div>
+
+        <!-- Success state -->
+        <div id="success-state" class="hidden text-center py-4">
+            <div class="bg-green-500/10 border border-green-500/50 text-green-400 dark:text-green-600 px-4 py-3 rounded mb-6">
+                Email verified! Your account is now active.
+            </div>
+            <a href="/login" class="inline-block w-full bg-primary text-white py-3 px-6 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors text-center">Go to Login</a>
+        </div>
+
+        <!-- Error state -->
+        <div id="error-state" class="hidden text-center py-4">
+            <div class="bg-red-500/10 border border-red-500/50 text-red-400 dark:text-red-600 px-4 py-3 rounded mb-6">
+                This verification link is invalid or has expired.
+            </div>
+            <a href="/login" class="text-primary hover:underline text-sm font-medium">&larr; Back to Login</a>
+        </div>
+    </div>
+
+    <script>
+        const loadingState = document.getElementById('loading-state');
+        const successState = document.getElementById('success-state');
+        const errorState = document.getElementById('error-state');
+
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+
+        async function verifyEmail() {
+            if (!token) {
+                loadingState.classList.add('hidden');
+                errorState.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/verify-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+
+                const data = await response.json();
+
+                loadingState.classList.add('hidden');
+
+                if (response.ok && data.success) {
+                    successState.classList.remove('hidden');
+                } else {
+                    errorState.classList.remove('hidden');
+                }
+            } catch (error) {
+                loadingState.classList.add('hidden');
+                errorState.classList.remove('hidden');
+            }
+        }
+
+        verifyEmail();
+    </script>
+</body>
+</html>

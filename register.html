@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K9 Vision - Create Your Account</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#3B82F6",
+              "background-light": "#F9FAFB",
+              "background-dark": "#111827",
+              "text-light": "#1F2937",
+              "text-dark": "#F9FAFB",
+              "card-light": "#FFFFFF",
+              "card-dark": "#1F2937",
+              "border-light": "#E5E7EB",
+              "border-dark": "#374151"
+            },
+            fontFamily: {
+              display: ["Poppins", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+            },
+          },
+        },
+      };
+    </script>
+</head>
+<body class="bg-background-dark dark:bg-background-light font-display text-text-dark dark:text-text-light antialiased min-h-screen flex items-center justify-center py-8 px-4">
+    <div class="bg-card-dark dark:bg-card-light p-8 rounded-lg shadow-lg max-w-lg w-full border border-border-dark dark:border-border-light">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-text-dark dark:text-text-light mb-2">Create Your Account</h1>
+            <p class="text-gray-400 dark:text-gray-600">Sign up to access the K9 Vision client portal</p>
+        </div>
+
+        <div id="error-message" class="hidden bg-red-500/10 border border-red-500/50 text-red-400 dark:text-red-600 px-4 py-3 rounded mb-4"></div>
+        <div id="success-message" class="hidden bg-green-500/10 border border-green-500/50 text-green-400 dark:text-green-600 px-4 py-3 rounded mb-4"></div>
+
+        <form id="register-form" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-300 dark:text-gray-700 text-sm font-medium mb-2" for="client_name">
+                        Your Name <span class="text-red-400">*</span>
+                    </label>
+                    <input
+                        class="mt-1 block w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white shadow-sm focus:border-primary focus:ring-primary text-text-dark dark:text-text-light sm:text-sm py-2 px-3"
+                        id="client_name"
+                        type="text"
+                        placeholder="Full name"
+                        required
+                    >
+                </div>
+                <div>
+                    <label class="block text-gray-300 dark:text-gray-700 text-sm font-medium mb-2" for="email">
+                        Email <span class="text-red-400">*</span>
+                    </label>
+                    <input
+                        class="mt-1 block w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white shadow-sm focus:border-primary focus:ring-primary text-text-dark dark:text-text-light sm:text-sm py-2 px-3"
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        required
+                    >
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-gray-300 dark:text-gray-700 text-sm font-medium mb-2" for="dog_name">
+                        Dog Name <span class="text-red-400">*</span>
+                    </label>
+                    <input
+                        class="mt-1 block w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white shadow-sm focus:border-primary focus:ring-primary text-text-dark dark:text-text-light sm:text-sm py-2 px-3"
+                        id="dog_name"
+                        type="text"
+                        placeholder="Dog's name"
+                        required
+                    >
+                </div>
+                <div>
+                    <label class="block text-gray-300 dark:text-gray-700 text-sm font-medium mb-2" for="breed">
+                        Breed
+                    </label>
+                    <input
+                        class="mt-1 block w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white shadow-sm focus:border-primary focus:ring-primary text-text-dark dark:text-text-light sm:text-sm py-2 px-3"
+                        id="breed"
+                        type="text"
+                        placeholder="Optional"
+                    >
+                </div>
+                <div>
+                    <label class="block text-gray-300 dark:text-gray-700 text-sm font-medium mb-2" for="age">
+                        Age
+                    </label>
+                    <input
+                        class="mt-1 block w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white shadow-sm focus:border-primary focus:ring-primary text-text-dark dark:text-text-light sm:text-sm py-2 px-3"
+                        id="age"
+                        type="number"
+                        min="0"
+                        max="30"
+                        placeholder="Optional"
+                    >
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-300 dark:text-gray-700 text-sm font-medium mb-2" for="username">
+                        Username <span class="text-red-400">*</span>
+                    </label>
+                    <input
+                        class="mt-1 block w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white shadow-sm focus:border-primary focus:ring-primary text-text-dark dark:text-text-light sm:text-sm py-2 px-3"
+                        id="username"
+                        type="text"
+                        placeholder="Min 3 characters"
+                        minlength="3"
+                        required
+                    >
+                </div>
+                <div>
+                    <label class="block text-gray-300 dark:text-gray-700 text-sm font-medium mb-2" for="password">
+                        Password <span class="text-red-400">*</span>
+                    </label>
+                    <input
+                        class="mt-1 block w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white shadow-sm focus:border-primary focus:ring-primary text-text-dark dark:text-text-light sm:text-sm py-2 px-3"
+                        id="password"
+                        type="password"
+                        placeholder="Min 8 characters"
+                        minlength="8"
+                        required
+                    >
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-gray-300 dark:text-gray-700 text-sm font-medium mb-2" for="confirm-password">
+                    Confirm Password <span class="text-red-400">*</span>
+                </label>
+                <input
+                    class="mt-1 block w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white shadow-sm focus:border-primary focus:ring-primary text-text-dark dark:text-text-light sm:text-sm py-2 px-3"
+                    id="confirm-password"
+                    type="password"
+                    placeholder="Re-enter your password"
+                    minlength="8"
+                    required
+                >
+            </div>
+
+            <div>
+                <button
+                    class="w-full bg-primary text-white py-3 px-6 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
+                    type="submit"
+                    id="submit-btn"
+                >
+                    Create Account
+                </button>
+            </div>
+        </form>
+
+        <!-- Success state -->
+        <div id="success-state" class="hidden text-center py-4">
+            <p class="text-green-400 dark:text-green-600 mb-4">Registration successful! Check your email to verify your account.</p>
+            <a href="/login" class="inline-block w-full bg-primary text-white py-3 px-6 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors text-center">Go to Login</a>
+        </div>
+
+        <div id="login-link" class="mt-4 text-center">
+            <p class="text-gray-400 dark:text-gray-600 text-sm">Already have an account? <a href="/login" class="text-primary hover:underline font-medium">Sign in</a></p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('register-form');
+        const errorMessage = document.getElementById('error-message');
+        const successState = document.getElementById('success-state');
+        const submitBtn = document.getElementById('submit-btn');
+        const loginLink = document.getElementById('login-link');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const client_name = document.getElementById('client_name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const dog_name = document.getElementById('dog_name').value.trim();
+            const breed = document.getElementById('breed').value.trim();
+            const age = document.getElementById('age').value ? parseInt(document.getElementById('age').value, 10) : null;
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            errorMessage.classList.add('hidden');
+
+            if (username.length < 3) {
+                errorMessage.textContent = 'Username must be at least 3 characters.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+
+            if (password.length < 8) {
+                errorMessage.textContent = 'Password must be at least 8 characters.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                errorMessage.textContent = 'Passwords do not match.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating Account...';
+
+            try {
+                const body = { client_name, email, dog_name, username, password };
+                if (breed) body.breed = breed;
+                if (age !== null) body.age = age;
+
+                const response = await fetch('/api/auth/self-register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    form.classList.add('hidden');
+                    loginLink.classList.add('hidden');
+                    successState.classList.remove('hidden');
+                } else {
+                    errorMessage.textContent = data.error || 'Registration failed. Please try again.';
+                    errorMessage.classList.remove('hidden');
+                }
+            } catch (error) {
+                errorMessage.textContent = 'An error occurred. Please try again.';
+                errorMessage.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create Account';
+            }
+        });
+    </script>
+</body>
+</html>

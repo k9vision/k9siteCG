@@ -11,14 +11,14 @@ export async function onRequestGet(context) {
       );
     }
 
-    // Get all clients with user info
+    // Get all clients with user info (LEFT JOIN to include invite-pending clients without accounts)
     const clients = await context.env.DB.prepare(`
       SELECT
         c.*,
-        u.username
+        u.username,
+        u.status as user_status
       FROM clients c
-      JOIN users u ON c.user_id = u.id
-      WHERE u.role = 'client'
+      LEFT JOIN users u ON c.user_id = u.id
       ORDER BY c.created_at DESC
     `).all();
 

@@ -42,6 +42,14 @@ export async function onRequestPost(context) {
       );
     }
 
+    // Block unverified accounts
+    if (result.status === 'pending_verification') {
+      return new Response(
+        JSON.stringify({ error: 'Please verify your email before logging in. Check your inbox for the verification link.' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verify password
     const isValid = await bcrypt.compare(password, result.password);
 

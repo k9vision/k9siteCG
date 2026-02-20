@@ -178,6 +178,19 @@
             <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-2xl w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
                 <h3 class="text-2xl font-bold mb-4">Create New Client</h3>
                 <form id="create-client-form" class="space-y-4">
+                    <div class="border-b border-border-dark dark:border-border-light pb-4 mb-4">
+                        <p class="text-sm font-medium mb-2">Account Setup Method</p>
+                        <div class="flex gap-4">
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="setup-method" value="invite" checked onchange="toggleSetupMethod()">
+                                <span class="text-sm">Send Invite Email (client sets own password)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="setup-method" value="credentials" onchange="toggleSetupMethod()">
+                                <span class="text-sm">Set Credentials Now</span>
+                            </label>
+                        </div>
+                    </div>
                     <div class="grid md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium mb-2">Client Name *</label>
@@ -199,22 +212,22 @@
                             <label class="block text-sm font-medium mb-2">Age (years)</label>
                             <input type="number" id="client-dog-age" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                         </div>
-                        <div>
+                        <div id="username-field">
                             <label class="block text-sm font-medium mb-2">Username (optional)</label>
                             <input type="text" id="client-username" placeholder="Auto-generated if empty" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                         </div>
                     </div>
-                    <div class="border-t border-border-dark dark:border-border-light pt-4">
+                    <div id="credentials-section" class="border-t border-border-dark dark:border-border-light pt-4">
                         <label class="flex items-center space-x-3 mb-3">
                             <input type="checkbox" id="auto-generate-password" class="rounded" onchange="togglePasswordField()">
                             <span class="text-sm font-medium">Auto-generate password</span>
                         </label>
                         <div id="manual-password-field">
                             <label class="block text-sm font-medium mb-2">Password *</label>
-                            <input type="text" id="client-password" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                            <input type="text" id="client-password" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                         </div>
                     </div>
-                    <div class="border-t border-border-dark dark:border-border-light pt-4">
+                    <div id="email-credentials-section" class="border-t border-border-dark dark:border-border-light pt-4">
                         <label class="flex items-center space-x-3">
                             <input type="checkbox" id="send-credentials-email" class="rounded" checked>
                             <span class="text-sm font-medium">Email credentials to client</span>
@@ -225,9 +238,32 @@
                         <p class="text-sm text-green-700 dark:text-green-300">Username: <strong id="display-username"></strong></p>
                         <p class="text-sm text-green-700 dark:text-green-300">Password: <strong id="display-password"></strong></p>
                     </div>
+                    <div id="invite-success-display" class="hidden bg-green-50 dark:bg-green-900 border border-green-200 dark:border-green-700 rounded p-4">
+                        <p class="text-sm font-medium text-green-800 dark:text-green-200">Invite sent! The client will receive an email to set up their account.</p>
+                    </div>
                     <div class="flex gap-4">
-                        <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Create Client</button>
+                        <button type="submit" id="create-client-btn" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Send Invite</button>
                         <button type="button" onclick="closeCreateClientModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Manual Reset Password Modal -->
+        <div id="manual-reset-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+                <h3 class="text-2xl font-bold mb-4">Set New Password</h3>
+                <form id="manual-reset-form" class="space-y-4">
+                    <input type="hidden" id="reset-client-id">
+                    <p class="text-sm text-gray-400 dark:text-gray-600">Setting a new password for: <strong id="reset-client-name"></strong></p>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">New Password *</label>
+                        <input type="text" id="reset-new-password" minlength="8" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                        <p class="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Set Password</button>
+                        <button type="button" onclick="closeManualResetModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -409,15 +445,36 @@
                 if (clients.length === 0) {
                     clientsList.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No clients found</p>';
                 } else {
-                    clientsList.innerHTML = clients.map(client => `
+                    clientsList.innerHTML = clients.map(client => {
+                        const isPending = !client.username;
+                        const statusBadge = isPending
+                            ? '<span class="text-xs px-2 py-1 rounded bg-yellow-500 text-white ml-2">Invite Pending</span>'
+                            : '';
+                        const inviteBtn = isPending
+                            ? `<button onclick="resendInvite(${client.id})" class="bg-yellow-500 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700">Resend Invite</button>`
+                            : '';
+                        const resetBtns = !isPending
+                            ? `<button onclick="sendResetEmail(${client.id})" class="bg-orange-500 text-white px-3 py-1 rounded text-sm hover:bg-orange-700">Send Reset Email</button>
+                               <button onclick="showManualReset(${client.id}, '${(client.client_name || '').replace(/'/g, "\\'")}')" class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-700">Set Password</button>`
+                            : '';
+                        return `
                         <div class="border border-border-dark dark:border-border-light rounded p-4">
-                            <h4 class="font-bold text-lg">${client.dog_name || 'Unknown'}</h4>
-                            <p class="text-gray-400 dark:text-gray-600">Owner: ${client.client_name || 'N/A'}</p>
-                            <p class="text-gray-400 dark:text-gray-600">Breed: ${client.dog_breed || 'N/A'}</p>
-                            <p class="text-gray-400 dark:text-gray-600">Age: ${client.dog_age || 'N/A'} years</p>
-                            <button onclick="viewClient(${client.id})" class="mt-2 bg-primary text-white px-4 py-1 rounded text-sm">View Details</button>
-                        </div>
-                    `).join('');
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-bold text-lg">${client.dog_name || 'Unknown'}${statusBadge}</h4>
+                                    <p class="text-gray-400 dark:text-gray-600">Owner: ${client.client_name || 'N/A'}</p>
+                                    <p class="text-gray-400 dark:text-gray-600">Breed: ${client.dog_breed || 'N/A'}</p>
+                                    <p class="text-gray-400 dark:text-gray-600">Age: ${client.dog_age || 'N/A'} years</p>
+                                    ${client.username ? `<p class="text-gray-400 dark:text-gray-600 text-sm">Login: ${client.username}</p>` : ''}
+                                </div>
+                                <div class="flex gap-2 flex-wrap justify-end">
+                                    <button onclick="viewClient(${client.id})" class="bg-primary text-white px-4 py-1 rounded text-sm">View Details</button>
+                                    ${inviteBtn}
+                                    ${resetBtns}
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
                 }
 
                 document.getElementById('clients-section').classList.remove('hidden');
@@ -577,12 +634,39 @@
         function showCreateClient() {
             document.getElementById('create-client-modal').classList.remove('hidden');
             document.getElementById('credentials-display').classList.add('hidden');
+            document.getElementById('invite-success-display').classList.add('hidden');
             document.getElementById('invoice-date').valueAsDate = new Date();
+            toggleSetupMethod();
         }
 
         function closeCreateClientModal() {
             document.getElementById('create-client-modal').classList.add('hidden');
             document.getElementById('create-client-form').reset();
+            document.getElementById('credentials-display').classList.add('hidden');
+            document.getElementById('invite-success-display').classList.add('hidden');
+        }
+
+        function toggleSetupMethod() {
+            const method = document.querySelector('input[name="setup-method"]:checked').value;
+            const credentialsSection = document.getElementById('credentials-section');
+            const emailCredentialsSection = document.getElementById('email-credentials-section');
+            const usernameField = document.getElementById('username-field');
+            const passwordInput = document.getElementById('client-password');
+            const submitBtn = document.getElementById('create-client-btn');
+
+            if (method === 'invite') {
+                credentialsSection.classList.add('hidden');
+                emailCredentialsSection.classList.add('hidden');
+                usernameField.classList.add('hidden');
+                passwordInput.required = false;
+                submitBtn.textContent = 'Send Invite';
+            } else {
+                credentialsSection.classList.remove('hidden');
+                emailCredentialsSection.classList.remove('hidden');
+                usernameField.classList.remove('hidden');
+                togglePasswordField();
+                submitBtn.textContent = 'Create Client';
+            }
         }
 
         function togglePasswordField() {
@@ -602,56 +686,181 @@
         document.getElementById('create-client-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const method = document.querySelector('input[name="setup-method"]:checked').value;
             const clientName = document.getElementById('client-name').value;
             const email = document.getElementById('client-email').value;
             const dogName = document.getElementById('client-dog-name').value;
             const breed = document.getElementById('client-dog-breed').value;
             const age = document.getElementById('client-dog-age').value;
-            const username = document.getElementById('client-username').value;
-            const password = document.getElementById('client-password').value;
-            const autoGenPassword = document.getElementById('auto-generate-password').checked;
-            const sendEmail = document.getElementById('send-credentials-email').checked;
+
+            if (method === 'invite') {
+                // Send invite flow
+                try {
+                    const res = await fetch(`${API_BASE}/clients/invite`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({
+                            client_name: clientName,
+                            email,
+                            dog_name: dogName,
+                            breed: breed || null,
+                            age: age ? parseInt(age) : null
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        document.getElementById('invite-success-display').classList.remove('hidden');
+                        loadDashboard();
+                        setTimeout(() => { closeCreateClientModal(); }, 3000);
+                    } else {
+                        alert(data.error || 'Failed to send invite');
+                    }
+                } catch (error) {
+                    console.error('Invite error:', error);
+                    alert('Failed to send invite');
+                }
+            } else {
+                // Existing credentials flow
+                const username = document.getElementById('client-username').value;
+                const password = document.getElementById('client-password').value;
+                const autoGenPassword = document.getElementById('auto-generate-password').checked;
+                const sendEmail = document.getElementById('send-credentials-email').checked;
+
+                try {
+                    const res = await fetch(`${API_BASE}/clients/create-with-email`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({
+                            client_name: clientName,
+                            email,
+                            dog_name: dogName,
+                            breed: breed || null,
+                            age: age ? parseInt(age) : null,
+                            username: username || null,
+                            password: autoGenPassword ? null : password,
+                            auto_generate_password: autoGenPassword,
+                            send_email: sendEmail
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        document.getElementById('display-username').textContent = data.credentials.username;
+                        document.getElementById('display-password').textContent = data.credentials.password;
+                        document.getElementById('credentials-display').classList.remove('hidden');
+
+                        alert(`Client created successfully!${sendEmail ? ' Email sent.' : ''}`);
+                        loadDashboard();
+
+                        setTimeout(() => { closeCreateClientModal(); }, 3000);
+                    } else {
+                        alert(data.error || 'Failed to create client');
+                    }
+                } catch (error) {
+                    console.error('Create client error:', error);
+                    alert('Failed to create client');
+                }
+            }
+        });
+
+        // PASSWORD RESET FUNCTIONS
+        async function sendResetEmail(clientId) {
+            if (!confirm('Send a password reset email to this client?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/clients/reset-password`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ client_id: clientId, mode: 'email' })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Reset email sent successfully!');
+                } else {
+                    alert(data.error || 'Failed to send reset email');
+                }
+            } catch (error) {
+                console.error('Reset email error:', error);
+                alert('Failed to send reset email');
+            }
+        }
+
+        function showManualReset(clientId, clientName) {
+            document.getElementById('reset-client-id').value = clientId;
+            document.getElementById('reset-client-name').textContent = clientName;
+            document.getElementById('reset-new-password').value = '';
+            document.getElementById('manual-reset-modal').classList.remove('hidden');
+        }
+
+        function closeManualResetModal() {
+            document.getElementById('manual-reset-modal').classList.add('hidden');
+            document.getElementById('manual-reset-form').reset();
+        }
+
+        document.getElementById('manual-reset-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const clientId = document.getElementById('reset-client-id').value;
+            const newPassword = document.getElementById('reset-new-password').value;
+
+            if (newPassword.length < 8) {
+                alert('Password must be at least 8 characters');
+                return;
+            }
 
             try {
-                const res = await fetch(`${API_BASE}/clients/create-with-email`, {
+                const res = await fetch(`${API_BASE}/clients/reset-password`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ client_id: parseInt(clientId), mode: 'manual', new_password: newPassword })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Password updated successfully!');
+                    closeManualResetModal();
+                } else {
+                    alert(data.error || 'Failed to update password');
+                }
+            } catch (error) {
+                console.error('Manual reset error:', error);
+                alert('Failed to update password');
+            }
+        });
+
+        // RESEND INVITE
+        async function resendInvite(clientId) {
+            if (!confirm('Resend the invite email to this client?')) return;
+            try {
+                // Get client info first
+                const clientsRes = await fetch(`${API_BASE}/clients`, { headers: getAuthHeaders() });
+                const clientsData = await clientsRes.json();
+                const client = (clientsData.clients || []).find(c => c.id === clientId);
+                if (!client) { alert('Client not found'); return; }
+
+                const res = await fetch(`${API_BASE}/clients/invite`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
                     body: JSON.stringify({
-                        client_name: clientName,
-                        email,
-                        dog_name: dogName,
-                        breed: breed || null,
-                        age: age ? parseInt(age) : null,
-                        username: username || null,
-                        password: autoGenPassword ? null : password,
-                        auto_generate_password: autoGenPassword,
-                        send_email: sendEmail
+                        client_name: client.client_name,
+                        email: client.email,
+                        dog_name: client.dog_name,
+                        breed: client.breed || client.dog_breed || null,
+                        age: client.age || client.dog_age || null,
+                        resend_for_client_id: clientId
                     })
                 });
-
                 const data = await res.json();
-
                 if (res.ok) {
-                    // Show credentials
-                    document.getElementById('display-username').textContent = data.credentials.username;
-                    document.getElementById('display-password').textContent = data.credentials.password;
-                    document.getElementById('credentials-display').classList.remove('hidden');
-
-                    alert(`Client created successfully!${sendEmail ? ' Email sent.' : ''}`);
-                    loadDashboard();
-
-                    // Reset form after 3 seconds
-                    setTimeout(() => {
-                        closeCreateClientModal();
-                    }, 3000);
+                    alert('Invite resent successfully!');
                 } else {
-                    alert(data.error || 'Failed to create client');
+                    alert(data.error || 'Failed to resend invite');
                 }
             } catch (error) {
-                console.error('Create client error:', error);
-                alert('Failed to create client');
+                console.error('Resend invite error:', error);
+                alert('Failed to resend invite');
             }
-        });
+        }
 
         // SERVICES MANAGEMENT FUNCTIONS
         let servicesData = [];

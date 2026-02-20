@@ -1,3 +1,8 @@
 /login /portal.html 200
 /admin /admin-dashboard.html 200
 /client /client-dashboard.html 200
+/forgot-password /forgot-password.html 200
+/reset-password /reset-password.html 200
+/setup-account /setup-account.html 200
+/register /register.html 200
+/verify-email /verify-email.html 200
