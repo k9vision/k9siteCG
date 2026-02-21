@@ -1,7 +1,7 @@
 // POST /api/auth/self-register
 // Public endpoint: client self-registration with email verification
 import bcrypt from 'bcryptjs';
-import { createToken } from '../../utils/tokens.js';
+import { createToken, invalidateTokens } from '../../utils/tokens.js';
 import { sendEmail, verificationEmailHtml } from '../../utils/emails.js';
 
 export async function onRequestPost(context) {
@@ -33,46 +33,92 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Check if email is already in use by an active user or linked client
-    const emailInUse = await db.prepare(
-      `SELECT id FROM users WHERE email = ?
-       UNION
-       SELECT user_id AS id FROM clients WHERE email = ? AND user_id IS NOT NULL`
-    ).bind(email, email).first();
+    // Check if email is already in use by a fully active (verified) user
+    const activeUser = await db.prepare(
+      `SELECT u.id, u.status FROM users u WHERE u.email = ? AND u.status = 'active'`
+    ).bind(email).first();
 
-    if (emailInUse) {
+    if (activeUser) {
       return new Response(JSON.stringify({ error: 'An account with this email already exists' }), {
         status: 409,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Check username uniqueness
-    const existingUser = await db.prepare(
-      'SELECT id FROM users WHERE username = ?'
-    ).bind(username).first();
+    // Also check clients table for email linked to an active user
+    const activeClient = await db.prepare(
+      `SELECT c.user_id FROM clients c JOIN users u ON c.user_id = u.id WHERE c.email = ? AND u.status = 'active'`
+    ).bind(email).first();
 
-    if (existingUser) {
-      return new Response(JSON.stringify({ error: 'Username already taken' }), {
+    if (activeClient) {
+      return new Response(JSON.stringify({ error: 'An account with this email already exists' }), {
         status: 409,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Hash password
+    // Check if there's an incomplete (pending_verification) registration for this email
+    // If so, update it instead of creating a new one (handles retry after email failure)
+    const pendingUser = await db.prepare(
+      `SELECT id, username FROM users WHERE email = ? AND status = 'pending_verification'`
+    ).bind(email).first();
+
     const hashedPassword = await bcrypt.hash(password, 10);
+    let userId;
 
-    // Create user with pending_verification status
-    const userResult = await db.prepare(
-      `INSERT INTO users (username, password, role, status, email) VALUES (?, ?, 'client', 'pending_verification', ?)`
-    ).bind(username, hashedPassword, email).run();
+    if (pendingUser) {
+      // Check if the new username conflicts with a different user
+      const usernameConflict = await db.prepare(
+        'SELECT id FROM users WHERE username = ? AND id != ?'
+      ).bind(username, pendingUser.id).first();
 
-    const userId = userResult.meta.last_row_id;
+      if (usernameConflict) {
+        return new Response(JSON.stringify({ error: 'Username already taken' }), {
+          status: 409,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
 
-    // Create client profile
-    await db.prepare(
-      'INSERT INTO clients (user_id, client_name, email, dog_name, breed, age) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(userId, client_name, email, dog_name, breed || null, age || null).run();
+      userId = pendingUser.id;
+
+      // Update the existing pending user with new credentials
+      await db.prepare(
+        `UPDATE users SET username = ?, password = ? WHERE id = ?`
+      ).bind(username, hashedPassword, userId).run();
+
+      // Update client profile
+      await db.prepare(
+        `UPDATE clients SET client_name = ?, dog_name = ?, breed = ?, age = ? WHERE user_id = ?`
+      ).bind(client_name, dog_name, breed || null, age || null, userId).run();
+
+      // Invalidate any old verification tokens
+      await invalidateTokens(db, { type: 'email_verification', userId, email });
+
+    } else {
+      // New registration — check username uniqueness
+      const existingUser = await db.prepare(
+        'SELECT id FROM users WHERE username = ?'
+      ).bind(username).first();
+
+      if (existingUser) {
+        return new Response(JSON.stringify({ error: 'Username already taken' }), {
+          status: 409,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Create user with pending_verification status
+      const userResult = await db.prepare(
+        `INSERT INTO users (username, password, role, status, email) VALUES (?, ?, 'client', 'pending_verification', ?)`
+      ).bind(username, hashedPassword, email).run();
+
+      userId = userResult.meta.last_row_id;
+
+      // Create client profile
+      await db.prepare(
+        'INSERT INTO clients (user_id, client_name, email, dog_name, breed, age) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind(userId, client_name, email, dog_name, breed || null, age || null).run();
+    }
 
     // Create email_verification token (24h expiry)
     const token = await createToken(db, {
