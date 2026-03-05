@@ -11,9 +11,9 @@ export async function onRequestPost(context) {
       );
     }
 
-    const { clientId, content, title } = await context.request.json();
+    const { client_id, content, title } = await context.request.json();
 
-    if (!clientId || !content) {
+    if (!client_id || !content) {
       return new Response(
         JSON.stringify({ error: 'Client ID and content are required' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -24,7 +24,7 @@ export async function onRequestPost(context) {
       INSERT INTO notes (client_id, content, title)
       VALUES (?, ?, ?)
       RETURNING *
-    `).bind(parseInt(clientId), content, title || 'Note').first();
+    `).bind(parseInt(client_id), content, title || 'Note').first();
 
     return new Response(
       JSON.stringify({ success: true, note }),
