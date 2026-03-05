@@ -269,6 +269,47 @@
             </div>
         </div>
 
+        <!-- Client Detail Modal -->
+        <div id="client-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-2xl w-full border border-border-dark dark:border-border-light my-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold">Client Details</h3>
+                    <button onclick="closeClientDetailModal()" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl">&times;</button>
+                </div>
+
+                <!-- Client Info -->
+                <div class="mb-6 p-4 bg-background-dark dark:bg-gray-50 rounded-lg">
+                    <h4 class="font-bold text-lg mb-2" id="detail-client-name">—</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm text-gray-400 dark:text-gray-600">
+                        <p>Dog: <span id="detail-dog-name">—</span></p>
+                        <p>Breed: <span id="detail-dog-breed">—</span></p>
+                        <p>Age: <span id="detail-dog-age">—</span></p>
+                        <p>Email: <span id="detail-email">—</span></p>
+                    </div>
+                </div>
+
+                <!-- Media -->
+                <div class="mb-6">
+                    <h4 class="font-semibold text-lg mb-2">Media</h4>
+                    <div id="detail-media" class="grid grid-cols-3 gap-2"></div>
+                </div>
+
+                <!-- Notes -->
+                <div class="mb-6">
+                    <h4 class="font-semibold text-lg mb-2">Training Notes</h4>
+                    <div id="detail-notes" class="space-y-2"></div>
+                </div>
+
+                <!-- Fun Facts -->
+                <div class="mb-6">
+                    <h4 class="font-semibold text-lg mb-2">Fun Facts</h4>
+                    <div id="detail-fun-facts" class="space-y-2"></div>
+                </div>
+
+                <button onclick="closeClientDetailModal()" class="w-full bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Close</button>
+            </div>
+        </div>
+
         <!-- Services Section -->
         <div id="services-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
             <div class="flex justify-between items-center mb-4">
@@ -391,6 +432,7 @@
 
     <script>
         const API_BASE = '/api';
+        let allClients = [];
 
         function checkAuth() {
             const token = localStorage.getItem('token');
@@ -440,6 +482,7 @@
                 const res = await fetch(`${API_BASE}/clients`, { headers: getAuthHeaders() });
                 const data = await res.json();
                 const clients = data.clients || [];
+                allClients = clients;
 
                 const clientsList = document.getElementById('clients-list');
                 if (clients.length === 0) {
@@ -626,8 +669,82 @@
             }
         });
 
-        function viewClient(clientId) {
-            window.location.href = `/client-view.html?id=${clientId}`;
+        async function viewClient(clientId) {
+            const modal = document.getElementById('client-detail-modal');
+            modal.classList.remove('hidden');
+
+            // Populate client info from cached data
+            const client = allClients.find(c => c.id === clientId);
+            if (client) {
+                document.getElementById('detail-client-name').textContent = client.client_name || 'N/A';
+                document.getElementById('detail-dog-name').textContent = client.dog_name || 'N/A';
+                document.getElementById('detail-dog-breed').textContent = client.dog_breed || 'N/A';
+                document.getElementById('detail-dog-age').textContent = client.dog_age ? `${client.dog_age} years` : 'N/A';
+                document.getElementById('detail-email').textContent = client.email || 'N/A';
+            }
+
+            // Show loading state
+            document.getElementById('detail-media').innerHTML = '<p class="text-gray-400 dark:text-gray-600 col-span-3">Loading...</p>';
+            document.getElementById('detail-notes').innerHTML = '<p class="text-gray-400 dark:text-gray-600">Loading...</p>';
+            document.getElementById('detail-fun-facts').innerHTML = '<p class="text-gray-400 dark:text-gray-600">Loading...</p>';
+
+            try {
+                const headers = getAuthHeaders();
+                const [mediaRes, notesRes, factsRes] = await Promise.all([
+                    fetch(`${API_BASE}/media/client/${clientId}`, { headers }),
+                    fetch(`${API_BASE}/notes/client/${clientId}`, { headers }),
+                    fetch(`${API_BASE}/fun-facts/client/${clientId}`, { headers })
+                ]);
+
+                // Media
+                const mediaData = await mediaRes.json();
+                const media = mediaData.media || mediaData || [];
+                const mediaEl = document.getElementById('detail-media');
+                if (Array.isArray(media) && media.length > 0) {
+                    mediaEl.innerHTML = media.map(m => {
+                        if (m.type === 'photo') {
+                            return `<img src="${m.url}" alt="${m.filename}" class="rounded w-full h-24 object-cover">`;
+                        }
+                        return `<div class="bg-gray-700 dark:bg-gray-200 rounded p-2 text-xs text-center flex items-center justify-center"><span class="material-icons mr-1">videocam</span>${m.filename}</div>`;
+                    }).join('');
+                } else {
+                    mediaEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600 col-span-3">No media yet</p>';
+                }
+
+                // Notes
+                const notesData = await notesRes.json();
+                const notes = notesData.notes || notesData || [];
+                const notesEl = document.getElementById('detail-notes');
+                if (Array.isArray(notes) && notes.length > 0) {
+                    notesEl.innerHTML = notes.map(n =>
+                        `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded">
+                            <p class="font-semibold text-sm">${n.title}</p>
+                            <p class="text-sm text-gray-400 dark:text-gray-600">${n.content}</p>
+                            <p class="text-xs text-gray-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</p>
+                        </div>`
+                    ).join('');
+                } else {
+                    notesEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No notes yet</p>';
+                }
+
+                // Fun Facts
+                const factsData = await factsRes.json();
+                const facts = factsData.fun_facts || factsData || [];
+                const factsEl = document.getElementById('detail-fun-facts');
+                if (Array.isArray(facts) && facts.length > 0) {
+                    factsEl.innerHTML = facts.map(f =>
+                        `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded text-sm">${f.fact}</div>`
+                    ).join('');
+                } else {
+                    factsEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No fun facts yet</p>';
+                }
+            } catch (error) {
+                console.error('Error loading client details:', error);
+            }
+        }
+
+        function closeClientDetailModal() {
+            document.getElementById('client-detail-modal').classList.add('hidden');
         }
 
         // CREATE CLIENT FUNCTIONS

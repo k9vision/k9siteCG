@@ -253,6 +253,10 @@
 
                     // Load notes/conversation
                     loadNotes(client.id);
+                } else {
+                    document.getElementById('dog-name').textContent = 'Profile not set up yet';
+                    document.getElementById('dog-breed').textContent = '—';
+                    document.getElementById('dog-age').textContent = '—';
                 }
             } catch (error) {
                 console.error('Error loading client data:', error);
