@@ -296,21 +296,46 @@
 
         <!-- Client Detail Modal -->
         <div id="client-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-2xl w-full border border-border-dark dark:border-border-light my-8">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-3xl w-full border border-border-dark dark:border-border-light my-8">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-2xl font-bold">Client Details</h3>
                     <button onclick="closeClientDetailModal()" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl">&times;</button>
                 </div>
+                <input type="hidden" id="detail-client-id">
+                <input type="hidden" id="detail-user-id">
 
-                <!-- Client Info -->
+                <!-- Client Info (editable) -->
                 <div class="mb-6 p-4 bg-background-dark dark:bg-gray-50 rounded-lg">
-                    <h4 class="font-bold text-lg mb-2" id="detail-client-name">—</h4>
-                    <div class="grid grid-cols-2 gap-2 text-sm text-gray-400 dark:text-gray-600">
-                        <p>Dog: <span id="detail-dog-name">—</span></p>
-                        <p>Breed: <span id="detail-dog-breed">—</span></p>
-                        <p>Age: <span id="detail-dog-age">—</span></p>
-                        <p>Email: <span id="detail-email">—</span></p>
+                    <h4 class="font-bold text-lg mb-3" id="detail-client-name-display">—</h4>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <label class="text-gray-400 dark:text-gray-600 block mb-1">Email</label>
+                            <input type="email" id="detail-email" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="saveClientEmail()" class="bg-primary text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Save Email</button>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Dogs Section -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="font-semibold text-lg">Dogs</h4>
+                        <button onclick="toggleAddDogForm()" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-700">+ Add Dog</button>
+                    </div>
+                    <!-- Add Dog Form (hidden by default) -->
+                    <div id="add-dog-form-admin" class="hidden border border-dashed border-border-dark dark:border-border-light rounded p-3 mb-3">
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <input type="text" id="new-dog-name" placeholder="Dog name *" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                            <input type="text" id="new-dog-breed" placeholder="Breed" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="number" id="new-dog-age" placeholder="Age" min="0" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                            <button onclick="addDogAdmin()" class="bg-green-500 text-white px-3 py-1.5 rounded text-sm hover:bg-green-700">Add Dog</button>
+                        </div>
+                    </div>
+                    <div id="detail-dogs" class="space-y-2"></div>
                 </div>
 
                 <!-- Media -->
@@ -468,21 +493,29 @@
                 </div>
 
                 <!-- Invoice Header Info -->
-                <div class="grid md:grid-cols-3 gap-4 mb-6">
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div>
                         <p class="text-sm text-gray-400">Client</p>
                         <p class="font-semibold" id="detail-client-name"></p>
                         <p class="text-sm text-gray-400" id="detail-dog-name"></p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-400">Trainer</p>
-                        <p class="font-semibold" id="detail-trainer-name"></p>
+                        <label class="text-sm text-gray-400 block">Trainer</label>
+                        <input type="text" id="detail-trainer-name" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light mt-1">
                     </div>
                     <div>
-                        <p class="text-sm text-gray-400">Date</p>
-                        <p class="font-semibold" id="detail-invoice-date"></p>
-                        <p class="text-sm text-gray-400" id="detail-due-date"></p>
+                        <label class="text-sm text-gray-400 block">Date</label>
+                        <input type="date" id="detail-invoice-date" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light mt-1">
                     </div>
+                    <div>
+                        <label class="text-sm text-gray-400 block">Due Date</label>
+                        <input type="date" id="detail-due-date" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light mt-1">
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 mb-6">
+                    <label class="text-sm text-gray-400">Tax Rate (%):</label>
+                    <input type="number" step="0.01" id="detail-tax-rate-input" class="w-24 text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    <button onclick="saveInvoiceDetails()" class="bg-green-500 text-white px-4 py-1 rounded text-sm hover:bg-green-700">Save Changes</button>
                 </div>
 
                 <!-- Status -->
@@ -560,7 +593,8 @@
                     <button onclick="saveInvoiceNotes()" class="mt-2 bg-primary text-white px-4 py-1 rounded text-sm hover:bg-blue-700">Save Notes</button>
                 </div>
 
-                <div class="flex justify-end">
+                <div class="flex justify-between">
+                    <button onclick="deleteInvoice()" class="bg-red-600 text-white py-2 px-6 rounded hover:bg-red-800">Delete Invoice</button>
                     <button onclick="closeInvoiceDetailModal()" class="bg-gray-500 text-white py-2 px-6 rounded hover:bg-gray-700">Close</button>
                 </div>
             </div>
@@ -1003,71 +1037,118 @@
             }
         });
 
+        let currentDetailClientId = null;
+
         async function viewClient(clientId) {
+            currentDetailClientId = clientId;
             const modal = document.getElementById('client-detail-modal');
             modal.classList.remove('hidden');
 
             // Populate client info from cached data
             const client = allClients.find(c => c.id === clientId);
             if (client) {
-                document.getElementById('detail-client-name').textContent = client.client_name || 'N/A';
-                document.getElementById('detail-dog-name').textContent = client.dog_name || 'N/A';
-                document.getElementById('detail-dog-breed').textContent = client.dog_breed || 'N/A';
-                document.getElementById('detail-dog-age').textContent = client.dog_age ? `${client.dog_age} years` : 'N/A';
-                document.getElementById('detail-email').textContent = client.email || 'N/A';
+                document.getElementById('detail-client-id').value = clientId;
+                document.getElementById('detail-user-id').value = client.user_id || '';
+                document.getElementById('detail-client-name-display').textContent = client.client_name || 'N/A';
+                document.getElementById('detail-email').value = client.email || '';
             }
 
             // Show loading state
+            document.getElementById('detail-dogs').innerHTML = '<p class="text-gray-400 dark:text-gray-600">Loading...</p>';
             document.getElementById('detail-media').innerHTML = '<p class="text-gray-400 dark:text-gray-600 col-span-3">Loading...</p>';
             document.getElementById('detail-notes').innerHTML = '<p class="text-gray-400 dark:text-gray-600">Loading...</p>';
             document.getElementById('detail-fun-facts').innerHTML = '<p class="text-gray-400 dark:text-gray-600">Loading...</p>';
+            document.getElementById('add-dog-form-admin').classList.add('hidden');
 
             try {
                 const headers = getAuthHeaders();
-                const [mediaRes, notesRes, factsRes] = await Promise.all([
+                const [dogsRes, mediaRes, notesRes, factsRes] = await Promise.all([
+                    fetch(`${API_BASE}/dogs?client_id=${clientId}`, { headers }),
                     fetch(`${API_BASE}/media/client/${clientId}`, { headers }),
                     fetch(`${API_BASE}/notes/client/${clientId}`, { headers }),
                     fetch(`${API_BASE}/fun-facts/client/${clientId}`, { headers })
                 ]);
 
-                // Media
+                // Dogs
+                const dogsData = await dogsRes.json();
+                const dogs = dogsData.dogs || [];
+                const dogsEl = document.getElementById('detail-dogs');
+                if (dogs.length > 0) {
+                    dogsEl.innerHTML = dogs.map(d => `
+                        <div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start" id="dog-row-${d.id}">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-semibold">${d.dog_name}</span>
+                                    ${d.is_primary ? '<span class="text-xs bg-primary text-white px-2 py-0.5 rounded">Primary</span>' : ''}
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 text-sm" id="dog-display-${d.id}">
+                                    <span class="text-gray-400 dark:text-gray-600">Breed: ${d.breed || 'N/A'}</span>
+                                    <span class="text-gray-400 dark:text-gray-600">Age: ${d.age || 'N/A'}</span>
+                                </div>
+                                <div class="hidden grid grid-cols-3 gap-2 mt-1" id="dog-edit-${d.id}">
+                                    <input type="text" value="${d.dog_name || ''}" placeholder="Name" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-name-${d.id}">
+                                    <input type="text" value="${d.breed || ''}" placeholder="Breed" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-breed-${d.id}">
+                                    <input type="number" value="${d.age || ''}" placeholder="Age" min="0" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-age-${d.id}">
+                                </div>
+                            </div>
+                            <div class="flex gap-1 ml-2">
+                                <button onclick="toggleEditDog(${d.id})" class="text-primary hover:text-blue-300 text-xs" id="dog-edit-btn-${d.id}">Edit</button>
+                                <button onclick="saveDogEdit(${d.id})" class="hidden text-green-500 hover:text-green-300 text-xs" id="dog-save-btn-${d.id}">Save</button>
+                                <button onclick="deleteDog(${d.id})" class="text-red-500 hover:text-red-300 text-xs">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    dogsEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No dogs yet</p>';
+                }
+
+                // Media (with delete buttons)
                 const mediaData = await mediaRes.json();
                 const media = mediaData.media || mediaData || [];
                 const mediaEl = document.getElementById('detail-media');
                 if (Array.isArray(media) && media.length > 0) {
                     mediaEl.innerHTML = media.map(m => {
-                        if (m.type === 'photo') {
-                            return `<img src="${m.url}" alt="${m.filename}" class="rounded w-full h-24 object-cover">`;
-                        }
-                        return `<div class="bg-gray-700 dark:bg-gray-200 rounded p-2 text-xs text-center flex items-center justify-center"><span class="material-icons mr-1">videocam</span>${m.filename}</div>`;
+                        const preview = m.type === 'photo'
+                            ? `<img src="${m.url}" alt="${m.filename}" class="rounded w-full h-24 object-cover">`
+                            : `<div class="bg-gray-700 dark:bg-gray-200 rounded p-2 text-xs text-center flex items-center justify-center h-24"><span class="material-icons mr-1">videocam</span>${m.filename}</div>`;
+                        return `<div class="relative group">
+                            ${preview}
+                            <button onclick="deleteMedia(${m.id})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">&times;</button>
+                        </div>`;
                     }).join('');
                 } else {
                     mediaEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600 col-span-3">No media yet</p>';
                 }
 
-                // Notes
+                // Notes (with delete buttons)
                 const notesData = await notesRes.json();
                 const notes = notesData.notes || notesData || [];
                 const notesEl = document.getElementById('detail-notes');
                 if (Array.isArray(notes) && notes.length > 0) {
                     notesEl.innerHTML = notes.map(n =>
-                        `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded">
-                            <p class="font-semibold text-sm">${n.title}</p>
-                            <p class="text-sm text-gray-400 dark:text-gray-600">${n.content}</p>
-                            <p class="text-xs text-gray-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</p>
+                        `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start">
+                            <div class="flex-1">
+                                <p class="font-semibold text-sm">${n.title}</p>
+                                <p class="text-sm text-gray-400 dark:text-gray-600">${n.content}</p>
+                                <p class="text-xs text-gray-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</p>
+                            </div>
+                            <button onclick="deleteNote(${n.id})" class="text-red-500 hover:text-red-300 text-xs ml-2">Delete</button>
                         </div>`
                     ).join('');
                 } else {
                     notesEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No notes yet</p>';
                 }
 
-                // Fun Facts
+                // Fun Facts (with delete buttons)
                 const factsData = await factsRes.json();
                 const facts = factsData.fun_facts || factsData || [];
                 const factsEl = document.getElementById('detail-fun-facts');
                 if (Array.isArray(facts) && facts.length > 0) {
                     factsEl.innerHTML = facts.map(f =>
-                        `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded text-sm">${f.fact}</div>`
+                        `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded text-sm flex justify-between items-start">
+                            <span class="flex-1">${f.fact}</span>
+                            <button onclick="deleteFunFact(${f.id})" class="text-red-500 hover:text-red-300 text-xs ml-2">Delete</button>
+                        </div>`
                     ).join('');
                 } else {
                     factsEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No fun facts yet</p>';
@@ -1079,6 +1160,168 @@
 
         function closeClientDetailModal() {
             document.getElementById('client-detail-modal').classList.add('hidden');
+            currentDetailClientId = null;
+        }
+
+        // Save client email
+        async function saveClientEmail() {
+            const userId = document.getElementById('detail-user-id').value;
+            const email = document.getElementById('detail-email').value;
+            if (!userId) return;
+            try {
+                const res = await fetch(`${API_BASE}/clients/user/${userId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ email })
+                });
+                if (res.ok) {
+                    alert('Email updated!');
+                    showClients();
+                } else {
+                    alert('Failed to update email');
+                }
+            } catch (error) {
+                console.error('Save email error:', error);
+                alert('Failed to update email');
+            }
+        }
+
+        // Dog management in admin detail modal
+        function toggleAddDogForm() {
+            document.getElementById('add-dog-form-admin').classList.toggle('hidden');
+        }
+
+        async function addDogAdmin() {
+            const clientId = document.getElementById('detail-client-id').value;
+            const dog_name = document.getElementById('new-dog-name').value.trim();
+            const breed = document.getElementById('new-dog-breed').value.trim();
+            const age = parseInt(document.getElementById('new-dog-age').value) || null;
+            if (!dog_name) { alert('Dog name is required'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/dogs`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ client_id: parseInt(clientId), dog_name, breed, age })
+                });
+                if (res.ok) {
+                    document.getElementById('new-dog-name').value = '';
+                    document.getElementById('new-dog-breed').value = '';
+                    document.getElementById('new-dog-age').value = '';
+                    document.getElementById('add-dog-form-admin').classList.add('hidden');
+                    await viewClient(currentDetailClientId);
+                } else {
+                    alert('Failed to add dog');
+                }
+            } catch (error) {
+                console.error('Add dog error:', error);
+                alert('Failed to add dog');
+            }
+        }
+
+        function toggleEditDog(dogId) {
+            document.getElementById(`dog-display-${dogId}`).classList.toggle('hidden');
+            document.getElementById(`dog-edit-${dogId}`).classList.toggle('hidden');
+            document.getElementById(`dog-edit-btn-${dogId}`).classList.toggle('hidden');
+            document.getElementById(`dog-save-btn-${dogId}`).classList.toggle('hidden');
+        }
+
+        async function saveDogEdit(dogId) {
+            const dog_name = document.getElementById(`dog-edit-name-${dogId}`).value.trim();
+            const breed = document.getElementById(`dog-edit-breed-${dogId}`).value.trim();
+            const age = parseInt(document.getElementById(`dog-edit-age-${dogId}`).value) || null;
+            if (!dog_name) { alert('Dog name is required'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/dogs/${dogId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ dog_name, breed, age })
+                });
+                if (res.ok) {
+                    await viewClient(currentDetailClientId);
+                    showClients();
+                } else {
+                    alert('Failed to update dog');
+                }
+            } catch (error) {
+                console.error('Save dog error:', error);
+                alert('Failed to update dog');
+            }
+        }
+
+        async function deleteDog(dogId) {
+            if (!confirm('Delete this dog?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/dogs/${dogId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (res.ok) {
+                    await viewClient(currentDetailClientId);
+                    showClients();
+                } else {
+                    alert('Failed to delete dog');
+                }
+            } catch (error) {
+                console.error('Delete dog error:', error);
+                alert('Failed to delete dog');
+            }
+        }
+
+        // Delete media from detail modal
+        async function deleteMedia(mediaId) {
+            if (!confirm('Delete this media file?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/media/${mediaId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (res.ok) {
+                    await viewClient(currentDetailClientId);
+                } else {
+                    alert('Failed to delete media');
+                }
+            } catch (error) {
+                console.error('Delete media error:', error);
+                alert('Failed to delete media');
+            }
+        }
+
+        // Delete note from detail modal
+        async function deleteNote(noteId) {
+            if (!confirm('Delete this note?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/notes/${noteId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (res.ok) {
+                    await viewClient(currentDetailClientId);
+                } else {
+                    alert('Failed to delete note');
+                }
+            } catch (error) {
+                console.error('Delete note error:', error);
+                alert('Failed to delete note');
+            }
+        }
+
+        // Delete fun fact from detail modal
+        async function deleteFunFact(factId) {
+            if (!confirm('Delete this fun fact?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/fun-facts/${factId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (res.ok) {
+                    await viewClient(currentDetailClientId);
+                } else {
+                    alert('Failed to delete fun fact');
+                }
+            } catch (error) {
+                console.error('Delete fun fact error:', error);
+                alert('Failed to delete fun fact');
+            }
         }
 
         // CREATE CLIENT FUNCTIONS
@@ -1510,9 +1753,10 @@
                 document.getElementById('detail-invoice-title').textContent = `Invoice #${inv.invoice_number}`;
                 document.getElementById('detail-client-name').textContent = inv.client_name || '';
                 document.getElementById('detail-dog-name').textContent = inv.dog_name ? `Dog: ${inv.dog_name}` : '';
-                document.getElementById('detail-trainer-name').textContent = inv.trainer_name || '';
-                document.getElementById('detail-invoice-date').textContent = inv.date ? new Date(inv.date).toLocaleDateString() : '';
-                document.getElementById('detail-due-date').textContent = inv.due_date ? `Due: ${new Date(inv.due_date).toLocaleDateString()}` : '';
+                document.getElementById('detail-trainer-name').value = inv.trainer_name || '';
+                document.getElementById('detail-invoice-date').value = inv.date || '';
+                document.getElementById('detail-due-date').value = inv.due_date || '';
+                document.getElementById('detail-tax-rate-input').value = Number(inv.tax_rate || 0);
 
                 // Status
                 document.getElementById('detail-status').value = inv.status || 'pending';
@@ -1604,6 +1848,52 @@
             } catch (error) {
                 console.error('Save notes error:', error);
                 alert('Failed to save notes');
+            }
+        }
+
+        async function saveInvoiceDetails() {
+            if (!currentDetailInvoiceId) return;
+            const trainer_name = document.getElementById('detail-trainer-name').value;
+            const date = document.getElementById('detail-invoice-date').value;
+            const due_date = document.getElementById('detail-due-date').value;
+            const tax_rate = parseFloat(document.getElementById('detail-tax-rate-input').value) || 0;
+            try {
+                const res = await fetch(`${API_BASE}/invoices/${currentDetailInvoiceId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ trainer_name, date, due_date, tax_rate })
+                });
+                if (res.ok) {
+                    alert('Invoice details saved!');
+                    await viewInvoiceDetails(currentDetailInvoiceId);
+                    loadInvoices();
+                } else {
+                    alert('Failed to save invoice details');
+                }
+            } catch (error) {
+                console.error('Save details error:', error);
+                alert('Failed to save invoice details');
+            }
+        }
+
+        async function deleteInvoice() {
+            if (!currentDetailInvoiceId) return;
+            if (!confirm('Are you sure you want to delete this invoice? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`${API_BASE}/invoices/${currentDetailInvoiceId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (res.ok) {
+                    alert('Invoice deleted!');
+                    closeInvoiceDetailModal();
+                    loadInvoices();
+                } else {
+                    alert('Failed to delete invoice');
+                }
+            } catch (error) {
+                console.error('Delete invoice error:', error);
+                alert('Failed to delete invoice');
             }
         }
 
@@ -1847,7 +2137,8 @@
                         'client_media_upload': 'photo_camera',
                         'service_request': 'room_service',
                         'new_client_registration': 'person_add',
-                        'client_note': 'note'
+                        'client_note': 'note',
+                        'new_dog': 'pets'
                     };
                     notifList.innerHTML = notifs.map(n => `
                         <div class="p-3 hover:bg-background-dark dark:hover:bg-gray-50 cursor-pointer flex items-start gap-3 ${n.is_read ? 'opacity-60' : ''}" onclick="markNotifRead(${n.id})">

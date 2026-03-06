@@ -48,15 +48,41 @@
             </button>
         </div>
 
-        <!-- Dog Photo & Info Center -->
+        <!-- Dogs Section -->
         <div class="bg-card-dark dark:bg-card-light p-8 rounded-lg shadow mb-8 border border-border-dark dark:border-border-light">
-            <div class="flex flex-col items-center">
-                <div class="mb-6">
-                    <img id="dog-photo" src="https://images.unsplash.com/photo-1633722715463-d30f4f325e24?w=400&h=400&fit=crop" alt="Your Dog" class="w-64 h-64 rounded-full object-cover border-4 border-primary shadow-lg">
-                </div>
-                <h3 class="text-2xl font-bold mb-2" id="dog-name">Loading...</h3>
-                <p class="text-lg text-gray-400 dark:text-gray-600 mb-1"><strong>Breed:</strong> <span id="dog-breed">Loading...</span></p>
-                <p class="text-lg text-gray-400 dark:text-gray-600"><strong>Age:</strong> <span id="dog-age">Loading...</span> years</p>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">My Dogs</h3>
+                <button onclick="showAddDogModal()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center">
+                    <span class="material-icons mr-1">pets</span> Add Dog
+                </button>
+            </div>
+            <div id="dogs-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <p class="text-gray-400 dark:text-gray-600">Loading...</p>
+            </div>
+        </div>
+
+        <!-- Add Dog Modal -->
+        <div id="add-dog-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+                <h3 class="text-2xl font-bold mb-4">Add a New Dog</h3>
+                <form id="add-dog-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Dog Name *</label>
+                        <input type="text" id="add-dog-name" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Breed</label>
+                        <input type="text" id="add-dog-breed" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Age (years)</label>
+                        <input type="number" id="add-dog-age" min="0" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
+                    <div class="flex gap-4">
+                        <button type="submit" class="flex-1 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-700">Add Dog</button>
+                        <button type="button" onclick="closeAddDogModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -230,6 +256,28 @@
         </div>
     </div>
 
+    <!-- Photo Capture Modal -->
+    <div id="photo-capture-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg p-6 max-w-lg w-full border border-border-dark dark:border-border-light">
+            <h3 class="text-2xl font-bold mb-4">Take Photo</h3>
+            <video id="photo-preview" autoplay muted playsinline class="w-full rounded-lg bg-black mb-4" style="max-height: 360px; object-fit: contain;"></video>
+            <canvas id="photo-canvas" class="hidden"></canvas>
+            <img id="photo-snapshot" class="hidden w-full rounded-lg bg-black mb-4" style="max-height: 360px; object-fit: contain;">
+            <div class="flex gap-3 justify-center">
+                <button id="btn-capture-photo" onclick="capturePhoto()" class="bg-green-500 text-white px-5 py-2 rounded hover:bg-green-700 flex items-center gap-1">
+                    <span class="material-icons text-sm">camera_alt</span> Capture
+                </button>
+                <button id="btn-retake-photo" onclick="retakePhoto()" class="bg-yellow-500 text-white px-5 py-2 rounded hover:bg-yellow-700 flex items-center gap-1 hidden">
+                    <span class="material-icons text-sm">refresh</span> Retake
+                </button>
+                <button id="btn-upload-photo" onclick="uploadCapturedPhoto()" class="bg-green-500 text-white px-5 py-2 rounded hover:bg-green-700 flex items-center gap-1 hidden">
+                    <span class="material-icons text-sm">cloud_upload</span> Upload
+                </button>
+                <button onclick="closePhotoCapture()" class="bg-gray-500 text-white px-5 py-2 rounded hover:bg-gray-700">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Video Recording Modal -->
     <div id="video-record-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-card-dark dark:bg-card-light rounded-lg p-6 max-w-lg w-full border border-border-dark dark:border-border-light">
@@ -331,6 +379,8 @@
             }
         }
 
+        let currentClientId = null;
+
         async function loadClientData() {
             if (!checkAuth()) return;
 
@@ -345,17 +395,14 @@
                 const client = data.client || data;
 
                 if (client && client.id) {
+                    currentClientId = client.id;
+
+                    // Load dogs from dogs table
+                    loadDogs(client.id);
+
+                    // Update fun facts title with primary dog name
                     const dogName = client.dog_name || 'Your Dog';
-                    document.getElementById('dog-name').textContent = dogName;
-                    document.getElementById('dog-breed').textContent = client.dog_breed || 'N/A';
-                    document.getElementById('dog-age').textContent = client.dog_age || 'N/A';
-
-                    // Update fun facts title with dog name
                     document.getElementById('fun-facts-title').textContent = `Fun Dog Facts about ${dogName}`;
-
-                    if (client.dog_image) {
-                        document.getElementById('dog-photo').src = client.dog_image;
-                    }
 
                     // Load fun facts
                     loadFunFacts(client.id);
@@ -366,13 +413,54 @@
                     // Load notes/conversation
                     loadNotes(client.id);
                 } else {
-                    document.getElementById('dog-name').textContent = 'Profile not set up yet';
-                    document.getElementById('dog-breed').textContent = '—';
-                    document.getElementById('dog-age').textContent = '—';
+                    document.getElementById('dogs-list').innerHTML = '<p class="text-gray-400 dark:text-gray-600">Profile not set up yet</p>';
                 }
             } catch (error) {
                 console.error('Error loading client data:', error);
             }
+        }
+
+        async function loadDogs(clientId) {
+            try {
+                const res = await fetch(`${API_BASE}/dogs?client_id=${clientId}`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const dogs = data.dogs || [];
+                const dogsList = document.getElementById('dogs-list');
+
+                if (dogs.length > 0) {
+                    dogsList.innerHTML = dogs.map(d => `
+                        <div class="bg-background-dark dark:bg-gray-50 rounded-lg p-4 text-center">
+                            <div class="w-20 h-20 mx-auto mb-3 rounded-full bg-primary flex items-center justify-center">
+                                <span class="material-icons text-4xl text-white">pets</span>
+                            </div>
+                            <h4 class="text-lg font-bold">${d.dog_name}</h4>
+                            <p class="text-sm text-gray-400 dark:text-gray-600">${d.breed || 'Breed unknown'}</p>
+                            <p class="text-sm text-gray-400 dark:text-gray-600">${d.age ? d.age + ' years old' : ''}</p>
+                            ${d.is_primary ? '<span class="inline-block mt-1 text-xs bg-primary text-white px-2 py-0.5 rounded">Primary</span>' : ''}
+                        </div>
+                    `).join('');
+
+                    // Update fun facts title with primary dog name
+                    const primaryDog = dogs.find(d => d.is_primary) || dogs[0];
+                    if (primaryDog) {
+                        document.getElementById('fun-facts-title').textContent = `Fun Dog Facts about ${primaryDog.dog_name}`;
+                    }
+                } else {
+                    dogsList.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No dogs added yet. Click "Add Dog" to get started!</p>';
+                }
+            } catch (error) {
+                console.error('Error loading dogs:', error);
+                document.getElementById('dogs-list').innerHTML = '<p class="text-gray-400 dark:text-gray-600">Failed to load dogs</p>';
+            }
+        }
+
+        function showAddDogModal() {
+            document.getElementById('add-dog-modal').classList.remove('hidden');
+        }
+
+        function closeAddDogModal() {
+            document.getElementById('add-dog-modal').classList.add('hidden');
+            document.getElementById('add-dog-form').reset();
         }
 
         async function loadMedia(clientId) {
@@ -459,6 +547,38 @@
             document.getElementById('request-service-modal').classList.add('hidden');
             document.getElementById('request-service-form').reset();
         }
+
+        // Add Dog form submission
+        document.getElementById('add-dog-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentClientId) { alert('Client profile not loaded'); return; }
+
+            const dog_name = document.getElementById('add-dog-name').value.trim();
+            const breed = document.getElementById('add-dog-breed').value.trim();
+            const age = parseInt(document.getElementById('add-dog-age').value) || null;
+
+            if (!dog_name) { alert('Dog name is required'); return; }
+
+            try {
+                const res = await fetch(`${API_BASE}/dogs`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ client_id: currentClientId, dog_name, breed, age })
+                });
+
+                if (res.ok) {
+                    alert('Dog added successfully! Your trainer has been notified.');
+                    closeAddDogModal();
+                    loadDogs(currentClientId);
+                } else {
+                    const data = await res.json();
+                    alert(data.error || 'Failed to add dog');
+                }
+            } catch (error) {
+                console.error('Add dog error:', error);
+                alert('Failed to add dog');
+            }
+        });
 
         document.getElementById('add-note-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -801,13 +921,94 @@
         }
 
         // CAMERA CAPTURE FUNCTIONS
+        let photoStream = null;
+        let photoBlobData = null;
+
         function takePhoto() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.capture = 'environment';
-            input.onchange = (e) => uploadCapturedFile(e.target.files[0]);
-            input.click();
+            document.getElementById('photo-capture-modal').classList.remove('hidden');
+            document.getElementById('btn-capture-photo').classList.remove('hidden');
+            document.getElementById('btn-retake-photo').classList.add('hidden');
+            document.getElementById('btn-upload-photo').classList.add('hidden');
+            document.getElementById('photo-snapshot').classList.add('hidden');
+            document.getElementById('photo-preview').classList.remove('hidden');
+            photoBlobData = null;
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    photoStream = stream;
+                    const preview = document.getElementById('photo-preview');
+                    preview.srcObject = stream;
+                    preview.play();
+                })
+                .catch(err => {
+                    console.error('Camera access denied:', err);
+                    alert('Could not access camera. Please allow camera permissions and try again.');
+                    closePhotoCapture();
+                });
+        }
+
+        function capturePhoto() {
+            const preview = document.getElementById('photo-preview');
+            const canvas = document.getElementById('photo-canvas');
+            const snapshot = document.getElementById('photo-snapshot');
+
+            canvas.width = preview.videoWidth;
+            canvas.height = preview.videoHeight;
+            canvas.getContext('2d').drawImage(preview, 0, 0);
+
+            if (photoStream) photoStream.getTracks().forEach(t => t.stop());
+
+            canvas.toBlob(blob => {
+                photoBlobData = blob;
+                snapshot.src = URL.createObjectURL(blob);
+                snapshot.classList.remove('hidden');
+                preview.classList.add('hidden');
+                document.getElementById('btn-capture-photo').classList.add('hidden');
+                document.getElementById('btn-retake-photo').classList.remove('hidden');
+                document.getElementById('btn-upload-photo').classList.remove('hidden');
+            }, 'image/jpeg', 0.9);
+        }
+
+        function retakePhoto() {
+            document.getElementById('photo-snapshot').classList.add('hidden');
+            document.getElementById('photo-preview').classList.remove('hidden');
+            document.getElementById('btn-capture-photo').classList.remove('hidden');
+            document.getElementById('btn-retake-photo').classList.add('hidden');
+            document.getElementById('btn-upload-photo').classList.add('hidden');
+            photoBlobData = null;
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    photoStream = stream;
+                    const preview = document.getElementById('photo-preview');
+                    preview.srcObject = stream;
+                    preview.play();
+                })
+                .catch(err => {
+                    console.error('Camera access denied:', err);
+                    alert('Could not access camera.');
+                    closePhotoCapture();
+                });
+        }
+
+        async function uploadCapturedPhoto() {
+            if (!photoBlobData) return alert('No photo captured.');
+            const file = new File([photoBlobData], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            document.getElementById('btn-upload-photo').disabled = true;
+            document.getElementById('btn-upload-photo').textContent = 'Uploading...';
+            await uploadCapturedFile(file);
+            closePhotoCapture();
+        }
+
+        function closePhotoCapture() {
+            if (photoStream) { photoStream.getTracks().forEach(t => t.stop()); photoStream = null; }
+            const preview = document.getElementById('photo-preview');
+            preview.srcObject = null;
+            document.getElementById('photo-snapshot').src = '';
+            document.getElementById('photo-capture-modal').classList.add('hidden');
+            document.getElementById('btn-upload-photo').disabled = false;
+            document.getElementById('btn-upload-photo').textContent = '';
+            document.getElementById('btn-upload-photo').innerHTML = '<span class="material-icons text-sm">cloud_upload</span> Upload';
         }
 
         let mediaStream = null;

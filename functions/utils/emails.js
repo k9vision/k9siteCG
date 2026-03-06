@@ -120,6 +120,25 @@ export function appointmentBookedNotificationHtml(clientName, dogName, date, tim
   `);
 }
 
+// Admin notification: client added a new dog
+export function newDogNotificationHtml(clientName, dogName, breed, age) {
+  return emailWrapper(`
+    <h2 style="color: #3B82F6; margin-bottom: 20px;">New Dog Added</h2>
+    <p><strong>${clientName}</strong> has added a new dog to their profile.</p>
+    <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 5px 0;"><strong>Dog Name:</strong> ${dogName}</p>
+      ${breed ? `<p style="margin: 5px 0;"><strong>Breed:</strong> ${breed}</p>` : ''}
+      ${age ? `<p style="margin: 5px 0;"><strong>Age:</strong> ${age} years</p>` : ''}
+    </div>
+    <p>Log in to your admin dashboard to view the updated client profile.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/admin-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View in Dashboard
+      </a>
+    </div>
+  `);
+}
+
 // Password reset email
 export function resetEmailHtml(resetUrl, adminTriggered = false) {
   const intro = adminTriggered

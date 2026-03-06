@@ -28,7 +28,7 @@ export async function onRequest(context) {
           clients.client_name,
           clients.email as client_email,
           clients.dog_name,
-          clients.dog_breed
+          clients.breed as dog_breed
         FROM invoices
         JOIN clients ON invoices.client_id = clients.id
         WHERE invoices.id = ?
@@ -58,8 +58,7 @@ export async function onRequest(context) {
     }
 
     if (request.method === 'PUT') {
-      // Update invoice status or notes
-      const { status, notes } = await request.json();
+      const { status, notes, new_items, trainer_name, date, due_date, tax_rate } = await request.json();
 
       if (status) {
         await env.DB.prepare(
@@ -73,22 +72,84 @@ export async function onRequest(context) {
         ).bind(notes, invoiceId).run();
       }
 
-      // Get updated invoice
+      if (trainer_name !== undefined) {
+        await env.DB.prepare(
+          'UPDATE invoices SET trainer_name = ? WHERE id = ?'
+        ).bind(trainer_name, invoiceId).run();
+      }
+
+      if (date !== undefined) {
+        await env.DB.prepare(
+          'UPDATE invoices SET date = ? WHERE id = ?'
+        ).bind(date, invoiceId).run();
+      }
+
+      if (due_date !== undefined) {
+        await env.DB.prepare(
+          'UPDATE invoices SET due_date = ? WHERE id = ?'
+        ).bind(due_date, invoiceId).run();
+      }
+
+      if (tax_rate !== undefined) {
+        // Update tax_rate and recalculate tax_amount and total from current subtotal
+        const current = await env.DB.prepare(
+          'SELECT subtotal FROM invoices WHERE id = ?'
+        ).bind(invoiceId).first();
+        const subtotal = current.subtotal || 0;
+        const taxAmount = subtotal * (tax_rate / 100);
+        const total = subtotal + taxAmount;
+        await env.DB.prepare(
+          'UPDATE invoices SET tax_rate = ?, tax_amount = ?, total = ? WHERE id = ?'
+        ).bind(tax_rate, taxAmount, total, invoiceId).run();
+      }
+
+      // Add new line items and recalculate totals
+      if (new_items && new_items.length > 0) {
+        for (const item of new_items) {
+          const itemTotal = item.quantity * item.price;
+          await env.DB.prepare(
+            'INSERT INTO invoice_items (invoice_id, service_id, service_name, quantity, price, total) VALUES (?, ?, ?, ?, ?, ?)'
+          ).bind(invoiceId, item.service_id || null, item.service_name, item.quantity, item.price, itemTotal).run();
+        }
+
+        // Recalculate invoice totals
+        const allItems = await env.DB.prepare(
+          'SELECT SUM(total) as subtotal FROM invoice_items WHERE invoice_id = ?'
+        ).bind(invoiceId).first();
+
+        const currentInvoice = await env.DB.prepare(
+          'SELECT tax_rate FROM invoices WHERE id = ?'
+        ).bind(invoiceId).first();
+
+        const subtotal = allItems.subtotal || 0;
+        const taxAmount = subtotal * (currentInvoice.tax_rate / 100);
+        const total = subtotal + taxAmount;
+
+        await env.DB.prepare(
+          'UPDATE invoices SET subtotal = ?, tax_amount = ?, total = ? WHERE id = ?'
+        ).bind(subtotal, taxAmount, total, invoiceId).run();
+      }
+
+      // Get updated invoice with items
       const invoice = await env.DB.prepare(`
         SELECT
           invoices.*,
           clients.client_name,
           clients.email as client_email,
           clients.dog_name,
-          clients.dog_breed
+          clients.breed as dog_breed
         FROM invoices
         JOIN clients ON invoices.client_id = clients.id
         WHERE invoices.id = ?
       `).bind(invoiceId).first();
 
+      const items = await env.DB.prepare(
+        'SELECT * FROM invoice_items WHERE invoice_id = ?'
+      ).bind(invoiceId).all();
+
       return new Response(JSON.stringify({
         success: true,
-        invoice
+        invoice: { ...invoice, items: items.results }
       }), {
         headers: { 'Content-Type': 'application/json' }
       });
