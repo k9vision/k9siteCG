@@ -1384,6 +1384,53 @@
             }
         }
 
+        // Notes polling - auto-refresh every 10s while tab is visible
+        let currentClientIdForNotes = null;
+        let notesPollingInterval = null;
+        let lastNotesCount = null;
+
+        const _originalLoadNotes = loadNotes;
+        loadNotes = async function(clientId) {
+            currentClientIdForNotes = clientId;
+            await _originalLoadNotes(clientId);
+        };
+
+        async function pollNotes() {
+            if (!currentClientIdForNotes) return;
+            try {
+                const res = await fetch(`${API_BASE}/notes/client/${currentClientIdForNotes}`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                const newCount = (data.notes || []).length;
+                if (lastNotesCount !== null && newCount === lastNotesCount) return;
+                lastNotesCount = newCount;
+                await _originalLoadNotes(currentClientIdForNotes);
+            } catch (e) { /* silent */ }
+        }
+
+        function startNotesPolling() {
+            if (notesPollingInterval) return;
+            notesPollingInterval = setInterval(pollNotes, 10000);
+        }
+
+        function stopNotesPolling() {
+            if (notesPollingInterval) {
+                clearInterval(notesPollingInterval);
+                notesPollingInterval = null;
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopNotesPolling();
+            } else {
+                startNotesPolling();
+            }
+        });
+
+        startNotesPolling();
+
         loadClientData();
         loadMyAppointments();
         loadInvoices();

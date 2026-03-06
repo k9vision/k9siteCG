@@ -1170,14 +1170,78 @@
                 } else {
                     factsEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No fun facts yet</p>';
                 }
+                startAdminNotesPolling();
             } catch (error) {
                 console.error('Error loading client details:', error);
             }
         }
 
+        // Notes polling for client detail view
+        let adminNotesPollingInterval = null;
+        let adminLastNotesCount = null;
+
+        async function refreshClientNotes(clientId) {
+            try {
+                const res = await fetch(`${API_BASE}/notes/client/${clientId}`, {
+                    headers: getAuthHeaders()
+                });
+                const notesData = await res.json();
+                const notes = notesData.notes || notesData || [];
+                const newCount = Array.isArray(notes) ? notes.length : 0;
+                if (adminLastNotesCount !== null && newCount === adminLastNotesCount) return;
+                adminLastNotesCount = newCount;
+                const notesEl = document.getElementById('detail-notes');
+                if (Array.isArray(notes) && notes.length > 0) {
+                    notesEl.innerHTML = notes.map(n => {
+                        const isClient = n.author_role === 'client';
+                        const roleLabel = isClient ? 'Client' : 'Trainer';
+                        const roleColor = isClient ? 'text-green-400' : 'text-blue-400';
+                        const borderColor = isClient ? 'border-l-4 border-green-500' : 'border-l-4 border-blue-500';
+                        return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start ${borderColor}">
+                            <div class="flex-1">
+                                <span class="text-xs font-bold ${roleColor}">${roleLabel}</span>
+                                <p class="font-semibold text-sm">${n.title}</p>
+                                <p class="text-sm text-gray-400 dark:text-gray-600">${n.content}</p>
+                                <p class="text-xs text-gray-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</p>
+                            </div>
+                            <button onclick="deleteNote(${n.id})" class="text-red-500 hover:text-red-300 text-xs ml-2">Delete</button>
+                        </div>`;
+                    }).join('');
+                } else {
+                    notesEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No notes yet</p>';
+                }
+            } catch (e) { /* silent */ }
+        }
+
+        function startAdminNotesPolling() {
+            stopAdminNotesPolling();
+            adminLastNotesCount = null;
+            if (currentDetailClientId) {
+                adminNotesPollingInterval = setInterval(() => {
+                    if (currentDetailClientId) refreshClientNotes(currentDetailClientId);
+                }, 10000);
+            }
+        }
+
+        function stopAdminNotesPolling() {
+            if (adminNotesPollingInterval) {
+                clearInterval(adminNotesPollingInterval);
+                adminNotesPollingInterval = null;
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopAdminNotesPolling();
+            } else if (currentDetailClientId) {
+                startAdminNotesPolling();
+            }
+        });
+
         function closeClientDetailModal() {
             document.getElementById('client-detail-modal').classList.add('hidden');
             currentDetailClientId = null;
+            stopAdminNotesPolling();
         }
 
         // Save client email
