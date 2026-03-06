@@ -6,6 +6,7 @@
     "build": "echo 'No build needed - static site'"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "pdf-lib": "^1.17.1"
   }
 }

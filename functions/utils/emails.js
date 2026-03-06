@@ -1,17 +1,27 @@
 // Centralized email sending and HTML templates
 
 const SITE_URL = 'https://k9visiontx.com';
-const FROM_EMAIL = 'trainercg@k9visiontx.com';
+const FROM_EMAIL = 'K9 Vision <trainercg@k9visiontx.com>';
 
 // Send an email via Resend API
-export async function sendEmail(env, { to, subject, html }) {
+// attachments: optional array of { filename, content (base64 string) }
+export async function sendEmail(env, { to, subject, html, attachments }) {
+  if (!to || !to.includes('@')) {
+    throw new Error('Invalid or missing recipient email address');
+  }
+
+  const payload = { from: FROM_EMAIL, to, subject, html };
+  if (attachments && attachments.length > 0) {
+    payload.attachments = attachments;
+  }
+
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${env.RESEND_API_KEY}`
     },
-    body: JSON.stringify({ from: FROM_EMAIL, to, subject, html })
+    body: JSON.stringify(payload)
   });
 
   if (!res.ok) {
@@ -136,6 +146,71 @@ export function newDogNotificationHtml(clientName, dogName, breed, age) {
         View in Dashboard
       </a>
     </div>
+  `);
+}
+
+// Invoice email: professional invoice sent to client
+export function invoiceEmailHtml(invoice, items) {
+  const itemsHTML = items.map(item => `
+    <tr>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;">${item.service_name}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.price.toFixed(2)}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.total.toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  return emailWrapper(`
+    <h2 style="color: #3B82F6; margin-bottom: 20px;">Invoice #${invoice.invoice_number}</h2>
+    <p>Hello ${invoice.client_name},</p>
+    <p>Thank you so much for trusting me with ${invoice.dog_name}'s training journey. It's truly a privilege to work with you both, and I'm grateful for every session we share together.</p>
+    <p>Please find the details of your invoice below:</p>
+
+    <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 5px 0;"><strong>Invoice #:</strong> ${invoice.invoice_number}</p>
+      <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(invoice.date).toLocaleDateString()}</p>
+      ${invoice.due_date ? `<p style="margin: 5px 0;"><strong>Due Date:</strong> ${new Date(invoice.due_date).toLocaleDateString()}</p>` : ''}
+      <p style="margin: 5px 0;"><strong>Trainer:</strong> ${invoice.trainer_name}</p>
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <p style="margin: 5px 0;"><strong>Bill To:</strong> ${invoice.client_name}</p>
+      <p style="margin: 5px 0;"><strong>Dog:</strong> ${invoice.dog_name}${invoice.dog_breed ? ` (${invoice.dog_breed})` : ''}</p>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+      <thead>
+        <tr style="background: #f3f4f6;">
+          <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Service</th>
+          <th style="padding: 10px 12px; text-align: center; border-bottom: 2px solid #e5e7eb;">Qty</th>
+          <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Price</th>
+          <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHTML}
+      </tbody>
+    </table>
+
+    <div style="text-align: right; margin-bottom: 20px;">
+      <p style="margin: 6px 0; font-size: 15px;"><strong>Subtotal:</strong> $${invoice.subtotal.toFixed(2)}</p>
+      <p style="margin: 6px 0; font-size: 15px;"><strong>Tax (${invoice.tax_rate}%):</strong> $${invoice.tax_amount.toFixed(2)}</p>
+      <p style="margin: 6px 0; font-size: 20px; color: #3B82F6;"><strong>Total: $${invoice.total.toFixed(2)}</strong></p>
+    </div>
+
+    ${invoice.notes ? `
+      <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 0;"><strong>Notes:</strong></p>
+        <p style="margin: 8px 0 0 0;">${invoice.notes}</p>
+      </div>
+    ` : ''}
+
+    <div style="background: #eff6ff; border-left: 4px solid #3B82F6; padding: 12px 15px; margin-bottom: 20px;">
+      <p style="margin: 0; font-size: 14px;">A PDF copy of this invoice is attached for your records.</p>
+    </div>
+
+    <p>Thank you again for being part of the K9 Vision family. I truly appreciate you!</p>
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>
   `);
 }
 
