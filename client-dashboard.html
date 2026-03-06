@@ -230,6 +230,27 @@
         </div>
     </div>
 
+    <!-- Video Recording Modal -->
+    <div id="video-record-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg p-6 max-w-lg w-full border border-border-dark dark:border-border-light">
+            <h3 class="text-2xl font-bold mb-4">Record Video</h3>
+            <video id="video-preview" autoplay muted playsinline class="w-full rounded-lg bg-black mb-4" style="max-height: 360px; object-fit: contain;"></video>
+            <div id="video-timer" class="text-center text-lg font-mono mb-3 hidden">00:00</div>
+            <div class="flex gap-3 justify-center">
+                <button id="btn-start-record" onclick="startRecording()" class="bg-red-500 text-white px-5 py-2 rounded hover:bg-red-700 flex items-center gap-1">
+                    <span class="material-icons text-sm">fiber_manual_record</span> Start Recording
+                </button>
+                <button id="btn-stop-record" onclick="stopRecording()" class="bg-yellow-500 text-white px-5 py-2 rounded hover:bg-yellow-700 flex items-center gap-1 hidden">
+                    <span class="material-icons text-sm">stop</span> Stop
+                </button>
+                <button id="btn-upload-record" onclick="uploadRecordedVideo()" class="bg-green-500 text-white px-5 py-2 rounded hover:bg-green-700 flex items-center gap-1 hidden">
+                    <span class="material-icons text-sm">cloud_upload</span> Upload
+                </button>
+                <button onclick="closeVideoRecorder()" class="bg-gray-500 text-white px-5 py-2 rounded hover:bg-gray-700">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Upload Media Modal -->
     <div id="upload-media-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
@@ -789,13 +810,93 @@
             input.click();
         }
 
+        let mediaStream = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordTimer = null;
+        let recordSeconds = 0;
+
         function takeVideo() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'video/*';
-            input.capture = 'environment';
-            input.onchange = (e) => uploadCapturedFile(e.target.files[0]);
-            input.click();
+            document.getElementById('video-record-modal').classList.remove('hidden');
+            document.getElementById('btn-start-record').classList.remove('hidden');
+            document.getElementById('btn-stop-record').classList.add('hidden');
+            document.getElementById('btn-upload-record').classList.add('hidden');
+            document.getElementById('video-timer').classList.add('hidden');
+            recordedChunks = [];
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true })
+                .then(stream => {
+                    mediaStream = stream;
+                    const preview = document.getElementById('video-preview');
+                    preview.srcObject = stream;
+                    preview.muted = true;
+                    preview.play();
+                })
+                .catch(err => {
+                    console.error('Camera access denied:', err);
+                    alert('Could not access camera. Please allow camera permissions and try again.');
+                    closeVideoRecorder();
+                });
+        }
+
+        function startRecording() {
+            recordedChunks = [];
+            recordSeconds = 0;
+            const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus'
+                : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm'
+                : 'video/mp4';
+            mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
+            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+            mediaRecorder.onstop = () => {
+                clearInterval(recordTimer);
+                const preview = document.getElementById('video-preview');
+                const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+                preview.srcObject = null;
+                preview.src = URL.createObjectURL(blob);
+                preview.muted = false;
+                preview.controls = true;
+                preview.play();
+            };
+            mediaRecorder.start(1000);
+
+            document.getElementById('btn-start-record').classList.add('hidden');
+            document.getElementById('btn-stop-record').classList.remove('hidden');
+            document.getElementById('video-timer').classList.remove('hidden');
+            recordTimer = setInterval(() => {
+                recordSeconds++;
+                const m = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
+                const s = String(recordSeconds % 60).padStart(2, '0');
+                document.getElementById('video-timer').textContent = `${m}:${s}`;
+            }, 1000);
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+            document.getElementById('btn-stop-record').classList.add('hidden');
+            document.getElementById('btn-upload-record').classList.remove('hidden');
+        }
+
+        function closeVideoRecorder() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+            clearInterval(recordTimer);
+            const preview = document.getElementById('video-preview');
+            preview.srcObject = null;
+            preview.src = '';
+            preview.controls = false;
+            document.getElementById('video-record-modal').classList.add('hidden');
+        }
+
+        async function uploadRecordedVideo() {
+            if (recordedChunks.length === 0) return alert('No video recorded.');
+            const ext = mediaRecorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
+            const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+            const file = new File([blob], `recording_${Date.now()}.${ext}`, { type: mediaRecorder.mimeType });
+            document.getElementById('btn-upload-record').disabled = true;
+            document.getElementById('btn-upload-record').textContent = 'Uploading...';
+            await uploadCapturedFile(file);
+            closeVideoRecorder();
         }
 
         async function uploadCapturedFile(file) {
