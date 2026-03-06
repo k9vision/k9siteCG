@@ -107,9 +107,14 @@
             </div>
         </div>
 
+        <div id="sections-container">
+
         <!-- Clients List -->
         <div id="clients-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
-            <h3 class="text-2xl font-bold mb-4">All Clients</h3>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">All Clients</h3>
+                <button onclick="hideSection('clients-section')" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none px-2" title="Close">&times;</button>
+            </div>
             <div id="clients-list" class="space-y-4"></div>
         </div>
 
@@ -334,7 +339,10 @@
         <div id="services-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-2xl font-bold">Manage Services</h3>
-                <button onclick="showAddService()" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-700">+ Add Service</button>
+                <div class="flex items-center gap-2">
+                    <button onclick="showAddService()" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-700">+ Add Service</button>
+                    <button onclick="hideSection('services-section')" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none px-2" title="Close">&times;</button>
+                </div>
             </div>
             <div id="services-list" class="space-y-3"></div>
         </div>
@@ -373,7 +381,10 @@
 
         <!-- Invoices Section -->
         <div id="invoices-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
-            <h3 class="text-2xl font-bold mb-4">All Invoices</h3>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">All Invoices</h3>
+                <button onclick="hideSection('invoices-section')" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none px-2" title="Close">&times;</button>
+            </div>
             <div id="invoices-list" class="space-y-3"></div>
         </div>
 
@@ -448,14 +459,122 @@
                 </form>
             </div>
         </div>
+        <!-- Invoice Detail Modal -->
+        <div id="invoice-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-4xl w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-2xl font-bold" id="detail-invoice-title">Invoice Details</h3>
+                    <button onclick="closeInvoiceDetailModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                </div>
+
+                <!-- Invoice Header Info -->
+                <div class="grid md:grid-cols-3 gap-4 mb-6">
+                    <div>
+                        <p class="text-sm text-gray-400">Client</p>
+                        <p class="font-semibold" id="detail-client-name"></p>
+                        <p class="text-sm text-gray-400" id="detail-dog-name"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">Trainer</p>
+                        <p class="font-semibold" id="detail-trainer-name"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">Date</p>
+                        <p class="font-semibold" id="detail-invoice-date"></p>
+                        <p class="text-sm text-gray-400" id="detail-due-date"></p>
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div class="flex items-center gap-3 mb-6">
+                    <label class="text-sm font-medium">Status:</label>
+                    <select id="detail-status" class="rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm">
+                        <option value="pending">Pending</option>
+                        <option value="paid">Paid</option>
+                        <option value="overdue">Overdue</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <button onclick="saveInvoiceStatus()" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Save Status</button>
+                </div>
+
+                <!-- Line Items Table -->
+                <div class="border-t border-border-dark dark:border-border-light pt-4 mb-4">
+                    <h4 class="text-lg font-semibold mb-3">Line Items</h4>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-border-dark dark:border-border-light">
+                                <th class="text-left py-2">Service</th>
+                                <th class="text-right py-2">Qty</th>
+                                <th class="text-right py-2">Price</th>
+                                <th class="text-right py-2">Total</th>
+                                <th class="text-right py-2">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detail-items-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Add Item Row -->
+                <div class="border border-dashed border-border-dark dark:border-border-light rounded p-3 mb-4">
+                    <h5 class="text-sm font-medium mb-2">Add New Item</h5>
+                    <div class="grid grid-cols-5 gap-2 items-end">
+                        <div class="col-span-2">
+                            <select id="detail-new-service" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="updateDetailNewItemPrice()">
+                                <option value="">Select service...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <input type="number" id="detail-new-qty" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="1" min="1" placeholder="Qty">
+                        </div>
+                        <div>
+                            <input type="number" step="0.01" id="detail-new-price" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" placeholder="Price">
+                        </div>
+                        <div>
+                            <button onclick="addDetailInvoiceItem()" class="w-full bg-green-500 text-white px-2 py-1.5 rounded text-sm hover:bg-green-700">+ Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Totals -->
+                <div class="flex justify-end mb-6">
+                    <div class="w-64 space-y-2">
+                        <div class="flex justify-between">
+                            <span>Subtotal:</span>
+                            <span id="detail-subtotal">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Tax (<span id="detail-tax-rate">0</span>%):</span>
+                            <span id="detail-tax">$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-xl font-bold">
+                            <span>Total:</span>
+                            <span id="detail-total">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="border-t border-border-dark dark:border-border-light pt-4 mb-4">
+                    <label class="block text-sm font-medium mb-2">Notes</label>
+                    <textarea id="detail-notes" rows="3" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" placeholder="Invoice notes..."></textarea>
+                    <button onclick="saveInvoiceNotes()" class="mt-2 bg-primary text-white px-4 py-1 rounded text-sm hover:bg-blue-700">Save Notes</button>
+                </div>
+
+                <div class="flex justify-end">
+                    <button onclick="closeInvoiceDetailModal()" class="bg-gray-500 text-white py-2 px-6 rounded hover:bg-gray-700">Close</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Schedule Section -->
         <div id="schedule-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-2xl font-bold">Schedule Management</h3>
-                <div class="flex gap-2">
+                <div class="flex items-center gap-2">
                     <button onclick="openBulkAvailabilityModal()" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">+ Add Hours</button>
                     <button onclick="openBulkBlockModal()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 text-sm">Block Date</button>
                     <button onclick="clearAllAvailability()" class="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-900 text-sm">Clear All</button>
+                    <button onclick="hideSection('schedule-section')" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none px-2" title="Close">&times;</button>
                 </div>
             </div>
 
@@ -534,6 +653,8 @@
                 </div>
             </div>
         </div>
+
+        </div> <!-- /sections-container -->
 
         <!-- Bulk Availability Modal -->
         <div id="bulk-availability-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -631,6 +752,17 @@
         const API_BASE = '/api';
         let allClients = [];
 
+        function showSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const container = document.getElementById('sections-container');
+            section.classList.remove('hidden');
+            container.prepend(section);
+        }
+
+        function hideSection(sectionId) {
+            document.getElementById(sectionId).classList.add('hidden');
+        }
+
         function checkAuth() {
             const token = localStorage.getItem('token');
             const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -717,7 +849,7 @@
                     }).join('');
                 }
 
-                document.getElementById('clients-section').classList.remove('hidden');
+                showSection('clients-section');
             } catch (error) {
                 console.error('Error loading clients:', error);
                 alert('Failed to load clients');
@@ -1186,7 +1318,7 @@
 
         async function showServices() {
             await loadServices();
-            document.getElementById('services-section').classList.remove('hidden');
+            showSection('services-section');
         }
 
         async function loadServices() {
@@ -1302,7 +1434,7 @@
 
         async function showInvoices() {
             await loadInvoices();
-            document.getElementById('invoices-section').classList.remove('hidden');
+            showSection('invoices-section');
         }
 
         async function loadInvoices() {
@@ -1359,19 +1491,179 @@
             }
         }
 
+        let currentDetailInvoiceId = null;
+
         async function viewInvoiceDetails(invoiceId) {
+            currentDetailInvoiceId = invoiceId;
             try {
                 const res = await fetch(`${API_BASE}/invoices/${invoiceId}`, { headers: getAuthHeaders() });
                 const data = await res.json();
 
-                if (res.ok) {
-                    const inv = data.invoice;
-                    alert(`Invoice #${inv.invoice_number}\\n\\nClient: ${inv.client_name}\\nDog: ${inv.dog_name}\\nTrainer: ${inv.trainer_name}\\n\\nSubtotal: $${inv.subtotal.toFixed(2)}\\nTax: $${inv.tax_amount.toFixed(2)}\\nTotal: $${inv.total.toFixed(2)}\\n\\nStatus: ${inv.status}\\n\\nItems:\\n${inv.items.map(item => `- ${item.service_name} x${item.quantity} @ $${item.price} = $${item.total}`).join('\\n')}`);
-                } else {
+                if (!res.ok) {
                     alert('Failed to load invoice details');
+                    return;
                 }
+
+                const inv = data.invoice;
+
+                // Populate header
+                document.getElementById('detail-invoice-title').textContent = `Invoice #${inv.invoice_number}`;
+                document.getElementById('detail-client-name').textContent = inv.client_name || '';
+                document.getElementById('detail-dog-name').textContent = inv.dog_name ? `Dog: ${inv.dog_name}` : '';
+                document.getElementById('detail-trainer-name').textContent = inv.trainer_name || '';
+                document.getElementById('detail-invoice-date').textContent = inv.date ? new Date(inv.date).toLocaleDateString() : '';
+                document.getElementById('detail-due-date').textContent = inv.due_date ? `Due: ${new Date(inv.due_date).toLocaleDateString()}` : '';
+
+                // Status
+                document.getElementById('detail-status').value = inv.status || 'pending';
+
+                // Line items
+                const tbody = document.getElementById('detail-items-body');
+                tbody.innerHTML = (inv.items || []).map(item => `
+                    <tr class="border-b border-border-dark dark:border-border-light">
+                        <td class="py-2">${item.service_name}</td>
+                        <td class="text-right py-2">${item.quantity}</td>
+                        <td class="text-right py-2">$${Number(item.price).toFixed(2)}</td>
+                        <td class="text-right py-2">$${Number(item.total).toFixed(2)}</td>
+                        <td class="text-right py-2">
+                            <button onclick="deleteInvoiceItem(${item.id})" class="text-red-500 hover:text-red-700 text-xs">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Totals
+                document.getElementById('detail-subtotal').textContent = `$${Number(inv.subtotal).toFixed(2)}`;
+                document.getElementById('detail-tax-rate').textContent = Number(inv.tax_rate).toFixed(2);
+                document.getElementById('detail-tax').textContent = `$${Number(inv.tax_amount).toFixed(2)}`;
+                document.getElementById('detail-total').textContent = `$${Number(inv.total).toFixed(2)}`;
+
+                // Notes
+                document.getElementById('detail-notes').value = inv.notes || '';
+
+                // Populate service dropdown for adding items
+                await loadServices();
+                const serviceSelect = document.getElementById('detail-new-service');
+                serviceSelect.innerHTML = '<option value="">Select service...</option>' +
+                    servicesData.map(s => `<option value="${s.id}" data-price="${s.price}" data-name="${s.name}">${s.name} ($${s.price})</option>`).join('');
+
+                document.getElementById('invoice-detail-modal').classList.remove('hidden');
             } catch (error) {
                 console.error('Invoice details error:', error);
+                alert('Failed to load invoice details');
+            }
+        }
+
+        function closeInvoiceDetailModal() {
+            document.getElementById('invoice-detail-modal').classList.add('hidden');
+            currentDetailInvoiceId = null;
+        }
+
+        function updateDetailNewItemPrice() {
+            const select = document.getElementById('detail-new-service');
+            const opt = select.options[select.selectedIndex];
+            if (opt && opt.dataset.price) {
+                document.getElementById('detail-new-price').value = opt.dataset.price;
+            }
+        }
+
+        async function saveInvoiceStatus() {
+            if (!currentDetailInvoiceId) return;
+            const status = document.getElementById('detail-status').value;
+            try {
+                const res = await fetch(`${API_BASE}/invoices/${currentDetailInvoiceId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ status })
+                });
+                if (res.ok) {
+                    alert('Status updated!');
+                    loadInvoices();
+                } else {
+                    alert('Failed to update status');
+                }
+            } catch (error) {
+                console.error('Save status error:', error);
+                alert('Failed to update status');
+            }
+        }
+
+        async function saveInvoiceNotes() {
+            if (!currentDetailInvoiceId) return;
+            const notes = document.getElementById('detail-notes').value;
+            try {
+                const res = await fetch(`${API_BASE}/invoices/${currentDetailInvoiceId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ notes })
+                });
+                if (res.ok) {
+                    alert('Notes saved!');
+                } else {
+                    alert('Failed to save notes');
+                }
+            } catch (error) {
+                console.error('Save notes error:', error);
+                alert('Failed to save notes');
+            }
+        }
+
+        async function addDetailInvoiceItem() {
+            if (!currentDetailInvoiceId) return;
+            const serviceSelect = document.getElementById('detail-new-service');
+            const opt = serviceSelect.options[serviceSelect.selectedIndex];
+            const serviceId = serviceSelect.value;
+            const serviceName = opt ? opt.dataset.name : '';
+            const quantity = parseInt(document.getElementById('detail-new-qty').value) || 0;
+            const price = parseFloat(document.getElementById('detail-new-price').value) || 0;
+
+            if (!serviceId || !quantity || !price) {
+                alert('Please select a service and enter quantity/price');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/invoices/${currentDetailInvoiceId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        new_items: [{ service_id: serviceId, service_name: serviceName, quantity, price }]
+                    })
+                });
+
+                if (res.ok) {
+                    // Reset add-item fields
+                    serviceSelect.value = '';
+                    document.getElementById('detail-new-qty').value = '1';
+                    document.getElementById('detail-new-price').value = '';
+                    // Refresh the modal and invoice list
+                    await viewInvoiceDetails(currentDetailInvoiceId);
+                    loadInvoices();
+                } else {
+                    alert('Failed to add item');
+                }
+            } catch (error) {
+                console.error('Add item error:', error);
+                alert('Failed to add item');
+            }
+        }
+
+        async function deleteInvoiceItem(itemId) {
+            if (!confirm('Delete this line item?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/invoices/items/${itemId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+
+                if (res.ok) {
+                    await viewInvoiceDetails(currentDetailInvoiceId);
+                    loadInvoices();
+                } else {
+                    alert('Failed to delete item');
+                }
+            } catch (error) {
+                console.error('Delete item error:', error);
+                alert('Failed to delete item');
             }
         }
 
@@ -1635,7 +1927,7 @@
         let cachedAppointments = [];
 
         async function showSchedule() {
-            document.getElementById('schedule-section').classList.remove('hidden');
+            showSection('schedule-section');
             const now = new Date();
             calendarYear = now.getFullYear();
             calendarMonth = now.getMonth();
