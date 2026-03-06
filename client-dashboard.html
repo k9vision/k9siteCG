@@ -41,7 +41,7 @@
 
     <div class="container mx-auto p-8">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-3xl font-bold">Welcome to Your Training Portal!</h2>
+            <h2 class="text-3xl font-bold" id="welcome-heading">Welcome to Your Training Portal!</h2>
             <button onclick="showRequestService()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center">
                 <span class="material-icons mr-2">add_circle</span>
                 Request Additional Service
@@ -444,6 +444,11 @@
 
                 if (client && client.id) {
                     currentClientId = client.id;
+
+                    // Show client name in welcome heading
+                    if (client.client_name) {
+                        document.getElementById('welcome-heading').textContent = `Welcome, ${client.client_name}!`;
+                    }
 
                     // Load dogs from dogs table
                     loadDogs(client.id);

@@ -821,16 +821,25 @@
             };
         }
 
+        function handleAuthError(res) {
+            if (res.status === 401 || res.status === 403) {
+                alert('Session expired. Please log in again.');
+                window.location.href = '/portal.html';
+                return true;
+            }
+            return false;
+        }
+
         async function loadDashboard() {
             if (!checkAuth()) return;
 
             try {
-                const [clientsRes, mediaRes, notesRes] = await Promise.all([
-                    fetch(`${API_BASE}/clients`, { headers: getAuthHeaders() }),
-                    fetch(`${API_BASE}/media`, { headers: getAuthHeaders() }),
-                    fetch(`${API_BASE}/notes`, { headers: getAuthHeaders() })
-                ]);
-
+                const clientsRes = await fetch(`${API_BASE}/clients`, { headers: getAuthHeaders() });
+                if (handleAuthError(clientsRes)) return;
+                if (!clientsRes.ok) {
+                    console.error('Failed to load clients:', clientsRes.status);
+                    return;
+                }
                 const clientsData = await clientsRes.json();
                 const clients = clientsData.clients || [];
                 document.getElementById('client-count').textContent = clients.length || 0;
@@ -844,6 +853,11 @@
         async function showClients() {
             try {
                 const res = await fetch(`${API_BASE}/clients`, { headers: getAuthHeaders() });
+                if (handleAuthError(res)) return;
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || `Server error: ${res.status}`);
+                }
                 const data = await res.json();
                 const clients = data.clients || [];
                 allClients = clients;
@@ -869,10 +883,9 @@
                             <div class="flex justify-between items-start">
                                 <div>
                                     <h4 class="font-bold text-lg">${client.dog_name || 'Unknown'}${statusBadge}</h4>
-                                    <p class="text-gray-400 dark:text-gray-600">Owner: ${client.client_name || 'N/A'}</p>
+                                    <p class="text-gray-400 dark:text-gray-600">Client: ${client.client_name || 'N/A'}${client.username ? ` (${client.username})` : ''}</p>
                                     <p class="text-gray-400 dark:text-gray-600">Breed: ${client.dog_breed || 'N/A'}</p>
                                     <p class="text-gray-400 dark:text-gray-600">Age: ${client.dog_age || 'N/A'} years</p>
-                                    ${client.username ? `<p class="text-gray-400 dark:text-gray-600 text-sm">Login: ${client.username}</p>` : ''}
                                 </div>
                                 <div class="flex gap-2 flex-wrap justify-end">
                                     <button onclick="viewClient(${client.id})" class="bg-primary text-white px-4 py-1 rounded text-sm">View Details</button>
