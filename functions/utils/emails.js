@@ -214,6 +214,24 @@ export function invoiceEmailHtml(invoice, items) {
   `);
 }
 
+// Admin notification: client sent a note/message
+export function clientNoteNotificationHtml(clientName, dogName, noteTitle, noteContent) {
+  return emailWrapper(`
+    <h2 style="color: #3B82F6; margin-bottom: 20px;">New Client Message</h2>
+    <p><strong>${clientName}</strong>${dogName ? ` (${dogName}'s owner)` : ''} sent you a message.</p>
+    <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 0 0 8px 0;"><strong>Subject:</strong> ${noteTitle}</p>
+      <p style="margin: 0; white-space: pre-wrap;">${noteContent}</p>
+    </div>
+    <p>Log in to your admin dashboard to view and reply.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/admin-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View in Dashboard
+      </a>
+    </div>
+  `);
+}
+
 // Password reset email
 export function resetEmailHtml(resetUrl, adminTriggered = false) {
   const intro = adminTriggered

@@ -278,6 +278,54 @@
         </div>
     </div>
 
+    <!-- Dog Photo Source Selection Modal -->
+    <div id="dog-photo-options-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg p-6 max-w-sm w-full border border-border-dark dark:border-border-light">
+            <h3 class="text-xl font-bold mb-4 text-center">Update Dog Photo</h3>
+            <div class="space-y-3">
+                <button onclick="dogPhotoFromFile()" class="w-full flex items-center gap-3 p-3 rounded-lg bg-background-dark dark:bg-gray-50 hover:bg-gray-700 dark:hover:bg-gray-200 transition">
+                    <span class="material-icons text-primary">photo_library</span>
+                    <span>Upload from Gallery</span>
+                </button>
+                <button onclick="dogPhotoFromCamera('environment')" class="w-full flex items-center gap-3 p-3 rounded-lg bg-background-dark dark:bg-gray-50 hover:bg-gray-700 dark:hover:bg-gray-200 transition">
+                    <span class="material-icons text-primary">camera_rear</span>
+                    <span>Use Rear Camera</span>
+                </button>
+                <button onclick="dogPhotoFromCamera('user')" class="w-full flex items-center gap-3 p-3 rounded-lg bg-background-dark dark:bg-gray-50 hover:bg-gray-700 dark:hover:bg-gray-200 transition">
+                    <span class="material-icons text-primary">camera_front</span>
+                    <span>Use Front Camera</span>
+                </button>
+            </div>
+            <button onclick="closeDogPhotoOptions()" class="mt-4 w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600">Cancel</button>
+        </div>
+    </div>
+    <input type="file" id="dog-photo-file-input" accept="image/*" class="hidden">
+
+    <!-- Dog Photo Camera Modal -->
+    <div id="dog-photo-camera-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg p-6 max-w-lg w-full border border-border-dark dark:border-border-light">
+            <h3 class="text-2xl font-bold mb-4">Take Dog Photo</h3>
+            <video id="dog-photo-preview" autoplay muted playsinline class="w-full rounded-lg bg-black mb-4" style="max-height: 360px; object-fit: contain;"></video>
+            <canvas id="dog-photo-canvas" class="hidden"></canvas>
+            <img id="dog-photo-snapshot" class="hidden w-full rounded-lg bg-black mb-4" style="max-height: 360px; object-fit: contain;">
+            <div class="flex gap-3 justify-center flex-wrap">
+                <button id="btn-dog-switch-camera" onclick="switchDogCamera()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-1">
+                    <span class="material-icons text-sm">flip_camera_ios</span> Switch Camera
+                </button>
+                <button id="btn-dog-capture" onclick="captureDogPhoto()" class="bg-green-500 text-white px-5 py-2 rounded hover:bg-green-700 flex items-center gap-1">
+                    <span class="material-icons text-sm">camera_alt</span> Capture
+                </button>
+                <button id="btn-dog-retake" onclick="retakeDogPhoto()" class="bg-yellow-500 text-white px-5 py-2 rounded hover:bg-yellow-700 flex items-center gap-1 hidden">
+                    <span class="material-icons text-sm">refresh</span> Retake
+                </button>
+                <button id="btn-dog-use-photo" onclick="useDogPhoto()" class="bg-green-500 text-white px-5 py-2 rounded hover:bg-green-700 flex items-center gap-1 hidden">
+                    <span class="material-icons text-sm">check</span> Use Photo
+                </button>
+                <button onclick="closeDogPhotoCamera()" class="bg-gray-500 text-white px-5 py-2 rounded hover:bg-gray-700">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Video Recording Modal -->
     <div id="video-record-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-card-dark dark:bg-card-light rounded-lg p-6 max-w-lg w-full border border-border-dark dark:border-border-light">
@@ -435,10 +483,9 @@
                                     ? `<img src="${d.photo_url}" alt="${d.dog_name}" class="w-20 h-20 rounded-full object-cover">`
                                     : `<div class="w-20 h-20 rounded-full bg-primary flex items-center justify-center"><span class="material-icons text-4xl text-white">pets</span></div>`
                                 }
-                                <label class="absolute bottom-0 right-0 w-7 h-7 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 shadow-lg">
+                                <button onclick="openDogPhotoOptions(${d.id})" class="absolute bottom-0 right-0 w-7 h-7 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 shadow-lg border-0">
                                     <span class="material-icons text-white text-sm">photo_camera</span>
-                                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="uploadDogPhoto(${d.id}, this)">
-                                </label>
+                                </button>
                             </div>
                             <h4 class="text-lg font-bold">${d.dog_name}</h4>
                             <p class="text-sm text-gray-400 dark:text-gray-600">${d.breed || 'Breed unknown'}</p>
@@ -494,6 +541,151 @@
                 console.error('Photo upload error:', err);
                 alert('Failed to upload photo');
             }
+        }
+
+        // DOG PROFILE PHOTO OPTIONS
+        let dogPhotoTargetId = null;
+        let dogPhotoStream = null;
+        let dogPhotoBlobData = null;
+        let dogPhotoFacingMode = 'environment';
+
+        function openDogPhotoOptions(dogId) {
+            dogPhotoTargetId = dogId;
+            document.getElementById('dog-photo-options-modal').classList.remove('hidden');
+        }
+
+        function closeDogPhotoOptions() {
+            document.getElementById('dog-photo-options-modal').classList.remove('hidden');
+            document.getElementById('dog-photo-options-modal').classList.add('hidden');
+        }
+
+        function dogPhotoFromFile() {
+            closeDogPhotoOptions();
+            const input = document.getElementById('dog-photo-file-input');
+            input.onchange = function() {
+                if (input.files[0]) {
+                    uploadDogPhoto(dogPhotoTargetId, input);
+                }
+            };
+            input.click();
+        }
+
+        function dogPhotoFromCamera(facingMode) {
+            closeDogPhotoOptions();
+            dogPhotoFacingMode = facingMode;
+            dogPhotoBlobData = null;
+            const modal = document.getElementById('dog-photo-camera-modal');
+            modal.classList.remove('hidden');
+            document.getElementById('btn-dog-capture').classList.remove('hidden');
+            document.getElementById('btn-dog-switch-camera').classList.remove('hidden');
+            document.getElementById('btn-dog-retake').classList.add('hidden');
+            document.getElementById('btn-dog-use-photo').classList.add('hidden');
+            document.getElementById('dog-photo-snapshot').classList.add('hidden');
+            document.getElementById('dog-photo-preview').classList.remove('hidden');
+
+            startDogCameraStream(facingMode);
+        }
+
+        function startDogCameraStream(facingMode) {
+            if (dogPhotoStream) dogPhotoStream.getTracks().forEach(t => t.stop());
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode } })
+                .then(stream => {
+                    dogPhotoStream = stream;
+                    const preview = document.getElementById('dog-photo-preview');
+                    preview.srcObject = stream;
+                    preview.play();
+                })
+                .catch(err => {
+                    console.error('Camera access denied:', err);
+                    alert('Could not access camera. Please allow camera permissions and try again.');
+                    closeDogPhotoCamera();
+                });
+        }
+
+        function switchDogCamera() {
+            dogPhotoFacingMode = dogPhotoFacingMode === 'environment' ? 'user' : 'environment';
+            startDogCameraStream(dogPhotoFacingMode);
+        }
+
+        function captureDogPhoto() {
+            const preview = document.getElementById('dog-photo-preview');
+            const canvas = document.getElementById('dog-photo-canvas');
+            const snapshot = document.getElementById('dog-photo-snapshot');
+
+            canvas.width = preview.videoWidth;
+            canvas.height = preview.videoHeight;
+            canvas.getContext('2d').drawImage(preview, 0, 0);
+
+            if (dogPhotoStream) dogPhotoStream.getTracks().forEach(t => t.stop());
+
+            canvas.toBlob(blob => {
+                dogPhotoBlobData = blob;
+                snapshot.src = URL.createObjectURL(blob);
+                snapshot.classList.remove('hidden');
+                preview.classList.add('hidden');
+                document.getElementById('btn-dog-capture').classList.add('hidden');
+                document.getElementById('btn-dog-switch-camera').classList.add('hidden');
+                document.getElementById('btn-dog-retake').classList.remove('hidden');
+                document.getElementById('btn-dog-use-photo').classList.remove('hidden');
+            }, 'image/jpeg', 0.9);
+        }
+
+        function retakeDogPhoto() {
+            document.getElementById('dog-photo-snapshot').classList.add('hidden');
+            document.getElementById('dog-photo-preview').classList.remove('hidden');
+            document.getElementById('btn-dog-capture').classList.remove('hidden');
+            document.getElementById('btn-dog-switch-camera').classList.remove('hidden');
+            document.getElementById('btn-dog-retake').classList.add('hidden');
+            document.getElementById('btn-dog-use-photo').classList.add('hidden');
+            dogPhotoBlobData = null;
+            startDogCameraStream(dogPhotoFacingMode);
+        }
+
+        async function useDogPhoto() {
+            if (!dogPhotoBlobData) return alert('No photo captured.');
+            document.getElementById('btn-dog-use-photo').disabled = true;
+            document.getElementById('btn-dog-use-photo').textContent = 'Uploading...';
+            try {
+                await uploadDogPhotoBlob(dogPhotoTargetId, dogPhotoBlobData);
+            } finally {
+                closeDogPhotoCamera();
+            }
+        }
+
+        async function uploadDogPhotoBlob(dogId, blob) {
+            const file = new File([blob], `dog_photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(`${API_BASE}/dogs/${dogId}/photo`, {
+                    method: 'POST',
+                    headers: { 'Authorization': getAuthHeaders()['Authorization'] },
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const clientId = JSON.parse(atob(localStorage.getItem('token').split('.')[1])).id;
+                    const clientRes = await fetch(`${API_BASE}/clients/user/${clientId}`, { headers: getAuthHeaders() });
+                    const clientData = await clientRes.json();
+                    if (clientData.client) loadDogs(clientData.client.id);
+                } else {
+                    alert(data.error || 'Failed to upload photo');
+                }
+            } catch (err) {
+                console.error('Photo upload error:', err);
+                alert('Failed to upload photo');
+            }
+        }
+
+        function closeDogPhotoCamera() {
+            if (dogPhotoStream) { dogPhotoStream.getTracks().forEach(t => t.stop()); dogPhotoStream = null; }
+            const preview = document.getElementById('dog-photo-preview');
+            preview.srcObject = null;
+            document.getElementById('dog-photo-snapshot').src = '';
+            document.getElementById('dog-photo-camera-modal').classList.add('hidden');
+            const useBtn = document.getElementById('btn-dog-use-photo');
+            useBtn.disabled = false;
+            useBtn.innerHTML = '<span class="material-icons text-sm">check</span> Use Photo';
         }
 
         async function loadMedia(clientId) {

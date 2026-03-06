@@ -1,5 +1,7 @@
 // Create a note for a client (admin or client)
 import { requireAuth } from '../../utils/auth.js';
+import { createNotification } from '../../utils/notify.js';
+import { sendEmail, clientNoteNotificationHtml } from '../../utils/emails.js';
 
 export async function onRequestPost(context) {
   try {
@@ -41,6 +43,37 @@ export async function onRequestPost(context) {
       VALUES (?, ?, ?, ?)
       RETURNING *
     `).bind(parseInt(client_id), content, title || 'Note', author_role).first();
+
+    // Notify admin when a client sends a note
+    if (author_role === 'client') {
+      try {
+        const clientInfo = await context.env.DB.prepare(
+          'SELECT client_name, dog_name FROM clients WHERE id = ?'
+        ).bind(parseInt(client_id)).first();
+
+        const clientName = clientInfo?.client_name || 'A client';
+        const dogName = clientInfo?.dog_name || '';
+        const noteTitle = title || 'Note';
+        const truncatedContent = content.length > 200 ? content.substring(0, 200) + '...' : content;
+
+        await createNotification(context.env.DB, {
+          type: 'client_note',
+          title: `New Message from ${clientName}`,
+          message: truncatedContent,
+          client_id: parseInt(client_id),
+          reference_id: note.id,
+          reference_type: 'note'
+        });
+
+        await sendEmail(context.env, {
+          to: 'trainercg@k9visiontx.com',
+          subject: `New Message from ${clientName}`,
+          html: clientNoteNotificationHtml(clientName, dogName, noteTitle, truncatedContent)
+        });
+      } catch (notifyErr) {
+        console.error('Notification/email error (note still saved):', notifyErr);
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true, note }),
