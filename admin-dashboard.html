@@ -35,7 +35,24 @@
     <nav class="bg-card-dark dark:bg-card-light border-b border-border-dark dark:border-border-light">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
             <h1 class="text-2xl font-bold text-text-dark dark:text-text-light">K9 Vision - Admin</h1>
-            <button onclick="logout()" class="bg-red-500 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors">Logout</button>
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <button onclick="toggleNotifications()" class="relative text-gray-300 hover:text-white dark:text-gray-600 dark:hover:text-gray-900 transition-colors">
+                        <span class="material-icons text-3xl">notifications</span>
+                        <span id="notif-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
+                    </button>
+                    <div id="notif-panel" class="hidden absolute right-0 top-12 w-96 bg-card-dark dark:bg-card-light border border-border-dark dark:border-border-light rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                        <div class="flex justify-between items-center p-4 border-b border-border-dark dark:border-border-light">
+                            <h4 class="font-bold">Notifications</h4>
+                            <button onclick="markAllNotificationsRead()" class="text-xs text-primary hover:underline">Mark all read</button>
+                        </div>
+                        <div id="notif-list" class="divide-y divide-border-dark dark:divide-border-light">
+                            <p class="p-4 text-gray-400 dark:text-gray-600 text-sm">No notifications</p>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="logout()" class="bg-red-500 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors">Logout</button>
+            </div>
         </div>
     </nav>
 
@@ -83,6 +100,9 @@
                 </button>
                 <button onclick="showCreateInvoice()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-3 px-6 rounded transition-colors">
                     🧾 Create Invoice
+                </button>
+                <button onclick="showSchedule()" class="bg-teal-500 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                    📅 Manage Schedule
                 </button>
             </div>
         </div>
@@ -428,6 +448,107 @@
                 </form>
             </div>
         </div>
+        <!-- Schedule Section -->
+        <div id="schedule-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">Schedule Management</h3>
+                <div class="flex gap-2">
+                    <button onclick="showAddAvailability()" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">+ Add Hours</button>
+                    <button onclick="showBlockDate()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 text-sm">Block Date</button>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Weekly Availability -->
+                <div>
+                    <h4 class="font-semibold text-lg mb-3">Weekly Availability</h4>
+                    <div id="availability-table" class="space-y-2">
+                        <p class="text-gray-400 dark:text-gray-600 text-sm">No availability set</p>
+                    </div>
+                </div>
+
+                <!-- Blocked Dates -->
+                <div>
+                    <h4 class="font-semibold text-lg mb-3">Blocked Dates</h4>
+                    <div id="blocked-dates-list" class="space-y-2">
+                        <p class="text-gray-400 dark:text-gray-600 text-sm">No blocked dates</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Appointments -->
+            <div class="mt-6">
+                <h4 class="font-semibold text-lg mb-3">Upcoming Appointments</h4>
+                <div id="appointments-table" class="space-y-2">
+                    <p class="text-gray-400 dark:text-gray-600 text-sm">No appointments</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Availability Modal -->
+        <div id="availability-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+                <h3 class="text-2xl font-bold mb-4">Add Availability</h3>
+                <form id="availability-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Day of Week *</label>
+                        <select id="avail-day" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                            <option value="0">Sunday</option>
+                            <option value="1" selected>Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Start Time *</label>
+                            <input type="time" id="avail-start" value="09:00" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">End Time *</label>
+                            <input type="time" id="avail-end" value="17:00" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Slot Duration (minutes)</label>
+                        <select id="avail-duration" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                            <option value="30">30 minutes</option>
+                            <option value="60" selected>60 minutes</option>
+                            <option value="90">90 minutes</option>
+                            <option value="120">120 minutes</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-4">
+                        <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Save</button>
+                        <button type="button" onclick="closeAvailabilityModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Block Date Modal -->
+        <div id="block-date-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+                <h3 class="text-2xl font-bold mb-4">Block Date</h3>
+                <form id="block-date-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Date *</label>
+                        <input type="date" id="block-date" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Reason</label>
+                        <input type="text" id="block-reason" placeholder="e.g., Holiday, Personal day" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
+                    <div class="flex gap-4">
+                        <button type="submit" class="flex-1 bg-red-500 text-white py-2 px-4 rounded hover:bg-red-700">Block Date</button>
+                        <button type="button" onclick="closeBlockDateModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -542,6 +663,11 @@
                 noteSelect.innerHTML = '<option value="">Choose a client...</option>' + options;
                 if (funFactSelect) {
                     funFactSelect.innerHTML = '<option value="">Choose a client...</option>' + options;
+                }
+
+                const invoiceSelect = document.getElementById('invoice-client-select');
+                if (invoiceSelect) {
+                    invoiceSelect.innerHTML = '<option value="">Choose a client...</option>' + options;
                 }
             } catch (error) {
                 console.error('Error loading clients:', error);
@@ -1318,7 +1444,314 @@
             }
         });
 
+        // NOTIFICATIONS FUNCTIONS
+        let notifPanelOpen = false;
+
+        function toggleNotifications() {
+            notifPanelOpen = !notifPanelOpen;
+            document.getElementById('notif-panel').classList.toggle('hidden', !notifPanelOpen);
+            if (notifPanelOpen) loadNotifications();
+        }
+
+        // Close notification panel when clicking outside
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('notif-panel');
+            const bell = e.target.closest('[onclick="toggleNotifications()"]');
+            if (!bell && !panel.contains(e.target) && notifPanelOpen) {
+                notifPanelOpen = false;
+                panel.classList.add('hidden');
+            }
+        });
+
+        async function loadNotifications() {
+            try {
+                const res = await fetch(`${API_BASE}/notifications?limit=20`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const notifs = data.notifications || [];
+                const notifList = document.getElementById('notif-list');
+
+                if (notifs.length === 0) {
+                    notifList.innerHTML = '<p class="p-4 text-gray-400 dark:text-gray-600 text-sm">No notifications</p>';
+                } else {
+                    const typeIcons = {
+                        'new_booking': 'event',
+                        'booking_cancelled': 'event_busy',
+                        'client_media_upload': 'photo_camera',
+                        'service_request': 'room_service',
+                        'new_client_registration': 'person_add',
+                        'client_note': 'note'
+                    };
+                    notifList.innerHTML = notifs.map(n => `
+                        <div class="p-3 hover:bg-background-dark dark:hover:bg-gray-50 cursor-pointer flex items-start gap-3 ${n.is_read ? 'opacity-60' : ''}" onclick="markNotifRead(${n.id})">
+                            <span class="material-icons text-primary mt-0.5">${typeIcons[n.type] || 'notifications'}</span>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold ${n.is_read ? '' : 'text-primary'}">${n.title}</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-600 truncate">${n.message}</p>
+                                <p class="text-xs text-gray-500 mt-1">${timeAgo(n.created_at)}</p>
+                            </div>
+                            ${n.is_read ? '' : '<span class="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></span>'}
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            }
+        }
+
+        async function fetchUnreadCount() {
+            try {
+                const res = await fetch(`${API_BASE}/notifications?unread_only=true&limit=1`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const badge = document.getElementById('notif-badge');
+                const count = data.unread_count || 0;
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Error fetching unread count:', error);
+            }
+        }
+
+        async function markNotifRead(id) {
+            try {
+                await fetch(`${API_BASE}/notifications/${id}`, { method: 'PUT', headers: getAuthHeaders() });
+                loadNotifications();
+                fetchUnreadCount();
+            } catch (error) {
+                console.error('Mark read error:', error);
+            }
+        }
+
+        async function markAllNotificationsRead() {
+            try {
+                await fetch(`${API_BASE}/notifications/read-all`, { method: 'POST', headers: getAuthHeaders() });
+                loadNotifications();
+                fetchUnreadCount();
+            } catch (error) {
+                console.error('Mark all read error:', error);
+            }
+        }
+
+        function timeAgo(dateStr) {
+            const now = new Date();
+            const date = new Date(dateStr);
+            const diff = Math.floor((now - date) / 1000);
+            if (diff < 60) return 'just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            return `${Math.floor(diff / 86400)}d ago`;
+        }
+
+        // Poll for notifications every 60 seconds
+        setInterval(fetchUnreadCount, 60000);
+
+        // SCHEDULE MANAGEMENT FUNCTIONS
+        const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+        async function showSchedule() {
+            document.getElementById('schedule-section').classList.remove('hidden');
+            await Promise.all([loadAvailability(), loadBlockedDates(), loadAppointments()]);
+        }
+
+        async function loadAvailability() {
+            try {
+                const res = await fetch(`${API_BASE}/availability`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const slots = data.slots || [];
+                const container = document.getElementById('availability-table');
+
+                if (slots.length === 0) {
+                    container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No availability set. Click "+ Add Hours" to get started.</p>';
+                } else {
+                    container.innerHTML = slots.map(s => `
+                        <div class="flex justify-between items-center p-3 border border-border-dark dark:border-border-light rounded text-sm">
+                            <div>
+                                <span class="font-semibold">${DAY_NAMES[s.day_of_week]}</span>
+                                <span class="text-gray-400 dark:text-gray-600 ml-2">${s.start_time} - ${s.end_time}</span>
+                                <span class="text-xs text-gray-500 ml-2">(${s.slot_duration_minutes}min slots)</span>
+                                ${s.is_active ? '' : '<span class="text-xs text-red-500 ml-2">Inactive</span>'}
+                            </div>
+                            <button onclick="deleteAvailability(${s.id})" class="text-red-500 hover:text-red-700 text-xs">Remove</button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading availability:', error);
+            }
+        }
+
+        async function loadBlockedDates() {
+            try {
+                const res = await fetch(`${API_BASE}/availability/blocked`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const dates = data.blocked_dates || [];
+                const container = document.getElementById('blocked-dates-list');
+
+                if (dates.length === 0) {
+                    container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No blocked dates</p>';
+                } else {
+                    container.innerHTML = dates.map(d => `
+                        <div class="flex justify-between items-center p-3 border border-red-500/30 rounded text-sm bg-red-500/5">
+                            <div>
+                                <span class="font-semibold">${new Date(d.blocked_date + 'T00:00:00').toLocaleDateString()}</span>
+                                ${d.reason ? `<span class="text-gray-400 dark:text-gray-600 ml-2">${d.reason}</span>` : ''}
+                            </div>
+                            <button onclick="unblockDate(${d.id})" class="text-green-500 hover:text-green-700 text-xs">Unblock</button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading blocked dates:', error);
+            }
+        }
+
+        async function loadAppointments() {
+            try {
+                const res = await fetch(`${API_BASE}/appointments`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const appts = data.appointments || [];
+                const container = document.getElementById('appointments-table');
+
+                const upcoming = appts.filter(a => a.status !== 'cancelled' && a.status !== 'completed');
+
+                if (upcoming.length === 0) {
+                    container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No upcoming appointments</p>';
+                } else {
+                    container.innerHTML = upcoming.map(a => {
+                        const statusColors = { pending: 'bg-yellow-500', confirmed: 'bg-green-500', cancelled: 'bg-red-500', completed: 'bg-gray-500' };
+                        return `
+                        <div class="flex justify-between items-center p-3 border border-border-dark dark:border-border-light rounded text-sm">
+                            <div>
+                                <span class="font-semibold">${new Date(a.appointment_date + 'T00:00:00').toLocaleDateString()}</span>
+                                <span class="text-gray-400 dark:text-gray-600 ml-2">${a.start_time} - ${a.end_time}</span>
+                                <span class="ml-2">${a.client_name || 'Unknown'} (${a.dog_name || ''})</span>
+                                ${a.service_name ? `<span class="text-xs text-gray-500 ml-2">${a.service_name}</span>` : ''}
+                                <span class="text-xs px-2 py-0.5 rounded text-white ml-2 ${statusColors[a.status] || 'bg-gray-500'}">${a.status}</span>
+                            </div>
+                            <div class="flex gap-1">
+                                ${a.status === 'pending' ? `<button onclick="updateAppointment(${a.id}, 'confirmed')" class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-700">Confirm</button>` : ''}
+                                ${a.status !== 'cancelled' && a.status !== 'completed' ? `<button onclick="updateAppointment(${a.id}, 'cancelled')" class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-700">Cancel</button>` : ''}
+                                ${a.status === 'confirmed' ? `<button onclick="updateAppointment(${a.id}, 'completed')" class="bg-gray-500 text-white px-2 py-1 rounded text-xs hover:bg-gray-700">Complete</button>` : ''}
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Error loading appointments:', error);
+            }
+        }
+
+        async function updateAppointment(id, status) {
+            try {
+                const res = await fetch(`${API_BASE}/appointments/${id}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ status })
+                });
+                if (res.ok) {
+                    loadAppointments();
+                    fetchUnreadCount();
+                } else {
+                    alert('Failed to update appointment');
+                }
+            } catch (error) {
+                console.error('Update appointment error:', error);
+            }
+        }
+
+        function showAddAvailability() {
+            document.getElementById('availability-modal').classList.remove('hidden');
+        }
+
+        function closeAvailabilityModal() {
+            document.getElementById('availability-modal').classList.add('hidden');
+            document.getElementById('availability-form').reset();
+        }
+
+        document.getElementById('availability-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const res = await fetch(`${API_BASE}/availability`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        day_of_week: parseInt(document.getElementById('avail-day').value),
+                        start_time: document.getElementById('avail-start').value,
+                        end_time: document.getElementById('avail-end').value,
+                        slot_duration_minutes: parseInt(document.getElementById('avail-duration').value)
+                    })
+                });
+                if (res.ok) {
+                    closeAvailabilityModal();
+                    loadAvailability();
+                } else {
+                    const data = await res.json();
+                    alert(data.error || 'Failed to add availability');
+                }
+            } catch (error) {
+                console.error('Add availability error:', error);
+                alert('Failed to add availability');
+            }
+        });
+
+        async function deleteAvailability(id) {
+            if (!confirm('Remove this availability slot?')) return;
+            try {
+                await fetch(`${API_BASE}/availability/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                loadAvailability();
+            } catch (error) {
+                console.error('Delete availability error:', error);
+            }
+        }
+
+        function showBlockDate() {
+            document.getElementById('block-date-modal').classList.remove('hidden');
+        }
+
+        function closeBlockDateModal() {
+            document.getElementById('block-date-modal').classList.add('hidden');
+            document.getElementById('block-date-form').reset();
+        }
+
+        document.getElementById('block-date-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const res = await fetch(`${API_BASE}/availability/blocked`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        blocked_date: document.getElementById('block-date').value,
+                        reason: document.getElementById('block-reason').value || null
+                    })
+                });
+                if (res.ok) {
+                    closeBlockDateModal();
+                    loadBlockedDates();
+                } else {
+                    const data = await res.json();
+                    alert(data.error || 'Failed to block date');
+                }
+            } catch (error) {
+                console.error('Block date error:', error);
+                alert('Failed to block date');
+            }
+        });
+
+        async function unblockDate(id) {
+            if (!confirm('Unblock this date?')) return;
+            try {
+                await fetch(`${API_BASE}/availability/blocked/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                loadBlockedDates();
+            } catch (error) {
+                console.error('Unblock date error:', error);
+            }
+        }
+
         loadDashboard();
+        fetchUnreadCount();
     </script>
 </body>
 </html>

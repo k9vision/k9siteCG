@@ -87,6 +87,39 @@ export function verificationEmailHtml(clientName, verifyUrl) {
   `);
 }
 
+// Admin notification: client uploaded media
+export function mediaUploadNotificationHtml(clientName, dogName, mediaType) {
+  return emailWrapper(`
+    <h2 style="color: #3B82F6; margin-bottom: 20px;">New ${mediaType === 'video' ? 'Video' : 'Photo'} Upload</h2>
+    <p>${clientName} just uploaded a new ${mediaType} for <strong>${dogName}</strong>.</p>
+    <p>Log in to your admin dashboard to view the upload.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/admin-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View in Dashboard
+      </a>
+    </div>
+  `);
+}
+
+// Admin notification: client booked an appointment
+export function appointmentBookedNotificationHtml(clientName, dogName, date, time, serviceName) {
+  return emailWrapper(`
+    <h2 style="color: #3B82F6; margin-bottom: 20px;">New Appointment Booking</h2>
+    <p><strong>${clientName}</strong> has booked an appointment for <strong>${dogName}</strong>.</p>
+    <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+      <p style="margin: 5px 0;"><strong>Time:</strong> ${time}</p>
+      <p style="margin: 5px 0;"><strong>Service:</strong> ${serviceName || 'General'}</p>
+    </div>
+    <p>Please confirm or manage this appointment from your dashboard.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/admin-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View in Dashboard
+      </a>
+    </div>
+  `);
+}
+
 // Password reset email
 export function resetEmailHtml(resetUrl, adminTriggered = false) {
   const intro = adminTriggered
