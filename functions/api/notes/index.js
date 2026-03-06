@@ -1,9 +1,9 @@
-// Create a note for a client (admin only)
-import { requireAdmin } from '../../utils/auth.js';
+// Create a note for a client (admin or client)
+import { requireAuth } from '../../utils/auth.js';
 
 export async function onRequestPost(context) {
   try {
-    const auth = await requireAdmin(context);
+    const auth = await requireAuth(context);
     if (auth.error) {
       return new Response(
         JSON.stringify({ error: auth.error }),
@@ -20,11 +20,27 @@ export async function onRequestPost(context) {
       );
     }
 
+    // If client role, verify they can only create notes for their own record
+    if (auth.user.role === 'client') {
+      const client = await context.env.DB.prepare(
+        'SELECT id FROM clients WHERE user_id = ?'
+      ).bind(auth.user.id).first();
+
+      if (!client || client.id !== parseInt(client_id)) {
+        return new Response(
+          JSON.stringify({ error: 'Access denied' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    const author_role = auth.user.role === 'admin' ? 'admin' : 'client';
+
     const note = await context.env.DB.prepare(`
-      INSERT INTO notes (client_id, content, title)
-      VALUES (?, ?, ?)
+      INSERT INTO notes (client_id, content, title, author_role)
+      VALUES (?, ?, ?, ?)
       RETURNING *
-    `).bind(parseInt(client_id), content, title || 'Note').first();
+    `).bind(parseInt(client_id), content, title || 'Note', author_role).first();
 
     return new Response(
       JSON.stringify({ success: true, note }),

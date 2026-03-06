@@ -529,31 +529,56 @@
                 const res = await fetch(`${API_BASE}/notes/client/${clientId}`, {
                     headers: getAuthHeaders()
                 });
-                const notes = await res.json();
+                const data = await res.json();
+                const notes = data.notes || [];
 
                 const notesList = document.getElementById('notes-list');
                 const conversation = document.getElementById('conversation');
 
-                if (notes && notes.length > 0) {
-                    notesList.innerHTML = notes.slice(0, 3).map(note => `
+                if (notes.length > 0) {
+                    notesList.innerHTML = notes.slice(0, 3).map(note => {
+                        const isTrainer = note.author_role !== 'client';
+                        const label = isTrainer ? 'Trainer' : 'You';
+                        const labelColor = isTrainer ? 'text-blue-400' : 'text-green-400';
+                        return `
                         <div class="border border-border-dark dark:border-border-light rounded p-3">
-                            <h4 class="font-semibold">${note.title}</h4>
+                            <div class="flex items-center justify-between mb-1">
+                                <h4 class="font-semibold">${note.title}</h4>
+                                <span class="text-xs font-medium ${labelColor}">${label}</span>
+                            </div>
                             <p class="text-sm text-gray-400 dark:text-gray-600 mt-1">${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''}</p>
                             <p class="text-xs text-gray-500 mt-2">${new Date(note.created_at).toLocaleDateString()}</p>
-                        </div>
-                    `).join('');
+                        </div>`;
+                    }).join('');
 
-                    conversation.innerHTML = notes.map(note => `
-                        <div class="border-l-4 border-primary pl-4 py-2">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-primary">${note.title}</h4>
-                                    <p class="text-sm mt-1">${note.content}</p>
+                    conversation.innerHTML = notes.map(note => {
+                        const isTrainer = note.author_role !== 'client';
+                        if (isTrainer) {
+                            return `
+                            <div class="border-l-4 border-blue-500 pl-4 py-2">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <span class="text-xs font-bold text-blue-400">Trainer</span>
+                                        <h4 class="font-semibold text-blue-400">${note.title}</h4>
+                                        <p class="text-sm mt-1">${note.content}</p>
+                                    </div>
+                                    <span class="text-xs text-gray-500">${new Date(note.created_at).toLocaleDateString()}</span>
                                 </div>
-                                <span class="text-xs text-gray-500">${new Date(note.created_at).toLocaleDateString()}</span>
-                            </div>
-                        </div>
-                    `).join('');
+                            </div>`;
+                        } else {
+                            return `
+                            <div class="border-r-4 border-green-500 pr-4 py-2 text-right">
+                                <div class="flex items-start justify-between">
+                                    <span class="text-xs text-gray-500">${new Date(note.created_at).toLocaleDateString()}</span>
+                                    <div class="flex-1 ml-4">
+                                        <span class="text-xs font-bold text-green-400">You</span>
+                                        <h4 class="font-semibold text-green-400">${note.title}</h4>
+                                        <p class="text-sm mt-1">${note.content}</p>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }
+                    }).join('');
                 } else {
                     notesList.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No notes yet</p>';
                     conversation.innerHTML = '<p class="text-gray-400 dark:text-gray-600">Start a conversation with your trainer!</p>';
