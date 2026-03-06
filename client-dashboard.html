@@ -48,6 +48,22 @@
             </button>
         </div>
 
+        <!-- Profile Section -->
+        <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow mb-8 border border-border-dark dark:border-border-light">
+            <div class="flex items-center gap-4">
+                <span class="material-icons text-primary text-3xl">person</span>
+                <div id="profile-display" class="flex items-center gap-3">
+                    <span class="text-lg font-semibold" id="profile-name-text">—</span>
+                    <button onclick="toggleProfileEdit(true)" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Edit</button>
+                </div>
+                <div id="profile-edit" class="hidden flex items-center gap-3">
+                    <input type="text" id="profile-name-input" class="rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm">
+                    <button onclick="saveProfileName()" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-700">Save</button>
+                    <button onclick="toggleProfileEdit(false)" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">Cancel</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Dogs Section -->
         <div class="bg-card-dark dark:bg-card-light p-8 rounded-lg shadow mb-8 border border-border-dark dark:border-border-light">
             <div class="flex justify-between items-center mb-4">
@@ -428,6 +444,7 @@
         }
 
         let currentClientId = null;
+        let currentUserId = null;
 
         async function loadClientData() {
             if (!checkAuth()) return;
@@ -444,10 +461,12 @@
 
                 if (client && client.id) {
                     currentClientId = client.id;
+                    currentUserId = client.user_id || user.id;
 
-                    // Show client name in welcome heading
+                    // Show client name in welcome heading and profile
                     if (client.client_name) {
                         document.getElementById('welcome-heading').textContent = `Welcome, ${client.client_name}!`;
+                        document.getElementById('profile-name-text').textContent = client.client_name;
                     }
 
                     // Load dogs from dogs table
@@ -470,6 +489,36 @@
                 }
             } catch (error) {
                 console.error('Error loading client data:', error);
+            }
+        }
+
+        function toggleProfileEdit(show) {
+            document.getElementById('profile-display').classList.toggle('hidden', show);
+            document.getElementById('profile-edit').classList.toggle('hidden', !show);
+            if (show) {
+                document.getElementById('profile-name-input').value = document.getElementById('profile-name-text').textContent;
+            }
+        }
+
+        async function saveProfileName() {
+            const client_name = document.getElementById('profile-name-input').value.trim();
+            if (!client_name) { alert('Name cannot be empty'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/clients/user/${currentUserId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ client_name })
+                });
+                if (res.ok) {
+                    document.getElementById('profile-name-text').textContent = client_name;
+                    document.getElementById('welcome-heading').textContent = `Welcome, ${client_name}!`;
+                    toggleProfileEdit(false);
+                } else {
+                    alert('Failed to update name');
+                }
+            } catch (error) {
+                console.error('Save profile name error:', error);
+                alert('Failed to update name');
             }
         }
 

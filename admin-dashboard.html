@@ -307,7 +307,15 @@
 
                 <!-- Client Info (editable) -->
                 <div class="mb-6 p-4 bg-background-dark dark:bg-gray-50 rounded-lg">
-                    <h4 class="font-bold text-lg mb-3" id="detail-client-name-display">—</h4>
+                    <div class="grid grid-cols-2 gap-3 text-sm mb-3">
+                        <div>
+                            <label class="text-gray-400 dark:text-gray-600 block mb-1">Client Name</label>
+                            <input type="text" id="detail-client-name-input" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="saveClientName()" class="bg-primary text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Save Name</button>
+                        </div>
+                    </div>
                     <div class="grid grid-cols-2 gap-3 text-sm">
                         <div>
                             <label class="text-gray-400 dark:text-gray-600 block mb-1">Email</label>
@@ -1063,7 +1071,7 @@
             if (client) {
                 document.getElementById('detail-client-id').value = clientId;
                 document.getElementById('detail-user-id').value = client.user_id || '';
-                document.getElementById('detail-client-name-display').textContent = client.client_name || 'N/A';
+                document.getElementById('detail-client-name-input').value = client.client_name || '';
                 document.getElementById('detail-email').value = client.email || '';
             }
 
@@ -1279,6 +1287,29 @@
             } catch (error) {
                 console.error('Save email error:', error);
                 alert('Failed to update email');
+            }
+        }
+
+        async function saveClientName() {
+            const userId = document.getElementById('detail-user-id').value;
+            const client_name = document.getElementById('detail-client-name-input').value.trim();
+            if (!userId) return;
+            if (!client_name) { alert('Client name cannot be empty'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/clients/user/${userId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ client_name })
+                });
+                if (res.ok) {
+                    alert('Client name updated!');
+                    showClients();
+                } else {
+                    alert('Failed to update client name');
+                }
+            } catch (error) {
+                console.error('Save client name error:', error);
+                alert('Failed to update client name');
             }
         }
 
