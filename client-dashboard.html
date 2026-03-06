@@ -1387,7 +1387,7 @@
         // Notes polling - auto-refresh every 10s while tab is visible
         let currentClientIdForNotes = null;
         let notesPollingInterval = null;
-        let lastNotesCount = null;
+        let lastNotesHash = null;
 
         const _originalLoadNotes = loadNotes;
         loadNotes = async function(clientId) {
@@ -1402,9 +1402,10 @@
                     headers: getAuthHeaders()
                 });
                 const data = await res.json();
-                const newCount = (data.notes || []).length;
-                if (lastNotesCount !== null && newCount === lastNotesCount) return;
-                lastNotesCount = newCount;
+                const notesList = data.notes || [];
+                const newHash = JSON.stringify(notesList.map(n => n.id + ':' + n.created_at + ':' + (n.updated_at || '')));
+                if (lastNotesHash !== null && newHash === lastNotesHash) return;
+                lastNotesHash = newHash;
                 await _originalLoadNotes(currentClientIdForNotes);
             } catch (e) { /* silent */ }
         }

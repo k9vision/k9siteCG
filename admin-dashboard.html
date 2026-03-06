@@ -45,6 +45,7 @@
                         <div class="flex justify-between items-center p-4 border-b border-border-dark dark:border-border-light">
                             <h4 class="font-bold">Notifications</h4>
                             <button onclick="markAllNotificationsRead()" class="text-xs text-primary hover:underline">Mark all read</button>
+                            <button onclick="clearAllNotifications()" class="text-xs text-red-400 hover:underline ml-2">Clear all</button>
                         </div>
                         <div id="notif-list" class="divide-y divide-border-dark dark:divide-border-light">
                             <p class="p-4 text-gray-400 dark:text-gray-600 text-sm">No notifications</p>
@@ -1178,7 +1179,7 @@
 
         // Notes polling for client detail view
         let adminNotesPollingInterval = null;
-        let adminLastNotesCount = null;
+        let adminLastNotesHash = null;
 
         async function refreshClientNotes(clientId) {
             try {
@@ -1187,9 +1188,10 @@
                 });
                 const notesData = await res.json();
                 const notes = notesData.notes || notesData || [];
-                const newCount = Array.isArray(notes) ? notes.length : 0;
-                if (adminLastNotesCount !== null && newCount === adminLastNotesCount) return;
-                adminLastNotesCount = newCount;
+                const notesList = Array.isArray(notes) ? notes : [];
+                const newHash = JSON.stringify(notesList.map(n => n.id + ':' + n.created_at + ':' + (n.updated_at || '')));
+                if (adminLastNotesHash !== null && newHash === adminLastNotesHash) return;
+                adminLastNotesHash = newHash;
                 const notesEl = document.getElementById('detail-notes');
                 if (Array.isArray(notes) && notes.length > 0) {
                     notesEl.innerHTML = notes.map(n => {
@@ -1215,7 +1217,7 @@
 
         function startAdminNotesPolling() {
             stopAdminNotesPolling();
-            adminLastNotesCount = null;
+            adminLastNotesHash = null;
             if (currentDetailClientId) {
                 adminNotesPollingInterval = setInterval(() => {
                     if (currentDetailClientId) refreshClientNotes(currentDetailClientId);
@@ -2295,6 +2297,16 @@
                 fetchUnreadCount();
             } catch (error) {
                 console.error('Mark all read error:', error);
+            }
+        }
+
+        async function clearAllNotifications() {
+            try {
+                await fetch(`${API_BASE}/notifications/clear`, { method: 'POST', headers: getAuthHeaders() });
+                loadNotifications();
+                fetchUnreadCount();
+            } catch (error) {
+                console.error('Clear notifications error:', error);
             }
         }
 
