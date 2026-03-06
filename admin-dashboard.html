@@ -453,9 +453,58 @@
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-2xl font-bold">Schedule Management</h3>
                 <div class="flex gap-2">
-                    <button onclick="showAddAvailability()" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">+ Add Hours</button>
-                    <button onclick="showBlockDate()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 text-sm">Block Date</button>
+                    <button onclick="openBulkAvailabilityModal()" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">+ Add Hours</button>
+                    <button onclick="openBulkBlockModal()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 text-sm">Block Date</button>
                 </div>
+            </div>
+
+            <!-- Calendar Navigation -->
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <button onclick="prevMonth()" class="px-3 py-1 rounded border border-border-dark dark:border-border-light hover:bg-gray-700 dark:hover:bg-gray-200 text-sm">&lt;</button>
+                    <span id="calendar-month-label" class="text-lg font-semibold min-w-[160px] text-center"></span>
+                    <button onclick="nextMonth()" class="px-3 py-1 rounded border border-border-dark dark:border-border-light hover:bg-gray-700 dark:hover:bg-gray-200 text-sm">&gt;</button>
+                </div>
+                <button onclick="goToday()" class="px-3 py-1 rounded border border-border-dark dark:border-border-light hover:bg-gray-700 dark:hover:bg-gray-200 text-sm">Today</button>
+            </div>
+
+            <!-- Legend -->
+            <div class="flex flex-wrap gap-4 mb-3 text-xs text-gray-400 dark:text-gray-600">
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span> Available</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span> Blocked</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Appointment</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded ring-2 ring-primary inline-block"></span> Selected</span>
+            </div>
+
+            <!-- Quick Select -->
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+                <button onclick="selectWeekdays()" class="px-3 py-1 rounded bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-800 text-xs hover:bg-gray-600 dark:hover:bg-gray-300">Select Weekdays</button>
+                <button onclick="selectAllDays()" class="px-3 py-1 rounded bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-800 text-xs hover:bg-gray-600 dark:hover:bg-gray-300">Select All</button>
+                <button onclick="clearSelection()" class="px-3 py-1 rounded bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-800 text-xs hover:bg-gray-600 dark:hover:bg-gray-300">Clear</button>
+                <span class="text-xs text-gray-500 ml-2">Shift+click for range, Ctrl+click to toggle</span>
+            </div>
+
+            <!-- Day Headers -->
+            <div class="grid grid-cols-7 gap-1 mb-1">
+                <div class="text-center text-xs font-semibold text-gray-400 dark:text-gray-600 py-1">Sun</div>
+                <div class="text-center text-xs font-semibold text-gray-400 dark:text-gray-600 py-1">Mon</div>
+                <div class="text-center text-xs font-semibold text-gray-400 dark:text-gray-600 py-1">Tue</div>
+                <div class="text-center text-xs font-semibold text-gray-400 dark:text-gray-600 py-1">Wed</div>
+                <div class="text-center text-xs font-semibold text-gray-400 dark:text-gray-600 py-1">Thu</div>
+                <div class="text-center text-xs font-semibold text-gray-400 dark:text-gray-600 py-1">Fri</div>
+                <div class="text-center text-xs font-semibold text-gray-400 dark:text-gray-600 py-1">Sat</div>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div id="calendar-grid" class="grid grid-cols-7 gap-1 mb-4"></div>
+
+            <!-- Selection Action Bar -->
+            <div id="selection-bar" class="hidden flex flex-wrap items-center gap-3 p-3 mb-4 rounded border border-primary bg-primary/10">
+                <span id="selection-count" class="text-sm font-semibold"></span>
+                <button onclick="openBulkAvailabilityModal()" class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">Set Availability</button>
+                <button onclick="openBulkBlockModal()" class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-700">Block Selected</button>
+                <button onclick="bulkUnblock()" class="bg-yellow-600 text-white px-3 py-1 rounded text-xs hover:bg-yellow-700">Unblock Selected</button>
+                <button onclick="clearSelection()" class="bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-700">Clear</button>
             </div>
 
             <div class="grid md:grid-cols-2 gap-6">
@@ -485,66 +534,57 @@
             </div>
         </div>
 
-        <!-- Add Availability Modal -->
-        <div id="availability-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <!-- Bulk Availability Modal -->
+        <div id="bulk-availability-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
-                <h3 class="text-2xl font-bold mb-4">Add Availability</h3>
-                <form id="availability-form" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Day of Week *</label>
-                        <select id="avail-day" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
-                            <option value="0">Sunday</option>
-                            <option value="1" selected>Monday</option>
-                            <option value="2">Tuesday</option>
-                            <option value="3">Wednesday</option>
-                            <option value="4">Thursday</option>
-                            <option value="5">Friday</option>
-                            <option value="6">Saturday</option>
-                        </select>
-                    </div>
+                <h3 class="text-2xl font-bold mb-4">Set Availability</h3>
+                <div id="bulk-avail-days" class="text-sm text-gray-400 dark:text-gray-600 mb-2"></div>
+                <p class="text-xs text-yellow-500 mb-4">This sets RECURRING weekly availability for these days of the week.</p>
+                <form id="bulk-availability-form" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium mb-2">Start Time *</label>
-                            <input type="time" id="avail-start" value="09:00" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                            <input type="time" id="bulk-avail-start" value="09:00" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-2">End Time *</label>
-                            <input type="time" id="avail-end" value="17:00" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                            <input type="time" id="bulk-avail-end" value="17:00" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-2">Slot Duration (minutes)</label>
-                        <select id="avail-duration" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        <label class="block text-sm font-medium mb-2">Slot Duration</label>
+                        <select id="bulk-avail-duration" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                             <option value="30">30 minutes</option>
                             <option value="60" selected>60 minutes</option>
                             <option value="90">90 minutes</option>
                             <option value="120">120 minutes</option>
                         </select>
                     </div>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" id="bulk-avail-replace" checked class="rounded">
+                        Replace existing slots for these days
+                    </label>
                     <div class="flex gap-4">
                         <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Save</button>
-                        <button type="button" onclick="closeAvailabilityModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                        <button type="button" onclick="closeBulkAvailabilityModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Block Date Modal -->
-        <div id="block-date-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <!-- Bulk Block Modal -->
+        <div id="bulk-block-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
-                <h3 class="text-2xl font-bold mb-4">Block Date</h3>
-                <form id="block-date-form" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Date *</label>
-                        <input type="date" id="block-date" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
-                    </div>
+                <h3 class="text-2xl font-bold mb-4">Block Dates</h3>
+                <div id="bulk-block-info" class="text-sm text-gray-400 dark:text-gray-600 mb-4"></div>
+                <form id="bulk-block-form" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-2">Reason</label>
-                        <input type="text" id="block-reason" placeholder="e.g., Holiday, Personal day" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        <input type="text" id="bulk-block-reason" placeholder="e.g., Holiday, Personal day" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                     </div>
                     <div class="flex gap-4">
-                        <button type="submit" class="flex-1 bg-red-500 text-white py-2 px-4 rounded hover:bg-red-700">Block Date</button>
-                        <button type="button" onclick="closeBlockDateModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                        <button type="submit" class="flex-1 bg-red-500 text-white py-2 px-4 rounded hover:bg-red-700">Block All</button>
+                        <button type="button" onclick="closeBulkBlockModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -1550,97 +1590,401 @@
 
         // SCHEDULE MANAGEMENT FUNCTIONS
         const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        let calendarYear, calendarMonth;
+        let selectedDates = new Set();
+        let lastClickedDate = null;
+        let cachedAvailabilitySlots = [];
+        let cachedBlockedDates = [];
+        let cachedAppointments = [];
 
         async function showSchedule() {
             document.getElementById('schedule-section').classList.remove('hidden');
-            await Promise.all([loadAvailability(), loadBlockedDates(), loadAppointments()]);
+            const now = new Date();
+            calendarYear = now.getFullYear();
+            calendarMonth = now.getMonth();
+            await loadCalendarData();
         }
 
-        async function loadAvailability() {
+        async function loadCalendarData() {
             try {
-                const res = await fetch(`${API_BASE}/availability`, { headers: getAuthHeaders() });
-                const data = await res.json();
-                const slots = data.slots || [];
-                const container = document.getElementById('availability-table');
-
-                if (slots.length === 0) {
-                    container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No availability set. Click "+ Add Hours" to get started.</p>';
-                } else {
-                    container.innerHTML = slots.map(s => `
-                        <div class="flex justify-between items-center p-3 border border-border-dark dark:border-border-light rounded text-sm">
-                            <div>
-                                <span class="font-semibold">${DAY_NAMES[s.day_of_week]}</span>
-                                <span class="text-gray-400 dark:text-gray-600 ml-2">${s.start_time} - ${s.end_time}</span>
-                                <span class="text-xs text-gray-500 ml-2">(${s.slot_duration_minutes}min slots)</span>
-                                ${s.is_active ? '' : '<span class="text-xs text-red-500 ml-2">Inactive</span>'}
-                            </div>
-                            <button onclick="deleteAvailability(${s.id})" class="text-red-500 hover:text-red-700 text-xs">Remove</button>
-                        </div>
-                    `).join('');
-                }
+                const [availRes, blockedRes, apptRes] = await Promise.all([
+                    fetch(`${API_BASE}/availability`, { headers: getAuthHeaders() }),
+                    fetch(`${API_BASE}/availability/blocked`, { headers: getAuthHeaders() }),
+                    fetch(`${API_BASE}/appointments`, { headers: getAuthHeaders() })
+                ]);
+                const availData = await availRes.json();
+                const blockedData = await blockedRes.json();
+                const apptData = await apptRes.json();
+                cachedAvailabilitySlots = availData.slots || [];
+                cachedBlockedDates = blockedData.blocked_dates || [];
+                cachedAppointments = apptData.appointments || [];
             } catch (error) {
-                console.error('Error loading availability:', error);
+                console.error('Error loading calendar data:', error);
+            }
+            renderCalendar();
+            renderAvailabilityList();
+            renderBlockedDatesList();
+            renderAppointmentsList();
+        }
+
+        function renderCalendar() {
+            document.getElementById('calendar-month-label').textContent = `${MONTH_NAMES[calendarMonth]} ${calendarYear}`;
+            const grid = document.getElementById('calendar-grid');
+            const firstDay = new Date(calendarYear, calendarMonth, 1).getDay();
+            const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+            // Build lookups
+            const availableDOWs = new Set(cachedAvailabilitySlots.filter(s => s.is_active).map(s => s.day_of_week));
+            const blockedDateSet = new Set(cachedBlockedDates.map(d => d.blocked_date));
+            const appointmentDates = new Map();
+            (cachedAppointments || []).filter(a => a.status === 'pending' || a.status === 'confirmed').forEach(a => {
+                appointmentDates.set(a.appointment_date, (appointmentDates.get(a.appointment_date) || 0) + 1);
+            });
+
+            let html = '';
+            // Empty cells for offset
+            for (let i = 0; i < firstDay; i++) {
+                html += '<div class="min-h-[3rem]"></div>';
+            }
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${calendarYear}-${String(calendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                const dow = new Date(calendarYear, calendarMonth, day).getDay();
+                const isAvailable = availableDOWs.has(dow);
+                const isBlocked = blockedDateSet.has(dateStr);
+                const hasAppt = appointmentDates.has(dateStr);
+                const isSelected = selectedDates.has(dateStr);
+                const isToday = dateStr === todayStr;
+                const isPast = new Date(calendarYear, calendarMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+                let bgClass = 'border-border-dark dark:border-border-light';
+                if (isBlocked) bgClass = 'bg-red-500/10 border-red-500/30';
+                else if (isAvailable) bgClass = 'bg-green-500/10 border-green-500/30';
+
+                let ringClass = isSelected ? 'ring-2 ring-primary bg-primary/20' : '';
+                let opacityClass = isPast ? 'opacity-40' : '';
+                let dayNumClass = isToday ? 'font-bold underline' : '';
+
+                html += `<div class="border rounded p-1 min-h-[3rem] cursor-pointer select-none transition-all ${bgClass} ${ringClass} ${opacityClass} hover:brightness-110"
+                    data-date="${dateStr}" onclick="handleDayClick('${dateStr}', event)">
+                    <span class="text-sm ${dayNumClass}">${day}</span>
+                    <div class="flex gap-0.5 mt-0.5">
+                        ${isAvailable && !isBlocked ? '<span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>' : ''}
+                        ${isBlocked ? '<span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>' : ''}
+                        ${hasAppt ? '<span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>' : ''}
+                    </div>
+                </div>`;
+            }
+            // Trailing empty cells
+            const totalCells = firstDay + daysInMonth;
+            const remainder = totalCells % 7;
+            if (remainder > 0) {
+                for (let i = 0; i < 7 - remainder; i++) {
+                    html += '<div class="min-h-[3rem]"></div>';
+                }
+            }
+            grid.innerHTML = html;
+            updateSelectionBar();
+        }
+
+        function handleDayClick(dateStr, event) {
+            if (event.shiftKey && lastClickedDate) {
+                selectRange(lastClickedDate, dateStr);
+            } else if (event.ctrlKey || event.metaKey) {
+                if (selectedDates.has(dateStr)) selectedDates.delete(dateStr);
+                else selectedDates.add(dateStr);
+            } else {
+                selectedDates.clear();
+                selectedDates.add(dateStr);
+            }
+            lastClickedDate = dateStr;
+            renderCalendar();
+        }
+
+        function selectRange(from, to) {
+            const start = new Date(from + 'T00:00:00');
+            const end = new Date(to + 'T00:00:00');
+            const [lo, hi] = start <= end ? [start, end] : [end, start];
+            const d = new Date(lo);
+            while (d <= hi) {
+                const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                selectedDates.add(ds);
+                d.setDate(d.getDate() + 1);
             }
         }
 
-        async function loadBlockedDates() {
-            try {
-                const res = await fetch(`${API_BASE}/availability/blocked`, { headers: getAuthHeaders() });
-                const data = await res.json();
-                const dates = data.blocked_dates || [];
-                const container = document.getElementById('blocked-dates-list');
-
-                if (dates.length === 0) {
-                    container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No blocked dates</p>';
-                } else {
-                    container.innerHTML = dates.map(d => `
-                        <div class="flex justify-between items-center p-3 border border-red-500/30 rounded text-sm bg-red-500/5">
-                            <div>
-                                <span class="font-semibold">${new Date(d.blocked_date + 'T00:00:00').toLocaleDateString()}</span>
-                                ${d.reason ? `<span class="text-gray-400 dark:text-gray-600 ml-2">${d.reason}</span>` : ''}
-                            </div>
-                            <button onclick="unblockDate(${d.id})" class="text-green-500 hover:text-green-700 text-xs">Unblock</button>
-                        </div>
-                    `).join('');
+        function selectWeekdays() {
+            const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dow = new Date(calendarYear, calendarMonth, day).getDay();
+                if (dow >= 1 && dow <= 5) {
+                    selectedDates.add(`${calendarYear}-${String(calendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`);
                 }
-            } catch (error) {
-                console.error('Error loading blocked dates:', error);
+            }
+            renderCalendar();
+        }
+
+        function selectAllDays() {
+            const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+            for (let day = 1; day <= daysInMonth; day++) {
+                selectedDates.add(`${calendarYear}-${String(calendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`);
+            }
+            renderCalendar();
+        }
+
+        function clearSelection() {
+            selectedDates.clear();
+            lastClickedDate = null;
+            renderCalendar();
+        }
+
+        function updateSelectionBar() {
+            const bar = document.getElementById('selection-bar');
+            const count = selectedDates.size;
+            if (count === 0) {
+                bar.classList.add('hidden');
+            } else {
+                bar.classList.remove('hidden');
+                document.getElementById('selection-count').textContent = `${count} day${count > 1 ? 's' : ''} selected`;
             }
         }
 
-        async function loadAppointments() {
+        function prevMonth() {
+            calendarMonth--;
+            if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+            selectedDates.clear();
+            lastClickedDate = null;
+            renderCalendar();
+        }
+
+        function nextMonth() {
+            calendarMonth++;
+            if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+            selectedDates.clear();
+            lastClickedDate = null;
+            renderCalendar();
+        }
+
+        function goToday() {
+            const now = new Date();
+            calendarYear = now.getFullYear();
+            calendarMonth = now.getMonth();
+            selectedDates.clear();
+            lastClickedDate = null;
+            renderCalendar();
+        }
+
+        // Bulk Availability Modal
+        function openBulkAvailabilityModal() {
+            if (selectedDates.size === 0) {
+                alert('Select one or more days on the calendar first.');
+                return;
+            }
+            const dows = new Set();
+            selectedDates.forEach(ds => {
+                const d = new Date(ds + 'T00:00:00');
+                dows.add(d.getDay());
+            });
+            const dayNames = [...dows].sort().map(d => DAY_NAMES[d]);
+            document.getElementById('bulk-avail-days').textContent = `Applying to: ${dayNames.join(', ')}`;
+            document.getElementById('bulk-availability-modal').classList.remove('hidden');
+        }
+
+        function closeBulkAvailabilityModal() {
+            document.getElementById('bulk-availability-modal').classList.add('hidden');
+            document.getElementById('bulk-availability-form').reset();
+        }
+
+        document.getElementById('bulk-availability-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const startTime = document.getElementById('bulk-avail-start').value;
+            const endTime = document.getElementById('bulk-avail-end').value;
+            const duration = parseInt(document.getElementById('bulk-avail-duration').value);
+            const replaceExisting = document.getElementById('bulk-avail-replace').checked;
+
+            const dows = new Set();
+            selectedDates.forEach(ds => {
+                const d = new Date(ds + 'T00:00:00');
+                dows.add(d.getDay());
+            });
+
             try {
-                const res = await fetch(`${API_BASE}/appointments`, { headers: getAuthHeaders() });
-                const data = await res.json();
-                const appts = data.appointments || [];
-                const container = document.getElementById('appointments-table');
-
-                const upcoming = appts.filter(a => a.status !== 'cancelled' && a.status !== 'completed');
-
-                if (upcoming.length === 0) {
-                    container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No upcoming appointments</p>';
-                } else {
-                    container.innerHTML = upcoming.map(a => {
-                        const statusColors = { pending: 'bg-yellow-500', confirmed: 'bg-green-500', cancelled: 'bg-red-500', completed: 'bg-gray-500' };
-                        return `
-                        <div class="flex justify-between items-center p-3 border border-border-dark dark:border-border-light rounded text-sm">
-                            <div>
-                                <span class="font-semibold">${new Date(a.appointment_date + 'T00:00:00').toLocaleDateString()}</span>
-                                <span class="text-gray-400 dark:text-gray-600 ml-2">${a.start_time} - ${a.end_time}</span>
-                                <span class="ml-2">${a.client_name || 'Unknown'} (${a.dog_name || ''})</span>
-                                ${a.service_name ? `<span class="text-xs text-gray-500 ml-2">${a.service_name}</span>` : ''}
-                                <span class="text-xs px-2 py-0.5 rounded text-white ml-2 ${statusColors[a.status] || 'bg-gray-500'}">${a.status}</span>
-                            </div>
-                            <div class="flex gap-1">
-                                ${a.status === 'pending' ? `<button onclick="updateAppointment(${a.id}, 'confirmed')" class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-700">Confirm</button>` : ''}
-                                ${a.status !== 'cancelled' && a.status !== 'completed' ? `<button onclick="updateAppointment(${a.id}, 'cancelled')" class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-700">Cancel</button>` : ''}
-                                ${a.status === 'confirmed' ? `<button onclick="updateAppointment(${a.id}, 'completed')" class="bg-gray-500 text-white px-2 py-1 rounded text-xs hover:bg-gray-700">Complete</button>` : ''}
-                            </div>
-                        </div>`;
-                    }).join('');
+                // If replace, delete existing slots for these DOWs
+                if (replaceExisting) {
+                    const toDelete = cachedAvailabilitySlots.filter(s => dows.has(s.day_of_week));
+                    await Promise.all(toDelete.map(s =>
+                        fetch(`${API_BASE}/availability/${s.id}`, { method: 'DELETE', headers: getAuthHeaders() })
+                    ));
                 }
+                // Create one slot per unique DOW
+                const results = await Promise.all([...dows].map(dow =>
+                    fetch(`${API_BASE}/availability`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({ day_of_week: dow, start_time: startTime, end_time: endTime, slot_duration_minutes: duration })
+                    })
+                ));
+                const allOk = results.every(r => r.ok);
+                if (!allOk) alert('Some availability slots failed to save.');
+                closeBulkAvailabilityModal();
+                clearSelection();
+                await loadCalendarData();
             } catch (error) {
-                console.error('Error loading appointments:', error);
+                console.error('Bulk availability error:', error);
+                alert('Failed to set availability');
+            }
+        });
+
+        async function deleteAvailability(id) {
+            if (!confirm('Remove this availability slot?')) return;
+            try {
+                await fetch(`${API_BASE}/availability/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                await loadCalendarData();
+            } catch (error) {
+                console.error('Delete availability error:', error);
+            }
+        }
+
+        // Bulk Block Modal
+        function openBulkBlockModal() {
+            if (selectedDates.size === 0) {
+                alert('Select one or more days on the calendar first.');
+                return;
+            }
+            document.getElementById('bulk-block-info').textContent = `Blocking ${selectedDates.size} specific date${selectedDates.size > 1 ? 's' : ''}`;
+            document.getElementById('bulk-block-modal').classList.remove('hidden');
+        }
+
+        function closeBulkBlockModal() {
+            document.getElementById('bulk-block-modal').classList.add('hidden');
+            document.getElementById('bulk-block-form').reset();
+        }
+
+        document.getElementById('bulk-block-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reason = document.getElementById('bulk-block-reason').value || null;
+            const blockedDateSet = new Set(cachedBlockedDates.map(d => d.blocked_date));
+            const datesToBlock = [...selectedDates].filter(d => !blockedDateSet.has(d));
+
+            if (datesToBlock.length === 0) {
+                alert('All selected dates are already blocked.');
+                closeBulkBlockModal();
+                return;
+            }
+
+            try {
+                const results = await Promise.all(datesToBlock.map(dateStr =>
+                    fetch(`${API_BASE}/availability/blocked`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({ blocked_date: dateStr, reason })
+                    })
+                ));
+                const allOk = results.every(r => r.ok);
+                if (!allOk) alert('Some dates failed to block.');
+                closeBulkBlockModal();
+                clearSelection();
+                await loadCalendarData();
+            } catch (error) {
+                console.error('Bulk block error:', error);
+                alert('Failed to block dates');
+            }
+        });
+
+        async function bulkUnblock() {
+            if (selectedDates.size === 0) return;
+            const toUnblock = cachedBlockedDates.filter(d => selectedDates.has(d.blocked_date));
+            if (toUnblock.length === 0) {
+                alert('None of the selected dates are blocked.');
+                return;
+            }
+            if (!confirm(`Unblock ${toUnblock.length} date${toUnblock.length > 1 ? 's' : ''}?`)) return;
+            try {
+                await Promise.all(toUnblock.map(d =>
+                    fetch(`${API_BASE}/availability/blocked/${d.id}`, { method: 'DELETE', headers: getAuthHeaders() })
+                ));
+                clearSelection();
+                await loadCalendarData();
+            } catch (error) {
+                console.error('Bulk unblock error:', error);
+            }
+        }
+
+        async function unblockDate(id) {
+            if (!confirm('Unblock this date?')) return;
+            try {
+                await fetch(`${API_BASE}/availability/blocked/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                await loadCalendarData();
+            } catch (error) {
+                console.error('Unblock date error:', error);
+            }
+        }
+
+        function renderAvailabilityList() {
+            const slots = cachedAvailabilitySlots;
+            const container = document.getElementById('availability-table');
+            if (slots.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No availability set. Select days on the calendar and click "Set Availability".</p>';
+            } else {
+                container.innerHTML = slots.map(s => `
+                    <div class="flex justify-between items-center p-3 border border-border-dark dark:border-border-light rounded text-sm">
+                        <div>
+                            <span class="font-semibold">${DAY_NAMES[s.day_of_week]}</span>
+                            <span class="text-gray-400 dark:text-gray-600 ml-2">${s.start_time} - ${s.end_time}</span>
+                            <span class="text-xs text-gray-500 ml-2">(${s.slot_duration_minutes}min slots)</span>
+                            ${s.is_active ? '' : '<span class="text-xs text-red-500 ml-2">Inactive</span>'}
+                        </div>
+                        <button onclick="deleteAvailability(${s.id})" class="text-red-500 hover:text-red-700 text-xs">Remove</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderBlockedDatesList() {
+            const dates = cachedBlockedDates;
+            const container = document.getElementById('blocked-dates-list');
+            if (dates.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No blocked dates</p>';
+            } else {
+                container.innerHTML = dates.map(d => `
+                    <div class="flex justify-between items-center p-3 border border-red-500/30 rounded text-sm bg-red-500/5">
+                        <div>
+                            <span class="font-semibold">${new Date(d.blocked_date + 'T00:00:00').toLocaleDateString()}</span>
+                            ${d.reason ? `<span class="text-gray-400 dark:text-gray-600 ml-2">${d.reason}</span>` : ''}
+                        </div>
+                        <button onclick="unblockDate(${d.id})" class="text-green-500 hover:text-green-700 text-xs">Unblock</button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderAppointmentsList() {
+            const appts = cachedAppointments || [];
+            const container = document.getElementById('appointments-table');
+            const upcoming = appts.filter(a => a.status !== 'cancelled' && a.status !== 'completed');
+            if (upcoming.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No upcoming appointments</p>';
+            } else {
+                container.innerHTML = upcoming.map(a => {
+                    const statusColors = { pending: 'bg-yellow-500', confirmed: 'bg-green-500', cancelled: 'bg-red-500', completed: 'bg-gray-500' };
+                    return `
+                    <div class="flex justify-between items-center p-3 border border-border-dark dark:border-border-light rounded text-sm">
+                        <div>
+                            <span class="font-semibold">${new Date(a.appointment_date + 'T00:00:00').toLocaleDateString()}</span>
+                            <span class="text-gray-400 dark:text-gray-600 ml-2">${a.start_time} - ${a.end_time}</span>
+                            <span class="ml-2">${a.client_name || 'Unknown'} (${a.dog_name || ''})</span>
+                            ${a.service_name ? `<span class="text-xs text-gray-500 ml-2">${a.service_name}</span>` : ''}
+                            <span class="text-xs px-2 py-0.5 rounded text-white ml-2 ${statusColors[a.status] || 'bg-gray-500'}">${a.status}</span>
+                        </div>
+                        <div class="flex gap-1">
+                            ${a.status === 'pending' ? `<button onclick="updateAppointment(${a.id}, 'confirmed')" class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-700">Confirm</button>` : ''}
+                            ${a.status !== 'cancelled' && a.status !== 'completed' ? `<button onclick="updateAppointment(${a.id}, 'cancelled')" class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-700">Cancel</button>` : ''}
+                            ${a.status === 'confirmed' ? `<button onclick="updateAppointment(${a.id}, 'completed')" class="bg-gray-500 text-white px-2 py-1 rounded text-xs hover:bg-gray-700">Complete</button>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
             }
         }
 
@@ -1652,101 +1996,13 @@
                     body: JSON.stringify({ status })
                 });
                 if (res.ok) {
-                    loadAppointments();
+                    await loadCalendarData();
                     fetchUnreadCount();
                 } else {
                     alert('Failed to update appointment');
                 }
             } catch (error) {
                 console.error('Update appointment error:', error);
-            }
-        }
-
-        function showAddAvailability() {
-            document.getElementById('availability-modal').classList.remove('hidden');
-        }
-
-        function closeAvailabilityModal() {
-            document.getElementById('availability-modal').classList.add('hidden');
-            document.getElementById('availability-form').reset();
-        }
-
-        document.getElementById('availability-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const res = await fetch(`${API_BASE}/availability`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        day_of_week: parseInt(document.getElementById('avail-day').value),
-                        start_time: document.getElementById('avail-start').value,
-                        end_time: document.getElementById('avail-end').value,
-                        slot_duration_minutes: parseInt(document.getElementById('avail-duration').value)
-                    })
-                });
-                if (res.ok) {
-                    closeAvailabilityModal();
-                    loadAvailability();
-                } else {
-                    const data = await res.json();
-                    alert(data.error || 'Failed to add availability');
-                }
-            } catch (error) {
-                console.error('Add availability error:', error);
-                alert('Failed to add availability');
-            }
-        });
-
-        async function deleteAvailability(id) {
-            if (!confirm('Remove this availability slot?')) return;
-            try {
-                await fetch(`${API_BASE}/availability/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-                loadAvailability();
-            } catch (error) {
-                console.error('Delete availability error:', error);
-            }
-        }
-
-        function showBlockDate() {
-            document.getElementById('block-date-modal').classList.remove('hidden');
-        }
-
-        function closeBlockDateModal() {
-            document.getElementById('block-date-modal').classList.add('hidden');
-            document.getElementById('block-date-form').reset();
-        }
-
-        document.getElementById('block-date-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const res = await fetch(`${API_BASE}/availability/blocked`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        blocked_date: document.getElementById('block-date').value,
-                        reason: document.getElementById('block-reason').value || null
-                    })
-                });
-                if (res.ok) {
-                    closeBlockDateModal();
-                    loadBlockedDates();
-                } else {
-                    const data = await res.json();
-                    alert(data.error || 'Failed to block date');
-                }
-            } catch (error) {
-                console.error('Block date error:', error);
-                alert('Failed to block date');
-            }
-        });
-
-        async function unblockDate(id) {
-            if (!confirm('Unblock this date?')) return;
-            try {
-                await fetch(`${API_BASE}/availability/blocked/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-                loadBlockedDates();
-            } catch (error) {
-                console.error('Unblock date error:', error);
             }
         }
 
