@@ -430,8 +430,15 @@
                 if (dogs.length > 0) {
                     dogsList.innerHTML = dogs.map(d => `
                         <div class="bg-background-dark dark:bg-gray-50 rounded-lg p-4 text-center">
-                            <div class="w-20 h-20 mx-auto mb-3 rounded-full bg-primary flex items-center justify-center">
-                                <span class="material-icons text-4xl text-white">pets</span>
+                            <div class="relative w-20 h-20 mx-auto mb-3">
+                                ${d.photo_url
+                                    ? `<img src="${d.photo_url}" alt="${d.dog_name}" class="w-20 h-20 rounded-full object-cover">`
+                                    : `<div class="w-20 h-20 rounded-full bg-primary flex items-center justify-center"><span class="material-icons text-4xl text-white">pets</span></div>`
+                                }
+                                <label class="absolute bottom-0 right-0 w-7 h-7 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 shadow-lg">
+                                    <span class="material-icons text-white text-sm">photo_camera</span>
+                                    <input type="file" accept="image/*" capture="environment" class="hidden" onchange="uploadDogPhoto(${d.id}, this)">
+                                </label>
                             </div>
                             <h4 class="text-lg font-bold">${d.dog_name}</h4>
                             <p class="text-sm text-gray-400 dark:text-gray-600">${d.breed || 'Breed unknown'}</p>
@@ -461,6 +468,32 @@
         function closeAddDogModal() {
             document.getElementById('add-dog-modal').classList.add('hidden');
             document.getElementById('add-dog-form').reset();
+        }
+
+        async function uploadDogPhoto(dogId, input) {
+            const file = input.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(`${API_BASE}/dogs/${dogId}/photo`, {
+                    method: 'POST',
+                    headers: { 'Authorization': getAuthHeaders()['Authorization'] },
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const clientId = JSON.parse(atob(localStorage.getItem('token').split('.')[1])).id;
+                    const clientRes = await fetch(`${API_BASE}/clients/user/${clientId}`, { headers: getAuthHeaders() });
+                    const clientData = await clientRes.json();
+                    if (clientData.client) loadDogs(clientData.client.id);
+                } else {
+                    alert(data.error || 'Failed to upload photo');
+                }
+            } catch (err) {
+                console.error('Photo upload error:', err);
+                alert('Failed to upload photo');
+            }
         }
 
         async function loadMedia(clientId) {

@@ -1076,22 +1076,34 @@
                 if (dogs.length > 0) {
                     dogsEl.innerHTML = dogs.map(d => `
                         <div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start" id="dog-row-${d.id}">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="font-semibold">${d.dog_name}</span>
-                                    ${d.is_primary ? '<span class="text-xs bg-primary text-white px-2 py-0.5 rounded">Primary</span>' : ''}
+                            <div class="flex items-start gap-3 flex-1">
+                                <div class="relative flex-shrink-0">
+                                    ${d.photo_url
+                                        ? `<img src="${d.photo_url}" alt="${d.dog_name}" class="w-12 h-12 rounded-full object-cover">`
+                                        : `<div class="w-12 h-12 rounded-full bg-primary flex items-center justify-center"><span class="material-icons text-white">pets</span></div>`
+                                    }
                                 </div>
-                                <div class="grid grid-cols-3 gap-2 text-sm" id="dog-display-${d.id}">
-                                    <span class="text-gray-400 dark:text-gray-600">Breed: ${d.breed || 'N/A'}</span>
-                                    <span class="text-gray-400 dark:text-gray-600">Age: ${d.age || 'N/A'}</span>
-                                </div>
-                                <div class="hidden grid grid-cols-3 gap-2 mt-1" id="dog-edit-${d.id}">
-                                    <input type="text" value="${d.dog_name || ''}" placeholder="Name" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-name-${d.id}">
-                                    <input type="text" value="${d.breed || ''}" placeholder="Breed" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-breed-${d.id}">
-                                    <input type="number" value="${d.age || ''}" placeholder="Age" min="0" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-age-${d.id}">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-semibold">${d.dog_name}</span>
+                                        ${d.is_primary ? '<span class="text-xs bg-primary text-white px-2 py-0.5 rounded">Primary</span>' : ''}
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2 text-sm" id="dog-display-${d.id}">
+                                        <span class="text-gray-400 dark:text-gray-600">Breed: ${d.breed || 'N/A'}</span>
+                                        <span class="text-gray-400 dark:text-gray-600">Age: ${d.age || 'N/A'}</span>
+                                    </div>
+                                    <div class="hidden grid grid-cols-3 gap-2 mt-1" id="dog-edit-${d.id}">
+                                        <input type="text" value="${d.dog_name || ''}" placeholder="Name" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-name-${d.id}">
+                                        <input type="text" value="${d.breed || ''}" placeholder="Breed" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-breed-${d.id}">
+                                        <input type="number" value="${d.age || ''}" placeholder="Age" min="0" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-age-${d.id}">
+                                    </div>
                                 </div>
                             </div>
                             <div class="flex gap-1 ml-2">
+                                <label class="text-primary hover:text-blue-300 text-xs cursor-pointer">
+                                    Photo
+                                    <input type="file" accept="image/*" class="hidden" onchange="uploadDogPhotoAdmin(${d.id}, this)">
+                                </label>
                                 <button onclick="toggleEditDog(${d.id})" class="text-primary hover:text-blue-300 text-xs" id="dog-edit-btn-${d.id}">Edit</button>
                                 <button onclick="saveDogEdit(${d.id})" class="hidden text-green-500 hover:text-green-300 text-xs" id="dog-save-btn-${d.id}">Save</button>
                                 <button onclick="deleteDog(${d.id})" class="text-red-500 hover:text-red-300 text-xs">Delete</button>
@@ -1245,6 +1257,29 @@
             } catch (error) {
                 console.error('Save dog error:', error);
                 alert('Failed to update dog');
+            }
+        }
+
+        async function uploadDogPhotoAdmin(dogId, input) {
+            const file = input.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const res = await fetch(`${API_BASE}/dogs/${dogId}/photo`, {
+                    method: 'POST',
+                    headers: { 'Authorization': getAuthHeaders()['Authorization'] },
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    viewClient(currentDetailClientId);
+                } else {
+                    alert(data.error || 'Failed to upload photo');
+                }
+            } catch (err) {
+                console.error('Photo upload error:', err);
+                alert('Failed to upload photo');
             }
         }
 

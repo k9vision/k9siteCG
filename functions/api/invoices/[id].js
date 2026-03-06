@@ -12,7 +12,7 @@ export async function onRequest(context) {
 
   // Require admin for all invoice operations
   const auth = await requireAdmin(context);
-  if (!auth.success) {
+  if (auth.error) {
     return new Response(JSON.stringify({ error: auth.error }), {
       status: auth.status,
       headers: { 'Content-Type': 'application/json' }
