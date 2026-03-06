@@ -27,17 +27,17 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ error: auth.error }), { status: auth.status, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const { day_of_week, start_time, end_time, slot_duration_minutes } = await context.request.json();
+    const { day_of_week, start_time, end_time, slot_duration_minutes, specific_date } = await context.request.json();
 
     if (day_of_week === undefined || !start_time || !end_time) {
       return new Response(JSON.stringify({ error: 'day_of_week, start_time, and end_time are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     const slot = await context.env.DB.prepare(`
-      INSERT INTO availability_slots (day_of_week, start_time, end_time, slot_duration_minutes)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO availability_slots (day_of_week, start_time, end_time, slot_duration_minutes, specific_date)
+      VALUES (?, ?, ?, ?, ?)
       RETURNING *
-    `).bind(day_of_week, start_time, end_time, slot_duration_minutes || 60).first();
+    `).bind(day_of_week, start_time, end_time, slot_duration_minutes || 60, specific_date || null).first();
 
     return new Response(JSON.stringify({ success: true, slot }), {
       status: 201, headers: { 'Content-Type': 'application/json' }

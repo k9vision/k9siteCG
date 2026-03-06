@@ -455,6 +455,7 @@
                 <div class="flex gap-2">
                     <button onclick="openBulkAvailabilityModal()" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">+ Add Hours</button>
                     <button onclick="openBulkBlockModal()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 text-sm">Block Date</button>
+                    <button onclick="clearAllAvailability()" class="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-900 text-sm">Clear All</button>
                 </div>
             </div>
 
@@ -536,10 +537,43 @@
 
         <!-- Bulk Availability Modal -->
         <div id="bulk-availability-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-lg w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
                 <h3 class="text-2xl font-bold mb-4">Set Availability</h3>
-                <div id="bulk-avail-days" class="text-sm text-gray-400 dark:text-gray-600 mb-2"></div>
-                <p class="text-xs text-yellow-500 mb-4">This sets RECURRING weekly availability for these days of the week.</p>
+                <div id="bulk-avail-days" class="text-sm text-gray-400 dark:text-gray-600 mb-4"></div>
+
+                <!-- Step 1: Choose type -->
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold mb-2">Availability Type</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 p-2 border border-border-dark dark:border-border-light rounded cursor-pointer hover:bg-primary/10">
+                            <input type="radio" name="avail-type" value="specific" checked class="text-primary" onchange="toggleAvailType()">
+                            <div>
+                                <span class="font-medium">This date only</span>
+                                <p class="text-xs text-gray-500">Availability applies only to the selected date(s)</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-2 p-2 border border-border-dark dark:border-border-light rounded cursor-pointer hover:bg-primary/10">
+                            <input type="radio" name="avail-type" value="recurring" class="text-primary" onchange="toggleAvailType()">
+                            <div>
+                                <span class="font-medium">Recurring weekly</span>
+                                <p class="text-xs text-gray-500">Repeats every week on the same day(s)</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Recurring options (hidden by default) -->
+                <div id="recurring-options" class="hidden mb-4">
+                    <label class="block text-sm font-semibold mb-2">Repeat On</label>
+                    <div class="flex flex-wrap gap-2" id="recurring-day-buttons"></div>
+                    <div class="flex gap-2 mt-2">
+                        <button type="button" onclick="setRecurringPreset('auto')" class="px-2 py-1 text-xs rounded bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-800 hover:opacity-80">Auto-detect</button>
+                        <button type="button" onclick="setRecurringPreset('weekdays')" class="px-2 py-1 text-xs rounded bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-800 hover:opacity-80">Weekdays</button>
+                        <button type="button" onclick="setRecurringPreset('all')" class="px-2 py-1 text-xs rounded bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-800 hover:opacity-80">Every day</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Set times -->
                 <form id="bulk-availability-form" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -560,10 +594,12 @@
                             <option value="120">120 minutes</option>
                         </select>
                     </div>
-                    <label class="flex items-center gap-2 text-sm">
-                        <input type="checkbox" id="bulk-avail-replace" checked class="rounded">
-                        Replace existing slots for these days
-                    </label>
+                    <div id="replace-option" class="hidden">
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" id="bulk-avail-replace" checked class="rounded">
+                            Replace existing recurring slots for these days
+                        </label>
+                    </div>
                     <div class="flex gap-4">
                         <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Save</button>
                         <button type="button" onclick="closeBulkAvailabilityModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
@@ -1636,8 +1672,10 @@
             const today = new Date();
             const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-            // Build lookups
-            const availableDOWs = new Set(cachedAvailabilitySlots.filter(s => s.is_active).map(s => s.day_of_week));
+            // Build lookups — recurring DOW availability + specific date availability
+            const activeSlots = cachedAvailabilitySlots.filter(s => s.is_active);
+            const availableDOWs = new Set(activeSlots.filter(s => !s.specific_date).map(s => s.day_of_week));
+            const specificDateAvail = new Set(activeSlots.filter(s => s.specific_date).map(s => s.specific_date));
             const blockedDateSet = new Set(cachedBlockedDates.map(d => d.blocked_date));
             const appointmentDates = new Map();
             (cachedAppointments || []).filter(a => a.status === 'pending' || a.status === 'confirmed').forEach(a => {
@@ -1652,7 +1690,7 @@
             for (let day = 1; day <= daysInMonth; day++) {
                 const dateStr = `${calendarYear}-${String(calendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                 const dow = new Date(calendarYear, calendarMonth, day).getDay();
-                const isAvailable = availableDOWs.has(dow);
+                const isAvailable = availableDOWs.has(dow) || specificDateAvail.has(dateStr);
                 const isBlocked = blockedDateSet.has(dateStr);
                 const hasAppt = appointmentDates.has(dateStr);
                 const isSelected = selectedDates.has(dateStr);
@@ -1777,6 +1815,14 @@
         }
 
         // Bulk Availability Modal
+        let selectedRecurringDOWs = new Set();
+
+        function toggleAvailType() {
+            const type = document.querySelector('input[name="avail-type"]:checked').value;
+            document.getElementById('recurring-options').classList.toggle('hidden', type !== 'recurring');
+            document.getElementById('replace-option').classList.toggle('hidden', type !== 'recurring');
+        }
+
         function openBulkAvailabilityModal() {
             if (selectedDates.size === 0) {
                 alert('Select one or more days on the calendar first.');
@@ -1788,8 +1834,47 @@
                 dows.add(d.getDay());
             });
             const dayNames = [...dows].sort().map(d => DAY_NAMES[d]);
-            document.getElementById('bulk-avail-days').textContent = `Applying to: ${dayNames.join(', ')}`;
+            const dateCount = selectedDates.size;
+            document.getElementById('bulk-avail-days').textContent = `${dateCount} date${dateCount > 1 ? 's' : ''} selected (${dayNames.join(', ')})`;
+
+            // Build recurring day buttons
+            selectedRecurringDOWs = new Set(dows);
+            renderRecurringDayButtons();
+
+            // Default to "specific" for single date, show both options
+            if (dateCount === 1) {
+                document.querySelector('input[name="avail-type"][value="specific"]').checked = true;
+            }
+            toggleAvailType();
             document.getElementById('bulk-availability-modal').classList.remove('hidden');
+        }
+
+        function renderRecurringDayButtons() {
+            const container = document.getElementById('recurring-day-buttons');
+            container.innerHTML = DAY_NAMES.map((name, i) => {
+                const active = selectedRecurringDOWs.has(i);
+                return `<button type="button" onclick="toggleRecurringDay(${i})" class="px-3 py-1 rounded text-xs font-medium transition-colors ${active ? 'bg-primary text-white' : 'bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-800 opacity-50'}">${name.substring(0, 3)}</button>`;
+            }).join('');
+        }
+
+        function toggleRecurringDay(dow) {
+            if (selectedRecurringDOWs.has(dow)) selectedRecurringDOWs.delete(dow);
+            else selectedRecurringDOWs.add(dow);
+            renderRecurringDayButtons();
+        }
+
+        function setRecurringPreset(preset) {
+            selectedRecurringDOWs.clear();
+            if (preset === 'auto') {
+                selectedDates.forEach(ds => {
+                    selectedRecurringDOWs.add(new Date(ds + 'T00:00:00').getDay());
+                });
+            } else if (preset === 'weekdays') {
+                [1,2,3,4,5].forEach(d => selectedRecurringDOWs.add(d));
+            } else if (preset === 'all') {
+                [0,1,2,3,4,5,6].forEach(d => selectedRecurringDOWs.add(d));
+            }
+            renderRecurringDayButtons();
         }
 
         function closeBulkAvailabilityModal() {
@@ -1797,37 +1882,60 @@
             document.getElementById('bulk-availability-form').reset();
         }
 
+        async function clearAllAvailability() {
+            if (!confirm('Remove ALL availability slots? This cannot be undone.')) return;
+            try {
+                await Promise.all(cachedAvailabilitySlots.map(s =>
+                    fetch(`${API_BASE}/availability/${s.id}`, { method: 'DELETE', headers: getAuthHeaders() })
+                ));
+                await loadCalendarData();
+            } catch (error) {
+                console.error('Clear all availability error:', error);
+                alert('Failed to clear availability');
+            }
+        }
+
         document.getElementById('bulk-availability-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const startTime = document.getElementById('bulk-avail-start').value;
             const endTime = document.getElementById('bulk-avail-end').value;
             const duration = parseInt(document.getElementById('bulk-avail-duration').value);
+            const availType = document.querySelector('input[name="avail-type"]:checked').value;
             const replaceExisting = document.getElementById('bulk-avail-replace').checked;
 
-            const dows = new Set();
-            selectedDates.forEach(ds => {
-                const d = new Date(ds + 'T00:00:00');
-                dows.add(d.getDay());
-            });
-
             try {
-                // If replace, delete existing slots for these DOWs
-                if (replaceExisting) {
-                    const toDelete = cachedAvailabilitySlots.filter(s => dows.has(s.day_of_week));
-                    await Promise.all(toDelete.map(s =>
-                        fetch(`${API_BASE}/availability/${s.id}`, { method: 'DELETE', headers: getAuthHeaders() })
+                if (availType === 'specific') {
+                    // Create one slot per selected date with specific_date set
+                    const results = await Promise.all([...selectedDates].map(dateStr => {
+                        const dow = new Date(dateStr + 'T00:00:00').getDay();
+                        return fetch(`${API_BASE}/availability`, {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ day_of_week: dow, start_time: startTime, end_time: endTime, slot_duration_minutes: duration, specific_date: dateStr })
+                        });
+                    }));
+                    if (!results.every(r => r.ok)) alert('Some slots failed to save.');
+                } else {
+                    // Recurring: use selectedRecurringDOWs
+                    if (selectedRecurringDOWs.size === 0) {
+                        alert('Select at least one day of the week for recurring availability.');
+                        return;
+                    }
+                    if (replaceExisting) {
+                        const toDelete = cachedAvailabilitySlots.filter(s => !s.specific_date && selectedRecurringDOWs.has(s.day_of_week));
+                        await Promise.all(toDelete.map(s =>
+                            fetch(`${API_BASE}/availability/${s.id}`, { method: 'DELETE', headers: getAuthHeaders() })
+                        ));
+                    }
+                    const results = await Promise.all([...selectedRecurringDOWs].map(dow =>
+                        fetch(`${API_BASE}/availability`, {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ day_of_week: dow, start_time: startTime, end_time: endTime, slot_duration_minutes: duration })
+                        })
                     ));
+                    if (!results.every(r => r.ok)) alert('Some availability slots failed to save.');
                 }
-                // Create one slot per unique DOW
-                const results = await Promise.all([...dows].map(dow =>
-                    fetch(`${API_BASE}/availability`, {
-                        method: 'POST',
-                        headers: getAuthHeaders(),
-                        body: JSON.stringify({ day_of_week: dow, start_time: startTime, end_time: endTime, slot_duration_minutes: duration })
-                    })
-                ));
-                const allOk = results.every(r => r.ok);
-                if (!allOk) alert('Some availability slots failed to save.');
                 closeBulkAvailabilityModal();
                 clearSelection();
                 await loadCalendarData();
@@ -1928,17 +2036,21 @@
             if (slots.length === 0) {
                 container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No availability set. Select days on the calendar and click "Set Availability".</p>';
             } else {
-                container.innerHTML = slots.map(s => `
+                container.innerHTML = slots.map(s => {
+                    const label = s.specific_date
+                        ? `<span class="font-semibold">${new Date(s.specific_date + 'T00:00:00').toLocaleDateString()}</span> <span class="text-xs text-blue-400 ml-1">(one-time)</span>`
+                        : `<span class="font-semibold">${DAY_NAMES[s.day_of_week]}</span> <span class="text-xs text-green-400 ml-1">(recurring)</span>`;
+                    return `
                     <div class="flex justify-between items-center p-3 border border-border-dark dark:border-border-light rounded text-sm">
                         <div>
-                            <span class="font-semibold">${DAY_NAMES[s.day_of_week]}</span>
+                            ${label}
                             <span class="text-gray-400 dark:text-gray-600 ml-2">${s.start_time} - ${s.end_time}</span>
                             <span class="text-xs text-gray-500 ml-2">(${s.slot_duration_minutes}min slots)</span>
                             ${s.is_active ? '' : '<span class="text-xs text-red-500 ml-2">Inactive</span>'}
                         </div>
                         <button onclick="deleteAvailability(${s.id})" class="text-red-500 hover:text-red-700 text-xs">Remove</button>
-                    </div>
-                `).join('');
+                    </div>`;
+                }).join('');
             }
         }
 

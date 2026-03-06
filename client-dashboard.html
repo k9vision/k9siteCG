@@ -118,6 +118,17 @@
             </div>
         </div>
 
+        <!-- My Invoices -->
+        <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow mb-8 border border-border-dark dark:border-border-light">
+            <h3 class="text-xl font-bold mb-4 flex items-center">
+                <span class="material-icons mr-2 text-primary">receipt_long</span>
+                My Invoices
+            </h3>
+            <div id="my-invoices" class="space-y-3">
+                <p class="text-gray-400 dark:text-gray-600 text-sm">No invoices yet</p>
+            </div>
+        </div>
+
         <div class="grid md:grid-cols-2 gap-6 mb-8">
             <!-- Training Media -->
             <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light">
@@ -126,9 +137,17 @@
                         <span class="material-icons mr-2 text-primary">photo_library</span>
                         Training Photos & Videos
                     </h3>
-                    <button onclick="showUploadMedia()" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700 flex items-center">
-                        <span class="material-icons text-sm mr-1">upload</span> Upload
-                    </button>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="takePhoto()" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-700 flex items-center">
+                            <span class="material-icons text-sm mr-1">photo_camera</span> Take Photo
+                        </button>
+                        <button onclick="takeVideo()" class="bg-purple-500 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 flex items-center">
+                            <span class="material-icons text-sm mr-1">videocam</span> Record Video
+                        </button>
+                        <button onclick="showUploadMedia()" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700 flex items-center">
+                            <span class="material-icons text-sm mr-1">upload</span> Upload File
+                        </button>
+                    </div>
                 </div>
                 <div id="media-list" class="space-y-4">
                     <p class="text-gray-400 dark:text-gray-600">No media files yet</p>
@@ -698,8 +717,124 @@
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('booking-date').setAttribute('min', today);
 
+        // INVOICE FUNCTIONS
+        async function loadInvoices() {
+            try {
+                const res = await fetch(`${API_BASE}/invoices`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const invoices = data.invoices || [];
+                const container = document.getElementById('my-invoices');
+
+                if (invoices.length === 0) {
+                    container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No invoices yet</p>';
+                    return;
+                }
+
+                const statusColors = { pending: 'bg-yellow-500', paid: 'bg-green-500', overdue: 'bg-red-500', cancelled: 'bg-gray-500' };
+
+                container.innerHTML = invoices.map(inv => {
+                    const itemsHtml = (inv.items || []).map(item => `
+                        <tr class="text-sm">
+                            <td class="py-1">${item.service_name}</td>
+                            <td class="py-1 text-center">${item.quantity}</td>
+                            <td class="py-1 text-right">$${Number(item.price).toFixed(2)}</td>
+                            <td class="py-1 text-right">$${Number(item.total).toFixed(2)}</td>
+                        </tr>
+                    `).join('');
+
+                    return `
+                    <div class="border border-border-dark dark:border-border-light rounded p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-semibold">Invoice #${inv.invoice_number}</p>
+                                <p class="text-sm text-gray-400 dark:text-gray-600">${new Date(inv.date).toLocaleDateString()}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-lg font-bold">$${Number(inv.total).toFixed(2)}</p>
+                                <span class="text-xs px-2 py-0.5 rounded text-white ${statusColors[inv.status] || 'bg-gray-500'}">${inv.status}</span>
+                            </div>
+                        </div>
+                        <details class="mt-3">
+                            <summary class="text-sm text-primary cursor-pointer hover:underline">View Details</summary>
+                            <div class="mt-2 border-t border-border-dark dark:border-border-light pt-2">
+                                <table class="w-full">
+                                    <thead><tr class="text-xs text-gray-500 border-b border-border-dark dark:border-border-light">
+                                        <th class="text-left py-1">Service</th><th class="text-center py-1">Qty</th><th class="text-right py-1">Price</th><th class="text-right py-1">Total</th>
+                                    </tr></thead>
+                                    <tbody>${itemsHtml}</tbody>
+                                </table>
+                                <div class="mt-2 pt-2 border-t border-border-dark dark:border-border-light text-sm space-y-1">
+                                    <div class="flex justify-between"><span>Subtotal:</span><span>$${Number(inv.subtotal).toFixed(2)}</span></div>
+                                    <div class="flex justify-between"><span>Tax (${inv.tax_rate}%):</span><span>$${Number(inv.tax_amount).toFixed(2)}</span></div>
+                                    <div class="flex justify-between font-bold"><span>Total:</span><span>$${Number(inv.total).toFixed(2)}</span></div>
+                                    ${inv.notes ? `<p class="text-xs text-gray-500 mt-1">${inv.notes}</p>` : ''}
+                                    ${inv.due_date ? `<p class="text-xs text-gray-500">Due: ${new Date(inv.due_date).toLocaleDateString()}</p>` : ''}
+                                </div>
+                            </div>
+                        </details>
+                    </div>`;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading invoices:', error);
+            }
+        }
+
+        // CAMERA CAPTURE FUNCTIONS
+        function takePhoto() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment';
+            input.onchange = (e) => uploadCapturedFile(e.target.files[0]);
+            input.click();
+        }
+
+        function takeVideo() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'video/*';
+            input.capture = 'environment';
+            input.onchange = (e) => uploadCapturedFile(e.target.files[0]);
+            input.click();
+        }
+
+        async function uploadCapturedFile(file) {
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('caption', '');
+
+            try {
+                const btn = event?.target;
+                if (btn) btn.disabled = true;
+
+                const res = await fetch(`${API_BASE}/media/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    alert('Media uploaded successfully!');
+                    const user = JSON.parse(localStorage.getItem('user'));
+                    const clientRes = await fetch(`${API_BASE}/clients/user/${user.id}`, { headers: getAuthHeaders() });
+                    const data = await clientRes.json();
+                    const client = data.client || data;
+                    if (client && client.id) loadMedia(client.id);
+                } else {
+                    const data = await res.json();
+                    alert(data.error || 'Upload failed');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Upload failed');
+            }
+        }
+
         loadClientData();
         loadMyAppointments();
+        loadInvoices();
     </script>
 </body>
 </html>

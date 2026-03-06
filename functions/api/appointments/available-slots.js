@@ -17,10 +17,10 @@ export async function onRequestGet(context) {
     const dateObj = new Date(date + 'T00:00:00');
     const dayOfWeek = dateObj.getDay();
 
-    // Get active availability slots for this day
+    // Get active availability slots: recurring (day_of_week) OR specific_date match
     const { results: slots } = await context.env.DB.prepare(
-      'SELECT * FROM availability_slots WHERE day_of_week = ? AND is_active = 1'
-    ).bind(dayOfWeek).all();
+      'SELECT * FROM availability_slots WHERE is_active = 1 AND (specific_date = ? OR (specific_date IS NULL AND day_of_week = ?))'
+    ).bind(date, dayOfWeek).all();
 
     if (slots.length === 0) {
       return new Response(JSON.stringify({ success: true, available_slots: [], message: 'No availability on this day' }), {

@@ -1,5 +1,5 @@
 // Invoices API - List all invoices and create new invoice
-import { requireAdmin } from '../../utils/auth';
+import { requireAuth, requireAdmin } from '../../utils/auth';
 
 // Generate invoice number: YY + DD + Client(2) + Dog(2)
 function generateInvoiceNumber(clientName, dogName) {
@@ -9,7 +9,8 @@ function generateInvoiceNumber(clientName, dogName) {
   const clientInitials = (clientName || 'XX').substring(0, 2).toUpperCase();
   const dogInitials = (dogName || 'XX').substring(0, 2).toUpperCase();
 
-  return `${year}${day}${clientInitials}${dogInitials}`;
+  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${year}${day}${clientInitials}${dogInitials}-${rand}`;
 }
 
 export async function onRequest(context) {
@@ -20,29 +21,47 @@ export async function onRequest(context) {
     return new Response(null, { status: 204 });
   }
 
-  // Require admin for all invoice operations
-  const auth = await requireAdmin(context);
-  if (!auth.success) {
-    return new Response(JSON.stringify({ error: auth.error }), {
-      status: auth.status,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
   try {
     if (request.method === 'GET') {
-      // List all invoices with client and dog info
-      const { results } = await env.DB.prepare(`
-        SELECT
-          invoices.*,
-          clients.client_name,
-          clients.email as client_email,
-          clients.dog_name,
-          clients.dog_breed
-        FROM invoices
-        JOIN clients ON invoices.client_id = clients.id
-        ORDER BY invoices.created_at DESC
-      `).all();
+      // Allow both admin and client to fetch invoices
+      const auth = await requireAuth(context);
+      if (auth.error) {
+        return new Response(JSON.stringify({ error: auth.error }), {
+          status: auth.status,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      let results;
+      if (auth.user.role === 'admin') {
+        const data = await env.DB.prepare(`
+          SELECT invoices.*, clients.client_name, clients.email as client_email, clients.dog_name, clients.dog_breed
+          FROM invoices JOIN clients ON invoices.client_id = clients.id
+          ORDER BY invoices.created_at DESC
+        `).all();
+        results = data.results;
+      } else {
+        // Client: look up their client record and return only their invoices
+        const client = await env.DB.prepare('SELECT id FROM clients WHERE user_id = ?').bind(auth.user.id).first();
+        if (!client) {
+          return new Response(JSON.stringify({ success: true, invoices: [] }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        const data = await env.DB.prepare(`
+          SELECT invoices.*, clients.client_name, clients.email as client_email, clients.dog_name, clients.dog_breed
+          FROM invoices JOIN clients ON invoices.client_id = clients.id
+          WHERE invoices.client_id = ?
+          ORDER BY invoices.created_at DESC
+        `).bind(client.id).all();
+        results = data.results;
+
+        // Also fetch invoice items for each invoice
+        for (const inv of results) {
+          const items = await env.DB.prepare('SELECT * FROM invoice_items WHERE invoice_id = ?').bind(inv.id).all();
+          inv.items = items.results;
+        }
+      }
 
       return new Response(JSON.stringify({
         success: true,
@@ -53,6 +72,14 @@ export async function onRequest(context) {
     }
 
     if (request.method === 'POST') {
+      // Require admin for creating invoices
+      const auth = await requireAdmin(context);
+      if (auth.error) {
+        return new Response(JSON.stringify({ error: auth.error }), {
+          status: auth.status,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       // Create new invoice
       const {
         client_id,
