@@ -28,7 +28,7 @@ export async function onRequest(context) {
           clients.client_name,
           clients.email as client_email,
           clients.dog_name,
-          clients.breed as dog_breed
+          clients.dog_breed
         FROM invoices
         JOIN clients ON invoices.client_id = clients.id
         WHERE invoices.id = ?
@@ -137,7 +137,7 @@ export async function onRequest(context) {
           clients.client_name,
           clients.email as client_email,
           clients.dog_name,
-          clients.breed as dog_breed
+          clients.dog_breed
         FROM invoices
         JOIN clients ON invoices.client_id = clients.id
         WHERE invoices.id = ?
