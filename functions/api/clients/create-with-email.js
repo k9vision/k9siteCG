@@ -29,7 +29,7 @@ export async function onRequest(context) {
 
   // Require admin
   const auth = await requireAdmin(context);
-  if (!auth.success) {
+  if (auth.error) {
     return new Response(JSON.stringify({ error: auth.error }), {
       status: auth.status,
       headers: { 'Content-Type': 'application/json' }
@@ -104,7 +104,7 @@ export async function onRequest(context) {
 
     // Create client profile
     const clientResult = await env.DB.prepare(
-      `INSERT INTO clients (user_id, client_name, email, dog_name, dog_breed, dog_age)
+      `INSERT INTO clients (user_id, client_name, email, dog_name, breed, age)
        VALUES (?, ?, ?, ?, ?, ?)`
     ).bind(userId, client_name, email, dog_name, breed || null, age || null).run();
 

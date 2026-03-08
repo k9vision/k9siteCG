@@ -27,7 +27,7 @@ export async function onRequest(context) {
     if (request.method === 'POST') {
       // Create new service (admin only)
       const auth = await requireAdmin(context);
-      if (!auth.success) {
+      if (auth.error) {
         return new Response(JSON.stringify({ error: auth.error }), {
           status: auth.status,
           headers: { 'Content-Type': 'application/json' }

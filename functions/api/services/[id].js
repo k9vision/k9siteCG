@@ -34,7 +34,7 @@ export async function onRequest(context) {
 
     // Update and delete require admin auth
     const auth = await requireAdmin(context);
-    if (!auth.success) {
+    if (auth.error) {
       return new Response(JSON.stringify({ error: auth.error }), {
         status: auth.status,
         headers: { 'Content-Type': 'application/json' }

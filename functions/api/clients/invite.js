@@ -54,7 +54,7 @@ export async function onRequest(context) {
 
     // Create client profile with user_id = NULL (not yet linked to a user account)
     const result = await db.prepare(
-      'INSERT INTO clients (user_id, client_name, email, dog_name, dog_breed, dog_age) VALUES (NULL, ?, ?, ?, ?, ?)'
+      'INSERT INTO clients (user_id, client_name, email, dog_name, breed, age) VALUES (NULL, ?, ?, ?, ?, ?)'
     ).bind(client_name, email, dog_name, breed || null, age || null).run();
 
     const clientId = result.meta.last_row_id;
