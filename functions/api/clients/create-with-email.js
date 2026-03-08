@@ -104,7 +104,7 @@ export async function onRequest(context) {
 
     // Create client profile
     const clientResult = await env.DB.prepare(
-      `INSERT INTO clients (user_id, client_name, email, dog_name, breed, age)
+      `INSERT INTO clients (user_id, client_name, email, dog_name, dog_breed, dog_age)
        VALUES (?, ?, ?, ?, ?, ?)`
     ).bind(userId, client_name, email, dog_name, breed || null, age || null).run();
 
