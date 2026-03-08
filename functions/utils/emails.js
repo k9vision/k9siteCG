@@ -232,6 +232,50 @@ export function clientNoteNotificationHtml(clientName, dogName, noteTitle, noteC
   `);
 }
 
+// Admin notification: new availability slot set
+export function availabilitySetNotificationHtml(dayName, startTime, endTime, specificDate) {
+  const when = specificDate
+    ? `<p style="margin: 5px 0;"><strong>Date:</strong> ${specificDate}</p>`
+    : `<p style="margin: 5px 0;"><strong>Day:</strong> ${dayName}</p>`;
+
+  return emailWrapper(`
+    <h2 style="color: #3B82F6; margin-bottom: 20px;">New Availability Set</h2>
+    <p>A new availability slot has been added to your schedule.</p>
+    <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      ${when}
+      <p style="margin: 5px 0;"><strong>Start:</strong> ${startTime}</p>
+      <p style="margin: 5px 0;"><strong>End:</strong> ${endTime}</p>
+    </div>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/admin-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View in Dashboard
+      </a>
+    </div>
+  `);
+}
+
+// Admin notification: date blocked
+export function blockedDateNotificationHtml(blockedDate, reason, allDay, startTime, endTime) {
+  const timeInfo = allDay || (!startTime && !endTime)
+    ? '<p style="margin: 5px 0;"><strong>Duration:</strong> All Day</p>'
+    : `<p style="margin: 5px 0;"><strong>Time:</strong> ${startTime} - ${endTime}</p>`;
+
+  return emailWrapper(`
+    <h2 style="color: #EF4444; margin-bottom: 20px;">Date Blocked</h2>
+    <p>A date has been blocked on your schedule.</p>
+    <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 5px 0;"><strong>Date:</strong> ${blockedDate}</p>
+      ${reason ? `<p style="margin: 5px 0;"><strong>Reason:</strong> ${reason}</p>` : ''}
+      ${timeInfo}
+    </div>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/admin-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View in Dashboard
+      </a>
+    </div>
+  `);
+}
+
 // Password reset email
 export function resetEmailHtml(resetUrl, adminTriggered = false) {
   const intro = adminTriggered

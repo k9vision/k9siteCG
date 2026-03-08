@@ -39,6 +39,31 @@ export async function onRequestPost(context) {
       RETURNING *
     `).bind(day_of_week, start_time, end_time, slot_duration_minutes || 60, specific_date || null).first();
 
+    // Sync availability to admin's Google Calendar
+    try {
+      const { syncAvailabilityToGoogle } = await import('../../utils/gcal.js');
+      await syncAvailabilityToGoogle(context.env.DB, context.env, slot);
+    } catch (syncErr) {
+      console.error('Google Calendar availability sync error:', syncErr);
+    }
+
+    // Email alert to admin (fire-and-forget)
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    try {
+      const { sendEmail, availabilitySetNotificationHtml } = await import('../../utils/emails.js');
+      const html = availabilitySetNotificationHtml(
+        dayNames[day_of_week] || `Day ${day_of_week}`,
+        start_time, end_time, specific_date || null
+      );
+      context.waitUntil(sendEmail(context.env, {
+        to: 'k9vision@yahoo.com',
+        subject: 'K9 Vision: New Availability Set',
+        html
+      }));
+    } catch (emailErr) {
+      console.error('Availability email alert error:', emailErr);
+    }
+
     return new Response(JSON.stringify({ success: true, slot }), {
       status: 201, headers: { 'Content-Type': 'application/json' }
     });

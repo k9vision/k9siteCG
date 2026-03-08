@@ -28,6 +28,32 @@ export async function onRequestPut(context) {
       return new Response(JSON.stringify({ error: 'Slot not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Re-sync updated slot to Google Calendar (remove old events, create new ones)
+    try {
+      const { removeSyncedEvents, syncAvailabilityToGoogle } = await import('../../utils/gcal.js');
+      await removeSyncedEvents(context.env.DB, context.env, 'availability', parseInt(id));
+      await syncAvailabilityToGoogle(context.env.DB, context.env, slot);
+    } catch (syncErr) {
+      console.error('Google Calendar availability update sync error:', syncErr);
+    }
+
+    // Email alert to admin (fire-and-forget)
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    try {
+      const { sendEmail, availabilitySetNotificationHtml } = await import('../../utils/emails.js');
+      const html = availabilitySetNotificationHtml(
+        dayNames[slot.day_of_week] || `Day ${slot.day_of_week}`,
+        slot.start_time, slot.end_time, slot.specific_date || null
+      );
+      context.waitUntil(sendEmail(context.env, {
+        to: 'k9vision@yahoo.com',
+        subject: 'K9 Vision: Availability Updated',
+        html
+      }));
+    } catch (emailErr) {
+      console.error('Availability update email alert error:', emailErr);
+    }
+
     return new Response(JSON.stringify({ success: true, slot }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Update availability error:', error);
@@ -44,6 +70,13 @@ export async function onRequestDelete(context) {
 
     const id = context.params.id;
     await context.env.DB.prepare('DELETE FROM availability_slots WHERE id = ?').bind(id).run();
+
+    try {
+      const { removeSyncedEvents } = await import('../../utils/gcal.js');
+      await removeSyncedEvents(context.env.DB, context.env, 'availability', parseInt(id));
+    } catch (syncErr) {
+      console.error('Google Calendar remove error:', syncErr);
+    }
 
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) {

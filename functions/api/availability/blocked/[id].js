@@ -10,6 +10,13 @@ export async function onRequestDelete(context) {
     const id = context.params.id;
     await context.env.DB.prepare('DELETE FROM blocked_dates WHERE id = ?').bind(id).run();
 
+    try {
+      const { removeSyncedEvents } = await import('../../utils/gcal.js');
+      await removeSyncedEvents(context.env.DB, context.env, 'blocked_date', parseInt(id));
+    } catch (syncErr) {
+      console.error('Google Calendar remove error:', syncErr);
+    }
+
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Unblock date error:', error);

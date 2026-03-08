@@ -83,6 +83,16 @@ export async function onRequestPut(context) {
       });
     }
 
+    // Remove synced Google Calendar events on cancellation
+    if (status === 'cancelled') {
+      try {
+        const { removeSyncedEvents } = await import('../../utils/gcal.js');
+        await removeSyncedEvents(context.env.DB, context.env, 'appointment', parseInt(id));
+      } catch (syncErr) {
+        console.error('Google Calendar remove error:', syncErr);
+      }
+    }
+
     return new Response(JSON.stringify({ success: true, appointment }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error('Update appointment error:', error);
@@ -105,6 +115,14 @@ export async function onRequestDelete(context) {
     }
 
     await context.env.DB.prepare('DELETE FROM appointments WHERE id = ?').bind(id).run();
+
+    // Remove synced Google Calendar events
+    try {
+      const { removeSyncedEvents } = await import('../../utils/gcal.js');
+      await removeSyncedEvents(context.env.DB, context.env, 'appointment', parseInt(id));
+    } catch (syncErr) {
+      console.error('Google Calendar remove error:', syncErr);
+    }
 
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error) {

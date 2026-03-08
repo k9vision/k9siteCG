@@ -119,6 +119,14 @@ export async function onRequestPost(context) {
       RETURNING *
     `).bind(clientId, appointment_date, start_time, end_time, service_id || null, service_name || null, notes || null).first();
 
+    // Sync to Google Calendar (fire-and-forget)
+    try {
+      const { syncAppointmentToGoogle } = await import('../../utils/gcal.js');
+      await syncAppointmentToGoogle(context.env.DB, context.env, appointment, clientId);
+    } catch (syncErr) {
+      console.error('Google Calendar sync error:', syncErr);
+    }
+
     // Get client info for notification
     const client = await context.env.DB.prepare('SELECT client_name, dog_name FROM clients WHERE id = ?').bind(clientId).first();
 
