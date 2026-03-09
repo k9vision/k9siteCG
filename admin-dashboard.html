@@ -961,6 +961,7 @@
                                     <button onclick="viewClient(${client.id})" class="bg-primary text-white px-4 py-1 rounded text-sm">View Details</button>
                                     ${inviteBtn}
                                     ${resetBtns}
+                                    <button onclick="deleteClient(${client.user_id || client.id}, '${(client.client_name || '').replace(/'/g, "\\'")}')" class="bg-red-700 text-white px-3 py-1 rounded text-sm hover:bg-red-900">Delete Client</button>
                                 </div>
                             </div>
                         </div>`;
@@ -971,6 +972,29 @@
             } catch (error) {
                 console.error('Error loading clients:', error);
                 alert('Failed to load clients');
+            }
+        }
+
+        async function deleteClient(userId, clientName) {
+            if (!confirm(`Are you sure you want to delete client "${clientName}"? This will permanently remove all their data including media, notes, invoices, and fun facts.`)) return;
+            if (!confirm(`FINAL WARNING: This action CANNOT be undone. Delete "${clientName}" and ALL associated data?`)) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/clients/${userId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (handleAuthError(res)) return;
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Client deleted successfully');
+                    showClients();
+                } else {
+                    alert(data.error || 'Failed to delete client');
+                }
+            } catch (error) {
+                console.error('Delete client error:', error);
+                alert('Failed to delete client');
             }
         }
 
