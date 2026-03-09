@@ -739,6 +739,17 @@
                         <button type="button" onclick="setRecurringPreset('weekdays')" class="px-2 py-1 text-xs rounded bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-800 hover:opacity-80">Weekdays</button>
                         <button type="button" onclick="setRecurringPreset('all')" class="px-2 py-1 text-xs rounded bg-gray-700 dark:bg-gray-200 text-white dark:text-gray-800 hover:opacity-80">Every day</button>
                     </div>
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Start Date *</label>
+                            <input type="date" id="recurring-start-date" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1">End Date *</label>
+                            <input type="date" id="recurring-end-date" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">The recurring schedule will only apply between these dates.</p>
                 </div>
 
                 <!-- Step 2: Set times -->
@@ -2501,10 +2512,17 @@
             const today = new Date();
             const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-            // Build lookups — recurring DOW availability + specific date availability
+            // Build lookups — recurring DOW availability (with date range check) + specific date availability
             const activeSlots = cachedAvailabilitySlots.filter(s => s.is_active);
-            const availableDOWs = new Set(activeSlots.filter(s => !s.specific_date).map(s => s.day_of_week));
+            const recurringSlots = activeSlots.filter(s => !s.specific_date);
             const specificDateAvail = new Set(activeSlots.filter(s => s.specific_date).map(s => s.specific_date));
+
+            // Helper: check if a date string falls within a recurring slot's date range
+            function isRecurringAvailable(dateStr, dow) {
+                return recurringSlots.some(s => s.day_of_week === dow
+                    && (!s.recurring_start_date || s.recurring_start_date <= dateStr)
+                    && (!s.recurring_end_date || s.recurring_end_date >= dateStr));
+            }
             const blockedDateSet = new Set(cachedBlockedDates.map(d => d.blocked_date));
             const appointmentDates = new Map();
             (cachedAppointments || []).filter(a => a.status === 'pending' || a.status === 'confirmed').forEach(a => {
@@ -2519,7 +2537,7 @@
             for (let day = 1; day <= daysInMonth; day++) {
                 const dateStr = `${calendarYear}-${String(calendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                 const dow = new Date(calendarYear, calendarMonth, day).getDay();
-                const isAvailable = availableDOWs.has(dow) || specificDateAvail.has(dateStr);
+                const isAvailable = isRecurringAvailable(dateStr, dow) || specificDateAvail.has(dateStr);
                 const isBlocked = blockedDateSet.has(dateStr);
                 const hasAppt = appointmentDates.has(dateStr);
                 const isSelected = selectedDates.has(dateStr);
@@ -2670,6 +2688,14 @@
             selectedRecurringDOWs = new Set(dows);
             renderRecurringDayButtons();
 
+            // Set default recurring date range from selected dates
+            const sortedDates = [...selectedDates].sort();
+            document.getElementById('recurring-start-date').value = sortedDates[0];
+            // Default end date to 3 months from start
+            const endDefault = new Date(sortedDates[0] + 'T00:00:00');
+            endDefault.setMonth(endDefault.getMonth() + 3);
+            document.getElementById('recurring-end-date').value = endDefault.toISOString().split('T')[0];
+
             // Default to "specific" for single date, show both options
             if (dateCount === 1) {
                 document.querySelector('input[name="avail-type"][value="specific"]').checked = true;
@@ -2750,6 +2776,16 @@
                         alert('Select at least one day of the week for recurring availability.');
                         return;
                     }
+                    const recurringStartDate = document.getElementById('recurring-start-date').value;
+                    const recurringEndDate = document.getElementById('recurring-end-date').value;
+                    if (!recurringStartDate || !recurringEndDate) {
+                        alert('Please set both a start date and end date for the recurring schedule.');
+                        return;
+                    }
+                    if (recurringEndDate < recurringStartDate) {
+                        alert('End date must be on or after the start date.');
+                        return;
+                    }
                     if (replaceExisting) {
                         const toDelete = cachedAvailabilitySlots.filter(s => !s.specific_date && selectedRecurringDOWs.has(s.day_of_week));
                         await Promise.all(toDelete.map(s =>
@@ -2760,7 +2796,7 @@
                         fetch(`${API_BASE}/availability`, {
                             method: 'POST',
                             headers: getAuthHeaders(),
-                            body: JSON.stringify({ day_of_week: dow, start_time: startTime, end_time: endTime, slot_duration_minutes: duration })
+                            body: JSON.stringify({ day_of_week: dow, start_time: startTime, end_time: endTime, slot_duration_minutes: duration, recurring_start_date: recurringStartDate, recurring_end_date: recurringEndDate })
                         })
                     ));
                     if (!results.every(r => r.ok)) alert('Some availability slots failed to save.');
@@ -2866,9 +2902,12 @@
                 container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No availability set. Select days on the calendar and click "Set Availability".</p>';
             } else {
                 container.innerHTML = slots.map(s => {
+                    const dateRange = (s.recurring_start_date && s.recurring_end_date)
+                        ? ` <span class="text-xs text-yellow-400 ml-1">${new Date(s.recurring_start_date + 'T00:00:00').toLocaleDateString()} – ${new Date(s.recurring_end_date + 'T00:00:00').toLocaleDateString()}</span>`
+                        : '';
                     const label = s.specific_date
                         ? `<span class="font-semibold">${new Date(s.specific_date + 'T00:00:00').toLocaleDateString()}</span> <span class="text-xs text-blue-400 ml-1">(one-time)</span>`
-                        : `<span class="font-semibold">${DAY_NAMES[s.day_of_week]}</span> <span class="text-xs text-green-400 ml-1">(recurring)</span>`;
+                        : `<span class="font-semibold">${DAY_NAMES[s.day_of_week]}</span> <span class="text-xs text-green-400 ml-1">(recurring)</span>${dateRange}`;
                     return `
                     <div class="flex justify-between items-center p-3 border border-border-dark dark:border-border-light rounded text-sm">
                         <div>
