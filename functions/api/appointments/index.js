@@ -73,9 +73,14 @@ export async function onRequestPost(context) {
     const dateObj = new Date(appointment_date + 'T00:00:00');
     const dayOfWeek = dateObj.getDay();
 
-    const { results: slots } = await context.env.DB.prepare(
-      'SELECT * FROM availability_slots WHERE is_active = 1 AND (specific_date = ? OR (specific_date IS NULL AND day_of_week = ?))'
-    ).bind(appointment_date, dayOfWeek).all();
+    const { results: slots } = await context.env.DB.prepare(`
+      SELECT * FROM availability_slots WHERE is_active = 1 AND (
+        specific_date = ?
+        OR (specific_date IS NULL AND day_of_week = ?
+            AND (recurring_start_date IS NULL OR recurring_start_date <= ?)
+            AND (recurring_end_date IS NULL OR recurring_end_date >= ?))
+      )
+    `).bind(appointment_date, dayOfWeek, appointment_date, appointment_date).all();
 
     if (slots.length === 0) {
       return new Response(JSON.stringify({ error: 'No availability set for this day' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
