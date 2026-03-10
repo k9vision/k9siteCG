@@ -172,6 +172,12 @@
                         <label class="block text-sm font-medium mb-2">Note</label>
                         <textarea id="note-content" rows="4" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required></textarea>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Link Media (optional)</label>
+                        <select id="note-media-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                            <option value="">No media reference</option>
+                        </select>
+                    </div>
                     <div class="flex gap-4">
                         <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Create</button>
                         <button type="button" onclick="closeNoteModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
@@ -1069,8 +1075,27 @@
 
         function showCreateNote() {
             loadClientSelects();
+            document.getElementById('note-media-select').innerHTML = '<option value="">No media reference</option>';
             document.getElementById('note-modal').classList.remove('hidden');
         }
+
+        // Populate media dropdown when client is selected in note modal
+        document.getElementById('note-client-select').addEventListener('change', async (e) => {
+            const clientId = e.target.value;
+            const mediaSelect = document.getElementById('note-media-select');
+            mediaSelect.innerHTML = '<option value="">No media reference</option>';
+            if (!clientId) return;
+            try {
+                const res = await fetch(`${API_BASE}/media/client/${clientId}`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const items = data.media || [];
+                items.forEach(m => {
+                    const icon = m.type === 'photo' ? '📷' : '🎥';
+                    const label = m.caption || m.original_name || m.filename;
+                    mediaSelect.innerHTML += `<option value="${m.id}">${icon} ${label}</option>`;
+                });
+            } catch (err) { console.error('Failed to load media for note:', err); }
+        });
 
         function closeNoteModal() {
             document.getElementById('note-modal').classList.add('hidden');
@@ -1133,12 +1158,15 @@
             const clientId = document.getElementById('note-client-select').value;
             const title = document.getElementById('note-title').value;
             const content = document.getElementById('note-content').value;
+            const mediaId = document.getElementById('note-media-select').value;
 
             try {
+                const body = { client_id: clientId, title, content, author_role: 'admin' };
+                if (mediaId) body.media_id = parseInt(mediaId);
                 const res = await fetch(`${API_BASE}/notes`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ client_id: clientId, title, content, author_role: 'admin' })
+                    body: JSON.stringify(body)
                 });
 
                 if (res.ok) {
@@ -1290,11 +1318,13 @@
                         const roleLabel = isClient ? 'Client' : 'Trainer';
                         const roleColor = isClient ? 'text-green-400' : 'text-blue-400';
                         const borderColor = isClient ? 'border-l-4 border-green-500' : 'border-l-4 border-blue-500';
+                        const mediaTag = n.media_url ? `<div class="mt-1 flex items-center gap-1 text-xs text-purple-400"><span>${n.media_type === 'photo' ? '📷' : '🎥'}</span><span>${n.media_filename || 'Media'}</span></div>` : '';
                         return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start ${borderColor}">
                             <div class="flex-1">
                                 <span class="text-xs font-bold ${roleColor}">${roleLabel}</span>
                                 <p class="font-semibold text-sm">${n.title}</p>
                                 <p class="text-sm text-gray-400 dark:text-gray-600">${n.content}</p>
+                                ${mediaTag}
                                 <p class="text-xs text-gray-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</p>
                             </div>
                             <button onclick="deleteNote(${n.id})" class="text-red-500 hover:text-red-300 text-xs ml-2">Delete</button>
@@ -1346,11 +1376,13 @@
                         const roleLabel = isClient ? 'Client' : 'Trainer';
                         const roleColor = isClient ? 'text-green-400' : 'text-blue-400';
                         const borderColor = isClient ? 'border-l-4 border-green-500' : 'border-l-4 border-blue-500';
+                        const mediaTag = n.media_url ? `<div class="mt-1 flex items-center gap-1 text-xs text-purple-400"><span>${n.media_type === 'photo' ? '📷' : '🎥'}</span><span>${n.media_filename || 'Media'}</span></div>` : '';
                         return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start ${borderColor}">
                             <div class="flex-1">
                                 <span class="text-xs font-bold ${roleColor}">${roleLabel}</span>
                                 <p class="font-semibold text-sm">${n.title}</p>
                                 <p class="text-sm text-gray-400 dark:text-gray-600">${n.content}</p>
+                                ${mediaTag}
                                 <p class="text-xs text-gray-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</p>
                             </div>
                             <button onclick="deleteNote(${n.id})" class="text-red-500 hover:text-red-300 text-xs ml-2">Delete</button>

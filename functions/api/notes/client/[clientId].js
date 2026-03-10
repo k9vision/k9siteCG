@@ -28,7 +28,11 @@ export async function onRequestGet(context) {
     }
 
     const notes = await context.env.DB.prepare(
-      'SELECT * FROM notes WHERE client_id = ? ORDER BY created_at DESC'
+      `SELECT notes.*, media.url as media_url, media.type as media_type, media.filename as media_filename
+       FROM notes
+       LEFT JOIN media ON notes.media_id = media.id
+       WHERE notes.client_id = ?
+       ORDER BY notes.created_at DESC`
     ).bind(clientId).all();
 
     return new Response(
