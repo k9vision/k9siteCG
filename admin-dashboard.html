@@ -141,6 +141,10 @@
                         <label class="block text-sm font-medium mb-2">File</label>
                         <input type="file" id="media-file" accept="image/*,video/*" class="w-full" required>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Caption (optional)</label>
+                        <input type="text" id="media-caption" placeholder="Add a caption..." class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
                     <div class="flex gap-4">
                         <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Upload</button>
                         <button type="button" onclick="closeUploadModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
@@ -366,6 +370,24 @@
                 </div>
 
                 <button onclick="closeClientDetailModal()" class="w-full bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Close</button>
+            </div>
+        </div>
+
+        <!-- Media Lightbox Modal -->
+        <div id="media-lightbox-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[60]" onclick="closeMediaLightbox(event)">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg max-w-3xl w-full max-h-[90vh] overflow-auto border border-border-dark dark:border-border-light" onclick="event.stopPropagation()">
+                <div class="flex justify-between items-center p-4 border-b border-border-dark dark:border-border-light">
+                    <span id="lightbox-filename" class="text-sm text-gray-400 dark:text-gray-600 truncate"></span>
+                    <button onclick="closeMediaLightbox()" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none">&times;</button>
+                </div>
+                <div id="lightbox-content" class="flex items-center justify-center p-4 bg-black min-h-[300px]"></div>
+                <div class="p-4 border-t border-border-dark dark:border-border-light">
+                    <label class="block text-sm font-medium mb-1">Caption / Notes</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="lightbox-caption" placeholder="Add a caption..." class="flex-1 rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm">
+                        <button onclick="saveMediaCaption()" class="bg-primary text-white px-4 py-2 rounded text-sm hover:bg-blue-700">Save</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1081,6 +1103,7 @@
             formData.append('file', file);
             formData.append('client_id', clientId);
             formData.append('type', type);
+            formData.append('caption', document.getElementById('media-caption').value || '');
 
             try {
                 const res = await fetch(`${API_BASE}/media/upload`, {
@@ -1233,18 +1256,24 @@
                     dogsEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No dogs yet</p>';
                 }
 
-                // Media (with delete buttons)
+                // Media (with delete buttons and lightbox)
                 const mediaData = await mediaRes.json();
                 const media = mediaData.media || mediaData || [];
+                window.currentDetailMedia = media;
                 const mediaEl = document.getElementById('detail-media');
                 if (Array.isArray(media) && media.length > 0) {
-                    mediaEl.innerHTML = media.map(m => {
+                    mediaEl.innerHTML = media.map((m, i) => {
                         const preview = m.type === 'photo'
-                            ? `<img src="${m.url}" alt="${m.filename}" class="rounded w-full h-24 object-cover">`
-                            : `<div class="bg-gray-700 dark:bg-gray-200 rounded p-2 text-xs text-center flex items-center justify-center h-24"><span class="material-icons mr-1">videocam</span>${m.filename}</div>`;
+                            ? `<img src="${m.url}" alt="${m.filename}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="openMediaLightbox(window.currentDetailMedia[${i}])">`
+                            : `<div class="bg-gray-700 dark:bg-gray-200 rounded flex flex-col items-center justify-center h-32 cursor-pointer" onclick="openMediaLightbox(window.currentDetailMedia[${i}])">
+                                <span class="material-icons text-3xl text-primary">play_circle</span>
+                                <span class="text-xs mt-1 px-1 truncate w-full text-center">${m.filename}</span>
+                              </div>`;
+                        const captionHtml = m.caption ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate" title="${m.caption}">${m.caption}</p>` : '';
                         return `<div class="relative group">
                             ${preview}
-                            <button onclick="deleteMedia(${m.id})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">&times;</button>
+                            ${captionHtml}
+                            <button onclick="event.stopPropagation(); deleteMedia(${m.id})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">&times;</button>
                         </div>`;
                     }).join('');
                 } else {
@@ -1532,6 +1561,63 @@
                 alert('Failed to delete media');
             }
         }
+
+        // Media lightbox
+        let currentLightboxMediaId = null;
+
+        function openMediaLightbox(mediaItem) {
+            currentLightboxMediaId = mediaItem.id;
+            const modal = document.getElementById('media-lightbox-modal');
+            const content = document.getElementById('lightbox-content');
+            document.getElementById('lightbox-filename').textContent = mediaItem.filename;
+            document.getElementById('lightbox-caption').value = mediaItem.caption || '';
+
+            if (mediaItem.type === 'photo') {
+                content.innerHTML = `<img src="${mediaItem.url}" alt="${mediaItem.filename}" class="max-w-full max-h-[60vh] object-contain rounded">`;
+            } else {
+                content.innerHTML = `<video src="${mediaItem.url}" controls autoplay class="max-w-full max-h-[60vh] rounded">Your browser does not support video.</video>`;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeMediaLightbox(event) {
+            if (event && event.target !== event.currentTarget && !event.currentTarget.id) return;
+            const modal = document.getElementById('media-lightbox-modal');
+            const video = modal.querySelector('video');
+            if (video) video.pause();
+            modal.classList.add('hidden');
+            currentLightboxMediaId = null;
+        }
+
+        async function saveMediaCaption() {
+            if (!currentLightboxMediaId) return;
+            const caption = document.getElementById('lightbox-caption').value;
+            try {
+                const res = await fetch(`${API_BASE}/media/${currentLightboxMediaId}`, {
+                    method: 'PUT',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ caption })
+                });
+                if (res.ok) {
+                    alert('Caption saved!');
+                    await viewClient(currentDetailClientId);
+                } else {
+                    alert('Failed to save caption');
+                }
+            } catch (error) {
+                console.error('Save caption error:', error);
+                alert('Failed to save caption');
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('media-lightbox-modal');
+                if (!modal.classList.contains('hidden')) {
+                    closeMediaLightbox();
+                }
+            }
+        });
 
         // Delete note from detail modal
         async function deleteNote(noteId) {

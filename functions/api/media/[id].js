@@ -1,6 +1,57 @@
-// Delete media (admin only)
-import { requireAdmin } from '../../utils/auth.js';
+import { requireAdmin, requireAuth } from '../../utils/auth.js';
 
+// Update media caption
+export async function onRequestPut(context) {
+  try {
+    const auth = await requireAuth(context);
+    if (auth.error) {
+      return new Response(
+        JSON.stringify({ error: auth.error }),
+        { status: auth.status, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const id = parseInt(context.params.id);
+    const { caption } = await context.request.json();
+
+    // If not admin, verify ownership
+    if (auth.user.role !== 'admin') {
+      const media = await context.env.DB.prepare(
+        'SELECT m.id FROM media m JOIN clients c ON m.client_id = c.id WHERE m.id = ? AND c.user_id = ?'
+      ).bind(id, auth.user.id).first();
+      if (!media) {
+        return new Response(
+          JSON.stringify({ error: 'Not authorized' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    const result = await context.env.DB.prepare(
+      'UPDATE media SET caption = ? WHERE id = ? RETURNING *'
+    ).bind(caption || '', id).first();
+
+    if (!result) {
+      return new Response(
+        JSON.stringify({ error: 'Media not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, media: result }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('Update media error:', error);
+    return new Response(
+      JSON.stringify({ error: 'Failed to update media' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+// Delete media (admin only)
 export async function onRequestDelete(context) {
   try {
     const auth = await requireAdmin(context);

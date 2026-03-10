@@ -233,7 +233,7 @@
                         </button>
                     </div>
                 </div>
-                <div id="media-list" class="space-y-4">
+                <div id="media-list">
                     <p class="text-gray-400 dark:text-gray-600">No media files yet</p>
                 </div>
             </div>
@@ -426,11 +426,26 @@
         </div>
     </div>
 
+    <!-- Media Lightbox Modal (read-only for clients) -->
+    <div id="media-lightbox-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[60]" onclick="closeMediaLightbox(event)">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg max-w-3xl w-full max-h-[90vh] overflow-auto border border-border-dark dark:border-border-light" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center p-4 border-b border-border-dark dark:border-border-light">
+                <span id="lightbox-filename" class="text-sm text-gray-400 dark:text-gray-600 truncate"></span>
+                <button onclick="closeMediaLightbox()" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none">&times;</button>
+            </div>
+            <div id="lightbox-content" class="flex items-center justify-center p-4 bg-black min-h-[300px]"></div>
+            <div id="lightbox-caption-area" class="hidden p-4 border-t border-border-dark dark:border-border-light">
+                <p id="lightbox-caption-text" class="text-sm text-gray-300 dark:text-gray-600"></p>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = '/api';
 
         let funFacts = [];
         let currentFactIndex = 0;
+        let clientMediaItems = [];
 
         function checkAuth() {
             const token = localStorage.getItem('token');
@@ -790,20 +805,20 @@
                     headers: getAuthHeaders()
                 });
                 const media = await res.json();
+                clientMediaItems = Array.isArray(media) ? media : [];
 
                 const mediaList = document.getElementById('media-list');
-                if (media && media.length > 0) {
-                    mediaList.innerHTML = media.map(item => `
-                        <div class="border border-border-dark dark:border-border-light rounded p-3">
-                            <div class="flex items-center justify-between">
-                                <span class="flex items-center">
-                                    <span class="material-icons text-primary mr-2">${item.type === 'video' ? 'videocam' : 'photo'}</span>
-                                    <span>${item.filename}</span>
-                                </span>
-                                <a href="${item.url}" target="_blank" class="text-primary hover:underline text-sm">View</a>
-                            </div>
-                        </div>
-                    `).join('');
+                if (clientMediaItems.length > 0) {
+                    mediaList.innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">${clientMediaItems.map((item, i) => {
+                        const preview = item.type === 'photo'
+                            ? `<img src="${item.url}" alt="${item.filename}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="openMediaLightbox(${i})">`
+                            : `<div class="bg-gray-700 dark:bg-gray-200 rounded flex flex-col items-center justify-center h-32 cursor-pointer" onclick="openMediaLightbox(${i})">
+                                <span class="material-icons text-3xl text-primary">play_circle</span>
+                                <span class="text-xs mt-1 px-1 truncate w-full text-center">${item.filename}</span>
+                              </div>`;
+                        const captionHtml = item.caption ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate" title="${item.caption}">${item.caption}</p>` : '';
+                        return `<div>${preview}${captionHtml}</div>`;
+                    }).join('')}</div>`;
                 } else {
                     mediaList.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No media files yet</p>';
                 }
@@ -811,6 +826,44 @@
                 console.error('Error loading media:', error);
             }
         }
+
+        function openMediaLightbox(index) {
+            const item = clientMediaItems[index];
+            if (!item) return;
+            const modal = document.getElementById('media-lightbox-modal');
+            const content = document.getElementById('lightbox-content');
+            document.getElementById('lightbox-filename').textContent = item.filename;
+
+            if (item.type === 'photo') {
+                content.innerHTML = `<img src="${item.url}" alt="${item.filename}" class="max-w-full max-h-[60vh] object-contain rounded">`;
+            } else {
+                content.innerHTML = `<video src="${item.url}" controls autoplay class="max-w-full max-h-[60vh] rounded">Your browser does not support video.</video>`;
+            }
+
+            const captionArea = document.getElementById('lightbox-caption-area');
+            if (item.caption) {
+                document.getElementById('lightbox-caption-text').textContent = item.caption;
+                captionArea.classList.remove('hidden');
+            } else {
+                captionArea.classList.add('hidden');
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeMediaLightbox(event) {
+            if (event && event.target !== event.currentTarget && !event.currentTarget.id) return;
+            const modal = document.getElementById('media-lightbox-modal');
+            const video = modal.querySelector('video');
+            if (video) video.pause();
+            modal.classList.add('hidden');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('media-lightbox-modal');
+                if (!modal.classList.contains('hidden')) closeMediaLightbox();
+            }
+        });
 
         async function loadNotes(clientId) {
             try {
