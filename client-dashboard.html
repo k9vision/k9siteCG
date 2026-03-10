@@ -278,6 +278,31 @@
                     <label class="block text-sm font-medium mb-2">Message</label>
                     <textarea id="note-message" rows="4" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required></textarea>
                 </div>
+                <!-- Media Attachment -->
+                <input type="hidden" id="note-media-id">
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="toggleMediaPicker()" class="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition">
+                        <span class="material-icons text-base">attach_file</span>
+                        Attach Media
+                    </button>
+                    <span id="no-media-hint" class="hidden text-xs text-gray-500 italic">No photos or videos yet</span>
+                </div>
+
+                <!-- Thumbnail Picker Grid -->
+                <div id="media-picker-grid" class="hidden">
+                    <div id="media-picker-items" class="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1"></div>
+                </div>
+
+                <!-- Selected Media Preview Chip -->
+                <div id="media-preview-chip" class="hidden flex items-center gap-2 bg-gray-700 dark:bg-gray-200 rounded-lg px-3 py-2">
+                    <img id="media-preview-thumb" class="w-10 h-10 rounded object-cover" src="" alt="">
+                    <span id="media-preview-icon" class="hidden material-icons text-blue-400 text-2xl">videocam</span>
+                    <span id="media-preview-name" class="text-sm truncate flex-1"></span>
+                    <button type="button" onclick="clearMediaSelection()" class="text-gray-400 hover:text-red-400 transition">
+                        <span class="material-icons text-base">close</span>
+                    </button>
+                </div>
+
                 <div class="flex gap-4">
                     <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Send</button>
                     <button type="button" onclick="closeAddNote()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
@@ -851,6 +876,21 @@
             modal.classList.remove('hidden');
         }
 
+        function openMediaLightboxByUrl(url, filename) {
+            const modal = document.getElementById('media-lightbox-modal');
+            const content = document.getElementById('lightbox-content');
+            document.getElementById('lightbox-filename').textContent = filename || 'Media';
+            const isVideo = /\.(mp4|mov|webm|avi)$/i.test(url);
+            if (isVideo) {
+                content.innerHTML = `<video src="${url}" controls autoplay class="max-w-full max-h-[60vh] rounded">Your browser does not support video.</video>`;
+            } else {
+                content.innerHTML = `<img src="${url}" alt="${filename}" class="max-w-full max-h-[60vh] object-contain rounded">`;
+            }
+            const captionArea = document.getElementById('lightbox-caption-area');
+            captionArea.classList.add('hidden');
+            modal.classList.remove('hidden');
+        }
+
         function closeMediaLightbox(event) {
             if (event && event.target !== event.currentTarget && !event.currentTarget.id) return;
             const modal = document.getElementById('media-lightbox-modal');
@@ -895,6 +935,14 @@
 
                     conversation.innerHTML = notes.map(note => {
                         const isTrainer = note.author_role !== 'client';
+                        let mediaHtml = '';
+                        if (note.media_url) {
+                            if (note.media_type === 'photo') {
+                                mediaHtml = `<img src="${note.media_url}" alt="${note.media_filename || 'Photo'}" class="w-24 h-24 object-cover rounded mt-2 cursor-pointer border border-gray-600 hover:opacity-80" onclick="openMediaLightboxByUrl('${note.media_url}', '${(note.media_filename || '').replace(/'/g, "\\'")}')">`;
+                            } else {
+                                mediaHtml = `<div class="mt-2 inline-flex items-center gap-2 bg-gray-700 dark:bg-gray-200 rounded px-3 py-2 cursor-pointer hover:bg-gray-600 dark:hover:bg-gray-300" onclick="openMediaLightboxByUrl('${note.media_url}', '${(note.media_filename || '').replace(/'/g, "\\'")}')"><span class="material-icons text-lg">play_circle</span><span class="text-xs">${note.media_filename || 'Video'}</span></div>`;
+                            }
+                        }
                         if (isTrainer) {
                             return `
                             <div class="border-l-4 border-blue-500 pl-4 py-2">
@@ -903,6 +951,7 @@
                                         <span class="text-xs font-bold text-blue-400">Trainer</span>
                                         <h4 class="font-semibold text-blue-400">${note.title}</h4>
                                         <p class="text-sm mt-1">${note.content}</p>
+                                        ${mediaHtml}
                                     </div>
                                     <span class="text-xs text-gray-500">${new Date(note.created_at).toLocaleDateString()}</span>
                                 </div>
@@ -916,6 +965,7 @@
                                         <span class="text-xs font-bold text-green-400">You</span>
                                         <h4 class="font-semibold text-green-400">${note.title}</h4>
                                         <p class="text-sm mt-1">${note.content}</p>
+                                        ${mediaHtml}
                                     </div>
                                 </div>
                             </div>`;
@@ -937,6 +987,74 @@
         function closeAddNote() {
             document.getElementById('add-note-modal').classList.add('hidden');
             document.getElementById('add-note-form').reset();
+            clearMediaSelection();
+            document.getElementById('media-picker-grid').classList.add('hidden');
+        }
+
+        function toggleMediaPicker() {
+            if (clientMediaItems.length === 0) {
+                const hint = document.getElementById('no-media-hint');
+                hint.classList.remove('hidden');
+                setTimeout(() => hint.classList.add('hidden'), 2000);
+                return;
+            }
+            const grid = document.getElementById('media-picker-grid');
+            grid.classList.toggle('hidden');
+            if (!grid.classList.contains('hidden')) renderMediaPicker();
+        }
+
+        function renderMediaPicker() {
+            const container = document.getElementById('media-picker-items');
+            const selectedId = document.getElementById('note-media-id').value;
+            container.innerHTML = clientMediaItems.map(item => {
+                const isSelected = String(item.id) === selectedId;
+                const ring = isSelected ? 'ring-2 ring-blue-500' : 'ring-1 ring-gray-600 dark:ring-gray-300';
+                if (item.type === 'photo') {
+                    return `<button type="button" onclick="selectMediaForNote(${item.id})" class="relative rounded overflow-hidden ${ring} aspect-square">
+                        <img src="${item.url}" class="w-full h-full object-cover" alt="${item.filename || ''}">
+                        ${isSelected ? '<span class="absolute top-0.5 right-0.5 material-icons text-blue-400 text-sm bg-black bg-opacity-60 rounded-full">check_circle</span>' : ''}
+                    </button>`;
+                } else {
+                    return `<button type="button" onclick="selectMediaForNote(${item.id})" class="relative rounded overflow-hidden ${ring} aspect-square bg-gray-800 dark:bg-gray-100 flex flex-col items-center justify-center">
+                        <span class="material-icons text-blue-400 text-2xl">videocam</span>
+                        <span class="text-xs truncate w-full px-1 text-center mt-1">${item.filename || 'Video'}</span>
+                        ${isSelected ? '<span class="absolute top-0.5 right-0.5 material-icons text-blue-400 text-sm bg-black bg-opacity-60 rounded-full">check_circle</span>' : ''}
+                    </button>`;
+                }
+            }).join('');
+        }
+
+        function selectMediaForNote(mediaId) {
+            const item = clientMediaItems.find(m => m.id === mediaId);
+            if (!item) return;
+            document.getElementById('note-media-id').value = mediaId;
+
+            const chip = document.getElementById('media-preview-chip');
+            const thumb = document.getElementById('media-preview-thumb');
+            const icon = document.getElementById('media-preview-icon');
+            const name = document.getElementById('media-preview-name');
+
+            if (item.type === 'photo') {
+                thumb.src = item.url;
+                thumb.classList.remove('hidden');
+                icon.classList.add('hidden');
+            } else {
+                thumb.classList.add('hidden');
+                icon.classList.remove('hidden');
+            }
+            name.textContent = item.filename || item.caption || (item.type === 'photo' ? 'Photo' : 'Video');
+            chip.classList.remove('hidden');
+
+            document.getElementById('media-picker-grid').classList.add('hidden');
+            renderMediaPicker();
+        }
+
+        function clearMediaSelection() {
+            document.getElementById('note-media-id').value = '';
+            document.getElementById('media-preview-chip').classList.add('hidden');
+            if (!document.getElementById('media-picker-grid').classList.contains('hidden')) {
+                renderMediaPicker();
+            }
         }
 
         function showRequestService() {
@@ -995,14 +1113,18 @@
                 const data = await clientRes.json();
                 const client = data.client || data;
 
+                const noteBody = {
+                    client_id: client.id,
+                    title: subject,
+                    content: message
+                };
+                const mediaIdVal = document.getElementById('note-media-id').value;
+                if (mediaIdVal) noteBody.media_id = parseInt(mediaIdVal);
+
                 const res = await fetch(`${API_BASE}/notes`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        client_id: client.id,
-                        title: subject,
-                        content: message
-                    })
+                    body: JSON.stringify(noteBody)
                 });
 
                 if (res.ok) {
