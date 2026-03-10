@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS media (
   filename TEXT NOT NULL,
   type TEXT NOT NULL CHECK(type IN ('photo', 'video')),
   url TEXT NOT NULL,
+  original_name TEXT,
+  caption TEXT DEFAULT '',
   uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
 );

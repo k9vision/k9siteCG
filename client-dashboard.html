@@ -804,7 +804,8 @@
                 const res = await fetch(`${API_BASE}/media/client/${clientId}`, {
                     headers: getAuthHeaders()
                 });
-                const media = await res.json();
+                const data = await res.json();
+                const media = data.media || data || [];
                 clientMediaItems = Array.isArray(media) ? media : [];
 
                 const mediaList = document.getElementById('media-list');
