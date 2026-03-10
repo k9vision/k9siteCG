@@ -111,6 +111,27 @@ export function mediaUploadNotificationHtml(clientName, dogName, mediaType) {
   `);
 }
 
+// Client notification: appointment confirmed by admin
+export function appointmentConfirmedHtml(clientName, dogName, date, time, serviceName) {
+  return emailWrapper(`
+    <h2 style="color: #10B981; margin-bottom: 20px;">Appointment Confirmed!</h2>
+    <p>Hello ${clientName},</p>
+    <p>Great news! Your appointment for <strong>${dogName}</strong> has been confirmed.</p>
+    <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10B981;">
+      <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+      <p style="margin: 5px 0;"><strong>Time:</strong> ${time}</p>
+      <p style="margin: 5px 0;"><strong>Service:</strong> ${serviceName || 'General'}</p>
+    </div>
+    <p>We look forward to seeing you and ${dogName}! If you need to make any changes, please log in to your dashboard or contact us.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/client-dashboard.html" style="background: #10B981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View My Appointments
+      </a>
+    </div>
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>
+  `);
+}
+
 // Admin notification: client booked an appointment
 export function appointmentBookedNotificationHtml(clientName, dogName, date, time, serviceName) {
   return emailWrapper(`

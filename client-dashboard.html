@@ -160,48 +160,6 @@
             </div>
         </div>
 
-        <!-- Calendar Sync -->
-        <div class="bg-card-dark dark:bg-card-light p-4 rounded-lg shadow border border-border-dark dark:border-border-light mb-6">
-            <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
-                <span class="material-icons text-teal-400">sync</span>
-                Sync to Your Calendar
-            </h3>
-
-            <!-- Google Calendar -->
-            <div class="mb-4">
-                <div id="client-gcal-disconnected" class="hidden">
-                    <button onclick="connectClientGoogleCalendar()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition-colors text-sm">
-                        Connect Google Calendar
-                    </button>
-                </div>
-                <div id="client-gcal-connected" class="hidden">
-                    <div class="flex items-center justify-between">
-                        <span class="flex items-center gap-2 text-sm">
-                            <span class="material-icons text-green-400 text-sm">check_circle</span>
-                            Google Calendar Connected
-                        </span>
-                        <button onclick="disconnectClientGoogleCalendar()" class="text-red-400 hover:text-red-300 text-sm underline">Disconnect</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- iCal Feed -->
-            <div>
-                <button id="client-ical-btn" onclick="generateClientIcalFeed()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 px-4 rounded transition-colors text-sm mb-2">
-                    Subscribe via Calendar URL
-                </button>
-                <div id="client-ical-url" class="hidden">
-                    <div class="flex gap-2">
-                        <input id="client-ical-input" type="text" readonly class="flex-1 bg-gray-800 dark:bg-gray-200 text-xs p-2 rounded border border-gray-600 dark:border-gray-400">
-                        <button onclick="copyClientIcalUrl()" class="bg-gray-600 hover:bg-gray-700 text-white px-2 rounded" title="Copy">
-                            <span class="material-icons text-sm">content_copy</span>
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-1">Add this URL to your phone's calendar app.</p>
-                </div>
-            </div>
-        </div>
-
         <!-- My Invoices -->
         <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow mb-8 border border-border-dark dark:border-border-light">
             <h3 class="text-xl font-bold mb-4 flex items-center">
@@ -1704,83 +1662,6 @@
 
         startNotesPolling();
 
-        // Calendar Sync functions
-        async function checkClientGoogleCalendarStatus() {
-            try {
-                const resp = await fetch(`${API_BASE}/calendar/google/status`, {
-                    headers: getAuthHeaders()
-                });
-                const data = await resp.json();
-                if (data.connected) {
-                    document.getElementById('client-gcal-connected').classList.remove('hidden');
-                    document.getElementById('client-gcal-disconnected').classList.add('hidden');
-                } else {
-                    document.getElementById('client-gcal-disconnected').classList.remove('hidden');
-                    document.getElementById('client-gcal-connected').classList.add('hidden');
-                }
-            } catch (err) {
-                document.getElementById('client-gcal-disconnected').classList.remove('hidden');
-            }
-        }
-
-        async function connectClientGoogleCalendar() {
-            try {
-                const resp = await fetch(`${API_BASE}/calendar/google/auth-url`, {
-                    headers: getAuthHeaders()
-                });
-                const data = await resp.json();
-                if (data.url) window.location.href = data.url;
-            } catch (err) {
-                alert('Failed to connect Google Calendar');
-            }
-        }
-
-        async function disconnectClientGoogleCalendar() {
-            if (!confirm('Disconnect Google Calendar?')) return;
-            try {
-                await fetch(`${API_BASE}/calendar/google/disconnect`, {
-                    method: 'DELETE',
-                    headers: getAuthHeaders()
-                });
-                document.getElementById('client-gcal-connected').classList.add('hidden');
-                document.getElementById('client-gcal-disconnected').classList.remove('hidden');
-                alert('Google Calendar disconnected');
-            } catch (err) {
-                alert('Failed to disconnect');
-            }
-        }
-
-        async function generateClientIcalFeed() {
-            try {
-                const resp = await fetch(`${API_BASE}/calendar/feed/generate`, {
-                    method: 'POST',
-                    headers: getAuthHeaders()
-                });
-                const data = await resp.json();
-                if (data.feed_url) {
-                    document.getElementById('client-ical-input').value = data.feed_url;
-                    document.getElementById('client-ical-url').classList.remove('hidden');
-                    document.getElementById('client-ical-btn').textContent = 'Refresh Feed URL';
-                }
-            } catch (err) {
-                alert('Failed to generate feed URL');
-            }
-        }
-
-        function copyClientIcalUrl() {
-            navigator.clipboard.writeText(document.getElementById('client-ical-input').value).then(() => {
-                alert('URL copied!');
-            });
-        }
-
-        // Check for Google Calendar connection callback
-        const gcalParams = new URLSearchParams(window.location.search);
-        if (gcalParams.get('gcal') === 'connected') {
-            alert('Google Calendar connected!');
-            window.history.replaceState({}, '', window.location.pathname);
-        }
-
-        checkClientGoogleCalendarStatus();
         loadClientData();
         loadMyAppointments();
         loadInvoices();

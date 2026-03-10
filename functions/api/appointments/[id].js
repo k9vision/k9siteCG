@@ -70,6 +70,35 @@ export async function onRequestPut(context) {
       RETURNING *
     `).bind(status || null, notes || null, id).first();
 
+    // Send confirmation email to client
+    if (status === 'confirmed') {
+      try {
+        const client = await context.env.DB.prepare(`
+          SELECT c.client_name, c.dog_name, c.email, u.username
+          FROM clients c
+          LEFT JOIN users u ON c.user_id = u.id
+          WHERE c.id = ?
+        `).bind(existing.client_id).first();
+        const clientEmail = client?.email || client?.username;
+        if (clientEmail && clientEmail.includes('@')) {
+          const { sendEmail, appointmentConfirmedHtml } = await import('../../utils/emails.js');
+          await sendEmail(context.env, {
+            to: clientEmail,
+            subject: `Appointment Confirmed - ${existing.appointment_date}`,
+            html: appointmentConfirmedHtml(
+              client?.client_name || 'Valued Client',
+              client?.dog_name || 'your dog',
+              existing.appointment_date,
+              existing.start_time,
+              existing.service_name || 'General'
+            )
+          });
+        }
+      } catch (emailErr) {
+        console.error('Failed to send confirmation email:', emailErr);
+      }
+    }
+
     // Create notification for cancellations
     if (status === 'cancelled') {
       const client = await context.env.DB.prepare('SELECT client_name, dog_name FROM clients WHERE id = ?').bind(existing.client_id).first();
