@@ -929,7 +929,7 @@
                                 <span class="text-xs font-medium ${labelColor}">${label}</span>
                             </div>
                             <p class="text-sm text-gray-400 dark:text-gray-600 mt-1">${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''}</p>
-                            <p class="text-xs text-gray-500 mt-2">${new Date(note.created_at).toLocaleDateString()}</p>
+                            <p class="text-xs text-gray-500 mt-2">${new Date(note.created_at).toLocaleString()}</p>
                         </div>`;
                     }).join('');
 
@@ -953,14 +953,14 @@
                                         <p class="text-sm mt-1">${note.content}</p>
                                         ${mediaHtml}
                                     </div>
-                                    <span class="text-xs text-gray-500">${new Date(note.created_at).toLocaleDateString()}</span>
+                                    <span class="text-xs text-gray-500">${new Date(note.created_at).toLocaleString()}</span>
                                 </div>
                             </div>`;
                         } else {
                             return `
                             <div class="border-r-4 border-green-500 pr-4 py-2 text-right">
                                 <div class="flex items-start justify-between">
-                                    <span class="text-xs text-gray-500">${new Date(note.created_at).toLocaleDateString()}</span>
+                                    <span class="text-xs text-gray-500">${new Date(note.created_at).toLocaleString()}</span>
                                     <div class="flex-1 ml-4">
                                         <span class="text-xs font-bold text-green-400">You</span>
                                         <h4 class="font-semibold text-green-400">${note.title}</h4>

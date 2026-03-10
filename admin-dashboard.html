@@ -1318,14 +1318,17 @@
                         const roleLabel = isClient ? 'Client' : 'Trainer';
                         const roleColor = isClient ? 'text-green-400' : 'text-blue-400';
                         const borderColor = isClient ? 'border-l-4 border-green-500' : 'border-l-4 border-blue-500';
-                        const mediaTag = n.media_url ? `<div class="mt-1 flex items-center gap-1 text-xs text-purple-400"><span>${n.media_type === 'photo' ? '📷' : '🎥'}</span><span>${n.media_filename || 'Media'}</span></div>` : '';
+                        const mediaTag = n.media_url ? (n.media_type === 'photo'
+                            ? `<img src="${n.media_url}" alt="${n.media_filename || 'Photo'}" class="w-16 h-16 object-cover rounded mt-1 cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${n.media_url}', '_blank')">`
+                            : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_filename || 'Video'}</span></div>`)
+                            : '';
                         return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start ${borderColor}">
                             <div class="flex-1">
                                 <span class="text-xs font-bold ${roleColor}">${roleLabel}</span>
                                 <p class="font-semibold text-sm">${n.title}</p>
                                 <p class="text-sm text-gray-400 dark:text-gray-600">${n.content}</p>
                                 ${mediaTag}
-                                <p class="text-xs text-gray-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</p>
+                                <p class="text-xs text-gray-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleString() : ''}</p>
                             </div>
                             <button onclick="deleteNote(${n.id})" class="text-red-500 hover:text-red-300 text-xs ml-2">Delete</button>
                         </div>`;
@@ -1376,14 +1379,17 @@
                         const roleLabel = isClient ? 'Client' : 'Trainer';
                         const roleColor = isClient ? 'text-green-400' : 'text-blue-400';
                         const borderColor = isClient ? 'border-l-4 border-green-500' : 'border-l-4 border-blue-500';
-                        const mediaTag = n.media_url ? `<div class="mt-1 flex items-center gap-1 text-xs text-purple-400"><span>${n.media_type === 'photo' ? '📷' : '🎥'}</span><span>${n.media_filename || 'Media'}</span></div>` : '';
+                        const mediaTag = n.media_url ? (n.media_type === 'photo'
+                            ? `<img src="${n.media_url}" alt="${n.media_filename || 'Photo'}" class="w-16 h-16 object-cover rounded mt-1 cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${n.media_url}', '_blank')">`
+                            : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_filename || 'Video'}</span></div>`)
+                            : '';
                         return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start ${borderColor}">
                             <div class="flex-1">
                                 <span class="text-xs font-bold ${roleColor}">${roleLabel}</span>
                                 <p class="font-semibold text-sm">${n.title}</p>
                                 <p class="text-sm text-gray-400 dark:text-gray-600">${n.content}</p>
                                 ${mediaTag}
-                                <p class="text-xs text-gray-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</p>
+                                <p class="text-xs text-gray-500 mt-1">${n.created_at ? new Date(n.created_at).toLocaleString() : ''}</p>
                             </div>
                             <button onclick="deleteNote(${n.id})" class="text-red-500 hover:text-red-300 text-xs ml-2">Delete</button>
                         </div>`;
