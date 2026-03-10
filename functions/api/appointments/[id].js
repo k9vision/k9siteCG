@@ -90,7 +90,8 @@ export async function onRequestPut(context) {
               client?.dog_name || 'your dog',
               existing.appointment_date,
               existing.start_time,
-              existing.service_name || 'General'
+              existing.service_name || 'General',
+              existing.end_time
             )
           });
         }

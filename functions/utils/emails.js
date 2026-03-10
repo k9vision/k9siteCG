@@ -111,8 +111,60 @@ export function mediaUploadNotificationHtml(clientName, dogName, mediaType) {
   `);
 }
 
+// Helper: convert date (YYYY-MM-DD) + time (HH:MM) to calendar-friendly formats
+function toCalendarDateTime(date, time) {
+  const [y, m, d] = date.split('-');
+  const [h, min] = (time || '00:00').split(':');
+  return `${y}${m}${d}T${h}${min}00`;
+}
+
+function buildCalendarLinks(date, startTime, endTime, serviceName, dogName) {
+  const title = `K9 Vision: ${serviceName || 'Training'} - ${dogName}`;
+  const location = 'Houston, TX';
+  const description = `Dog training session for ${dogName} with K9 Vision.`;
+  const start = toCalendarDateTime(date, startTime);
+  // Default to 1 hour after start if no end time
+  const end = endTime ? toCalendarDateTime(date, endTime) : toCalendarDateTime(date, (() => {
+    const [h, min] = (startTime || '00:00').split(':');
+    return `${String(parseInt(h) + 1).padStart(2, '0')}:${min}`;
+  })());
+
+  // Google Calendar
+  const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${start}/${end}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
+
+  // Outlook.com
+  const [sy, sm, sd] = date.split('-');
+  const outlookStart = `${sy}-${sm}-${sd}T${(startTime || '00:00')}:00`;
+  const outlookEndTime = endTime || (() => {
+    const [h, min] = (startTime || '00:00').split(':');
+    return `${String(parseInt(h) + 1).padStart(2, '0')}:${min}`;
+  })();
+  const outlookEnd = `${sy}-${sm}-${sd}T${outlookEndTime}:00`;
+  const outlookUrl = `https://outlook.live.com/calendar/0/action/compose?subject=${encodeURIComponent(title)}&startdt=${encodeURIComponent(outlookStart)}&enddt=${encodeURIComponent(outlookEnd)}&body=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
+
+  // .ics file (data URI)
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//K9 Vision//Appointment//EN',
+    'BEGIN:VEVENT',
+    `DTSTART:${start}`,
+    `DTEND:${end}`,
+    `SUMMARY:${title}`,
+    `DESCRIPTION:${description}`,
+    `LOCATION:${location}`,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  const icsUrl = `data:text/calendar;charset=utf-8,${encodeURIComponent(icsContent)}`;
+
+  return { googleUrl, outlookUrl, icsUrl };
+}
+
 // Client notification: appointment confirmed by admin
-export function appointmentConfirmedHtml(clientName, dogName, date, time, serviceName) {
+export function appointmentConfirmedHtml(clientName, dogName, date, time, serviceName, endTime) {
+  const cal = buildCalendarLinks(date, time, endTime, serviceName, dogName);
+
   return emailWrapper(`
     <h2 style="color: #10B981; margin-bottom: 20px;">Appointment Confirmed!</h2>
     <p>Hello ${clientName},</p>
@@ -121,6 +173,18 @@ export function appointmentConfirmedHtml(clientName, dogName, date, time, servic
       <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
       <p style="margin: 5px 0;"><strong>Time:</strong> ${time}</p>
       <p style="margin: 5px 0;"><strong>Service:</strong> ${serviceName || 'General'}</p>
+    </div>
+    <p style="margin-bottom: 10px; font-weight: bold; color: #374151;">Add to Your Calendar:</p>
+    <div style="text-align: center; margin: 0 0 25px 0;">
+      <a href="${cal.googleUrl}" target="_blank" style="background: #4285F4; color: white; padding: 10px 16px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 13px; margin: 4px;">
+        Google Calendar
+      </a>
+      <a href="${cal.outlookUrl}" target="_blank" style="background: #0078D4; color: white; padding: 10px 16px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 13px; margin: 4px;">
+        Outlook
+      </a>
+      <a href="${cal.icsUrl}" download="k9vision-appointment.ics" style="background: #6B7280; color: white; padding: 10px 16px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 13px; margin: 4px;">
+        Download .ics
+      </a>
     </div>
     <p>We look forward to seeing you and ${dogName}! If you need to make any changes, please log in to your dashboard or contact us.</p>
     <div style="text-align: center; margin: 30px 0;">
