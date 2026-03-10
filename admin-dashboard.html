@@ -2607,21 +2607,14 @@
         }
 
         async function loadCalendarData() {
-            try {
-                const [availRes, blockedRes, apptRes] = await Promise.all([
-                    fetch(`${API_BASE}/availability`, { headers: getAuthHeaders() }),
-                    fetch(`${API_BASE}/availability/blocked`, { headers: getAuthHeaders() }),
-                    fetch(`${API_BASE}/appointments`, { headers: getAuthHeaders() })
-                ]);
-                const availData = await availRes.json();
-                const blockedData = await blockedRes.json();
-                const apptData = await apptRes.json();
-                cachedAvailabilitySlots = availData.slots || [];
-                cachedBlockedDates = blockedData.blocked_dates || [];
-                cachedAppointments = apptData.appointments || [];
-            } catch (error) {
-                console.error('Error loading calendar data:', error);
-            }
+            const [availResult, blockedResult, apptResult] = await Promise.allSettled([
+                fetch(`${API_BASE}/availability`, { headers: getAuthHeaders() }).then(r => r.json()),
+                fetch(`${API_BASE}/availability/blocked`, { headers: getAuthHeaders() }).then(r => r.json()),
+                fetch(`${API_BASE}/appointments`, { headers: getAuthHeaders() }).then(r => r.json())
+            ]);
+            if (availResult.status === 'fulfilled') cachedAvailabilitySlots = availResult.value.slots || [];
+            if (blockedResult.status === 'fulfilled') cachedBlockedDates = blockedResult.value.blocked_dates || [];
+            if (apptResult.status === 'fulfilled') cachedAppointments = apptResult.value.appointments || [];
             renderCalendar();
             renderAvailabilityList();
             renderBlockedDatesList();
@@ -2864,13 +2857,17 @@
         async function clearAllAvailability() {
             if (!confirm('Remove ALL availability slots? This cannot be undone.')) return;
             try {
-                await Promise.all(cachedAvailabilitySlots.map(s =>
+                const results = await Promise.all(cachedAvailabilitySlots.map(s =>
                     fetch(`${API_BASE}/availability/${s.id}`, { method: 'DELETE', headers: getAuthHeaders() })
                 ));
+                const failed = results.filter(r => !r.ok);
+                if (failed.length > 0) {
+                    alert(`${failed.length} slot(s) failed to delete. Please try again.`);
+                }
                 await loadCalendarData();
             } catch (error) {
                 console.error('Clear all availability error:', error);
-                alert('Failed to clear availability');
+                alert('Failed to clear availability — network error.');
             }
         }
 
@@ -2937,10 +2934,16 @@
         async function deleteAvailability(id) {
             if (!confirm('Remove this availability slot?')) return;
             try {
-                await fetch(`${API_BASE}/availability/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                const res = await fetch(`${API_BASE}/availability/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    alert(data.error || `Failed to remove slot (${res.status})`);
+                    return;
+                }
                 await loadCalendarData();
             } catch (error) {
                 console.error('Delete availability error:', error);
+                alert('Network error — could not remove slot. Please try again.');
             }
         }
 
