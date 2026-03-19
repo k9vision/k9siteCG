@@ -2167,8 +2167,8 @@
                     headers: getAuthHeaders()
                 });
                 const data = await res.json();
-                if (res.ok && data.url) {
-                    const url = data.url;
+                if (res.ok && data.feed_url) {
+                    const url = data.feed_url;
                     document.getElementById('ical-url').value = url;
                     const webcalUrl = url.replace(/^https?:\/\//, 'webcal://');
                     document.getElementById('ical-webcal-link').href = webcalUrl;
