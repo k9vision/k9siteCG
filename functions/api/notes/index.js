@@ -75,6 +75,27 @@ export async function onRequestPost(context) {
       }
     }
 
+    // Notify client when admin adds a training note
+    if (author_role === 'admin') {
+      try {
+        const clientInfo = await context.env.DB.prepare(
+          'SELECT c.client_name, c.email, u.username FROM clients c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?'
+        ).bind(parseInt(client_id)).first();
+
+        const clientEmail = clientInfo?.email || clientInfo?.username;
+        if (clientEmail && clientEmail.includes('@')) {
+          const { trainerNoteNotificationHtml } = await import('../../utils/emails.js');
+          await sendEmail(context.env, {
+            to: clientEmail,
+            subject: `New Training Note: ${title || 'Note'}`,
+            html: trainerNoteNotificationHtml(clientInfo?.client_name || 'Valued Client', title || 'Note')
+          });
+        }
+      } catch (notifyErr) {
+        console.error('Failed to send trainer note notification:', notifyErr);
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, note }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }

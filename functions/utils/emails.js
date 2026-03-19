@@ -361,6 +361,57 @@ export function blockedDateNotificationHtml(blockedDate, reason, allDay, startTi
   `);
 }
 
+// Client notification: trainer added a training note
+export function trainerNoteNotificationHtml(clientName, noteTitle) {
+  return emailWrapper(`
+    <h2 style="color: #3B82F6; margin-bottom: 20px;">New Training Note</h2>
+    <p>Hello ${clientName},</p>
+    <p>Your trainer has added a new note for your dog's training.</p>
+    <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 5px 0;"><strong>Subject:</strong> ${noteTitle}</p>
+    </div>
+    <p>Log in to your dashboard to read the full note.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/client-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View Note
+      </a>
+    </div>
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>
+  `);
+}
+
+// Client notification: trainer uploaded media
+export function mediaUploadClientNotificationHtml(clientName, mediaCount) {
+  return emailWrapper(`
+    <h2 style="color: #3B82F6; margin-bottom: 20px;">New Media Added</h2>
+    <p>Hello ${clientName},</p>
+    <p>Your trainer has uploaded ${mediaCount > 1 ? mediaCount + ' new files' : 'a new file'} for your dog's training gallery.</p>
+    <p>Log in to your dashboard to view the new media.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/client-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View Gallery
+      </a>
+    </div>
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>
+  `);
+}
+
+// Client notification: appointment completed
+export function appointmentCompletedHtml(clientName, dogName, date) {
+  return emailWrapper(`
+    <h2 style="color: #10B981; margin-bottom: 20px;">Training Session Complete!</h2>
+    <p>Hello ${clientName},</p>
+    <p>Great news! <strong>${dogName}</strong>'s training session on <strong>${date}</strong> has been marked as completed.</p>
+    <p>Check your dashboard for any new training notes or media from the session.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/client-dashboard.html" style="background: #10B981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View My Dashboard
+      </a>
+    </div>
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>
+  `);
+}
+
 // Password reset email
 export function resetEmailHtml(resetUrl, adminTriggered = false) {
   const intro = adminTriggered

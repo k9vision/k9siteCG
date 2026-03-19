@@ -53,6 +53,30 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ error: 'appointment_date, start_time, and end_time are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Validate time format (HH:MM)
+    const timeRegex = /^\d{2}:\d{2}$/;
+    if (!timeRegex.test(start_time)) {
+      return new Response(JSON.stringify({ error: 'start_time must be in HH:MM format' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (!timeRegex.test(end_time)) {
+      return new Response(JSON.stringify({ error: 'end_time must be in HH:MM format' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Validate hours and minutes are in valid ranges
+    const [startH, startM] = start_time.split(':').map(Number);
+    const [endH, endM] = end_time.split(':').map(Number);
+    if (startH < 0 || startH > 23 || startM < 0 || startM > 59) {
+      return new Response(JSON.stringify({ error: 'start_time has invalid hours (0-23) or minutes (0-59)' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (endH < 0 || endH > 23 || endM < 0 || endM > 59) {
+      return new Response(JSON.stringify({ error: 'end_time has invalid hours (0-23) or minutes (0-59)' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Validate end_time is after start_time
+    if (end_time <= start_time) {
+      return new Response(JSON.stringify({ error: 'end_time must be after start_time' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // Resolve client_id
     let clientId;
     if (auth.user.role === 'client') {

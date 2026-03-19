@@ -61,6 +61,37 @@ export async function onRequest(context) {
       const { status, notes, new_items, trainer_name, date, due_date, tax_rate } = await request.json();
 
       if (status) {
+        // Invoice status state machine — validate transition
+        const VALID_TRANSITIONS = {
+          pending: ['paid', 'overdue', 'cancelled'],
+          overdue: ['paid', 'cancelled'],
+          paid: [],
+          cancelled: []
+        };
+
+        const currentInvoiceStatus = await env.DB.prepare(
+          'SELECT status FROM invoices WHERE id = ?'
+        ).bind(invoiceId).first();
+
+        if (!currentInvoiceStatus) {
+          return new Response(JSON.stringify({ error: 'Invoice not found' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        const currentStatus = currentInvoiceStatus.status;
+        const allowed = VALID_TRANSITIONS[currentStatus] || [];
+
+        if (!allowed.includes(status)) {
+          return new Response(JSON.stringify({
+            error: `Cannot change invoice status from '${currentStatus}' to '${status}'`
+          }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
         await env.DB.prepare(
           'UPDATE invoices SET status = ? WHERE id = ?'
         ).bind(status, invoiceId).run();
@@ -177,8 +208,7 @@ export async function onRequest(context) {
   } catch (error) {
     console.error('Invoice API error:', error);
     return new Response(JSON.stringify({
-      error: 'Internal server error',
-      details: error.message
+      error: 'Internal server error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

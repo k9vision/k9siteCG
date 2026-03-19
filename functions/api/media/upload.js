@@ -16,6 +16,26 @@ export async function onRequestPost(context) {
     const file = formData.get('file');
     const caption = formData.get('caption') || '';
 
+    // Validate file MIME type
+    const ALLOWED_MIME_TYPES = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'video/mp4', 'video/quicktime', 'video/webm'
+    ];
+    if (file && !ALLOWED_MIME_TYPES.includes(file.type)) {
+      return new Response(
+        JSON.stringify({ error: `File type '${file.type}' is not allowed. Accepted types: JPEG, PNG, GIF, WebP, MP4, MOV, WebM` }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate file size (50MB max)
+    if (file && file.size > 50 * 1024 * 1024) {
+      return new Response(
+        JSON.stringify({ error: 'File size exceeds the 50MB limit' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Resolve clientId based on role
     let clientId;
     if (auth.user.role === 'client') {
@@ -91,6 +111,27 @@ export async function onRequestPost(context) {
         });
       } catch (notifyErr) {
         console.error('Failed to send upload notification:', notifyErr);
+      }
+    }
+
+    // Notify client when admin uploads media for them
+    if (auth.user.role === 'admin') {
+      try {
+        const clientInfo = await context.env.DB.prepare(
+          'SELECT c.client_name, c.email, u.username FROM clients c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?'
+        ).bind(parseInt(clientId)).first();
+
+        const clientEmail = clientInfo?.email || clientInfo?.username;
+        if (clientEmail && clientEmail.includes('@')) {
+          const { sendEmail: sendEmailFn, mediaUploadClientNotificationHtml } = await import('../../utils/emails.js');
+          await sendEmailFn(context.env, {
+            to: clientEmail,
+            subject: 'New media added to your gallery',
+            html: mediaUploadClientNotificationHtml(clientInfo?.client_name || 'Valued Client', 1)
+          });
+        }
+      } catch (notifyErr) {
+        console.error('Failed to send media upload client notification:', notifyErr);
       }
     }
 

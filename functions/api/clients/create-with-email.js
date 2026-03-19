@@ -153,8 +153,7 @@ export async function onRequest(context) {
   } catch (error) {
     console.error('Create client error:', error);
     return new Response(JSON.stringify({
-      error: 'Failed to create client',
-      details: error.message
+      error: 'Failed to create client'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

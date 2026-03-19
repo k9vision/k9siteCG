@@ -19,6 +19,7 @@ export async function onRequestGet(context) {
         u.status as user_status
       FROM clients c
       LEFT JOIN users u ON c.user_id = u.id
+      WHERE u.deleted_at IS NULL OR u.id IS NULL
       ORDER BY c.created_at DESC
     `).all();
 

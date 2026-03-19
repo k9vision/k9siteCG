@@ -2,7 +2,28 @@
 
 export async function verifyToken(token, secret) {
   try {
-    const [header, payload, signature] = token.split('.');
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    const [header, payload, signature] = parts;
+
+    // Cryptographically verify the signature using HMAC-SHA256
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+
+    // Decode the base64 signature to bytes
+    const sigBytes = Uint8Array.from(atob(signature), c => c.charCodeAt(0));
+    const dataBytes = new TextEncoder().encode(`${header}.${payload}`);
+
+    const valid = await crypto.subtle.verify('HMAC', key, sigBytes, dataBytes);
+    if (!valid) return null;
+
+    // Only parse payload after signature is verified
     const data = JSON.parse(atob(payload));
 
     // Check expiration

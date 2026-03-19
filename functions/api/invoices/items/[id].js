@@ -10,7 +10,7 @@ export async function onRequest(context) {
   }
 
   const auth = await requireAdmin(context);
-  if (!auth.success) {
+  if (auth.error) {
     return new Response(JSON.stringify({ error: auth.error }), {
       status: auth.status,
       headers: { 'Content-Type': 'application/json' }
@@ -74,8 +74,7 @@ export async function onRequest(context) {
   } catch (error) {
     console.error('Invoice item API error:', error);
     return new Response(JSON.stringify({
-      error: 'Internal server error',
-      details: error.message
+      error: 'Internal server error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

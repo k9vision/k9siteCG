@@ -155,7 +155,7 @@ export async function onRequestPost(context) {
 
   } catch (error) {
     console.error('Self-register error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to register account', detail: error.message }), {
+    return new Response(JSON.stringify({ error: 'Failed to register account' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

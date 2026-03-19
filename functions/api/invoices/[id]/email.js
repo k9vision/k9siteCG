@@ -98,8 +98,7 @@ export async function onRequest(context) {
   } catch (error) {
     console.error('Email invoice error:', error);
     return new Response(JSON.stringify({
-      error: 'Failed to send invoice',
-      details: error.message
+      error: 'Failed to send invoice'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

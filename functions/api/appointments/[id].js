@@ -43,7 +43,7 @@ export async function onRequestPut(context) {
     }
 
     const id = context.params.id;
-    const { status, notes } = await context.request.json();
+    const { status, notes, appointment_date, start_time, end_time } = await context.request.json();
 
     const existing = await context.env.DB.prepare('SELECT * FROM appointments WHERE id = ?').bind(id).first();
     if (!existing) {
@@ -61,14 +61,95 @@ export async function onRequestPut(context) {
       }
     }
 
+    // Handle rescheduling if date/time fields are provided
+    let newDate = existing.appointment_date;
+    let newStart = existing.start_time;
+    let newEnd = existing.end_time;
+
+    if (appointment_date || start_time || end_time) {
+      // Only allow reschedule on pending or confirmed appointments
+      if (!['pending', 'confirmed'].includes(existing.status)) {
+        return new Response(JSON.stringify({ error: 'Can only reschedule pending or confirmed appointments' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      newDate = appointment_date || existing.appointment_date;
+      newStart = start_time || existing.start_time;
+      newEnd = end_time || existing.end_time;
+
+      // Validate time format (HH:MM)
+      const timeRegex = /^\d{2}:\d{2}$/;
+      if (start_time && !timeRegex.test(start_time)) {
+        return new Response(JSON.stringify({ error: 'start_time must be in HH:MM format' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (end_time && !timeRegex.test(end_time)) {
+        return new Response(JSON.stringify({ error: 'end_time must be in HH:MM format' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      // Validate end_time is after start_time
+      if (newEnd <= newStart) {
+        return new Response(JSON.stringify({ error: 'end_time must be after start_time' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      // Check availability
+      const dateObj = new Date(newDate + 'T00:00:00');
+      const dayOfWeek = dateObj.getDay();
+
+      const { results: slots } = await context.env.DB.prepare(`
+        SELECT * FROM availability_slots WHERE is_active = 1 AND (
+          specific_date = ?
+          OR (specific_date IS NULL AND day_of_week = ?
+              AND (recurring_start_date IS NULL OR recurring_start_date <= ?)
+              AND (recurring_end_date IS NULL OR recurring_end_date >= ?))
+        )
+      `).bind(newDate, dayOfWeek, newDate, newDate).all();
+
+      if (slots.length === 0) {
+        return new Response(JSON.stringify({ error: 'No availability set for this day' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      const timeInSlot = slots.some(s => newStart >= s.start_time && newEnd <= s.end_time);
+      if (!timeInSlot) {
+        return new Response(JSON.stringify({ error: 'Requested time is outside available hours' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      // Check blocked dates
+      const blocked = await context.env.DB.prepare(
+        'SELECT * FROM blocked_dates WHERE blocked_date = ?'
+      ).bind(newDate).first();
+
+      if (blocked) {
+        if (blocked.all_day) {
+          return new Response(JSON.stringify({ error: 'This date is blocked' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+        if (blocked.start_time && blocked.end_time) {
+          if (newStart < blocked.end_time && newEnd > blocked.start_time) {
+            return new Response(JSON.stringify({ error: 'This time slot is blocked' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          }
+        }
+      }
+
+      // Check double-booking (exclude current appointment)
+      const doubleBooked = await context.env.DB.prepare(`
+        SELECT id FROM appointments
+        WHERE appointment_date = ? AND start_time = ? AND status IN ('pending', 'confirmed') AND id != ?
+      `).bind(newDate, newStart, id).first();
+
+      if (doubleBooked) {
+        return new Response(JSON.stringify({ error: 'This time slot is already booked' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
     const appointment = await context.env.DB.prepare(`
       UPDATE appointments
       SET status = COALESCE(?, status),
           notes = COALESCE(?, notes),
+          appointment_date = ?,
+          start_time = ?,
+          end_time = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
       RETURNING *
-    `).bind(status || null, notes || null, id).first();
+    `).bind(status || null, notes || null, newDate, newStart, newEnd, id).first();
 
     // Send confirmation email to client
     if (status === 'confirmed') {
@@ -97,6 +178,32 @@ export async function onRequestPut(context) {
         }
       } catch (emailErr) {
         console.error('Failed to send confirmation email:', emailErr);
+      }
+    }
+
+    // Send completion email to client
+    if (status === 'completed') {
+      try {
+        const client = await context.env.DB.prepare(`
+          SELECT c.client_name, c.dog_name, c.email, u.username
+          FROM clients c LEFT JOIN users u ON c.user_id = u.id
+          WHERE c.id = ?
+        `).bind(existing.client_id).first();
+        const clientEmail = client?.email || client?.username;
+        if (clientEmail && clientEmail.includes('@')) {
+          const { sendEmail, appointmentCompletedHtml } = await import('../../utils/emails.js');
+          await sendEmail(context.env, {
+            to: clientEmail,
+            subject: `Training Session Complete - ${existing.appointment_date}`,
+            html: appointmentCompletedHtml(
+              client?.client_name || 'Valued Client',
+              client?.dog_name || 'your dog',
+              existing.appointment_date
+            )
+          });
+        }
+      } catch (emailErr) {
+        console.error('Failed to send completion email:', emailErr);
       }
     }
 

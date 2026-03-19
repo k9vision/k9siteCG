@@ -1,11 +1,20 @@
 // Shared middleware for all Pages Functions
 
+const ALLOWED_ORIGINS = [
+  'https://k9visiontx.com',
+  'https://www.k9visiontx.com',
+  'https://k9sitecg.pages.dev'
+];
+
 export async function onRequest(context) {
-  // Add CORS headers
+  const origin = context.request.headers.get('Origin');
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+
   const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Vary': 'Origin',
   };
 
   // Handle preflight requests

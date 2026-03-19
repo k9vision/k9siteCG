@@ -42,6 +42,14 @@ export async function onRequestPost(context) {
       );
     }
 
+    // Block soft-deleted accounts (don't reveal account was deleted)
+    if (result.deleted_at) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid credentials' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Block unverified accounts
     if (result.status === 'pending_verification') {
       return new Response(

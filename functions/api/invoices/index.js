@@ -197,8 +197,7 @@ export async function onRequest(context) {
   } catch (error) {
     console.error('Invoices API error:', error);
     return new Response(JSON.stringify({
-      error: 'Internal server error',
-      details: error.message
+      error: 'Internal server error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
