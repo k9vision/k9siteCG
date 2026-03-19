@@ -1,5 +1,5 @@
-// Update and delete notes (admin only)
-import { requireAdmin } from '../../utils/auth.js';
+// Update and delete notes
+import { requireAdmin, requireAuth } from '../../utils/auth.js';
 
 export async function onRequestPut(context) {
   try {
@@ -50,7 +50,7 @@ export async function onRequestPut(context) {
 
 export async function onRequestDelete(context) {
   try {
-    const auth = await requireAdmin(context);
+    const auth = await requireAuth(context);
     if (auth.error) {
       return new Response(
         JSON.stringify({ error: auth.error }),
@@ -59,6 +59,19 @@ export async function onRequestDelete(context) {
     }
 
     const id = parseInt(context.params.id);
+
+    // If not admin, verify ownership: note must belong to client AND be client-authored
+    if (auth.user.role !== 'admin') {
+      const note = await context.env.DB.prepare(
+        'SELECT n.id FROM notes n JOIN clients c ON n.client_id = c.id WHERE n.id = ? AND c.user_id = ? AND n.author_role = ?'
+      ).bind(id, auth.user.id, 'client').first();
+      if (!note) {
+        return new Response(
+          JSON.stringify({ error: 'Not authorized to delete this note' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     await context.env.DB.prepare(
       'DELETE FROM notes WHERE id = ?'

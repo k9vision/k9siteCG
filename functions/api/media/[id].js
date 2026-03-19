@@ -51,10 +51,10 @@ export async function onRequestPut(context) {
   }
 }
 
-// Delete media (admin only)
+// Delete media (authenticated users with ownership check)
 export async function onRequestDelete(context) {
   try {
-    const auth = await requireAdmin(context);
+    const auth = await requireAuth(context);
     if (auth.error) {
       return new Response(
         JSON.stringify({ error: auth.error }),
@@ -64,15 +64,33 @@ export async function onRequestDelete(context) {
 
     const id = parseInt(context.params.id);
 
-    // Get media info to delete from R2
+    // Get media info (also used for ownership check and R2 deletion)
     const media = await context.env.DB.prepare(
-      'SELECT filename FROM media WHERE id = ?'
+      'SELECT m.filename, m.client_id FROM media m WHERE m.id = ?'
     ).bind(id).first();
 
-    if (media) {
-      // Delete from R2
-      await context.env.MEDIA_BUCKET.delete(media.filename);
+    if (!media) {
+      return new Response(
+        JSON.stringify({ error: 'Media not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
     }
+
+    // If not admin, verify ownership
+    if (auth.user.role !== 'admin') {
+      const ownership = await context.env.DB.prepare(
+        'SELECT id FROM clients WHERE id = ? AND user_id = ?'
+      ).bind(media.client_id, auth.user.id).first();
+      if (!ownership) {
+        return new Response(
+          JSON.stringify({ error: 'Not authorized to delete this media' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Delete from R2
+    await context.env.MEDIA_BUCKET.delete(media.filename);
 
     // Delete from database
     await context.env.DB.prepare(

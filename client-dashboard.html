@@ -61,9 +61,14 @@
                     <button onclick="toggleProfileEdit(true)" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Edit</button>
                 </div>
                 <div id="profile-edit" class="hidden flex items-center gap-3 flex-wrap">
-                    <input type="text" id="profile-name-input" class="rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm" placeholder="Name">
-                    <input type="email" id="profile-email-input" class="rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm" placeholder="Email">
-                    <button onclick="saveProfileName()" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-700">Save</button>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="profile-name-input" class="rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm" placeholder="Name">
+                        <button onclick="saveProfileName()" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-700 whitespace-nowrap">Save Name</button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="email" id="profile-email-input" class="rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm" placeholder="Email">
+                        <button onclick="saveProfileEmail()" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-700 whitespace-nowrap">Save Email</button>
+                    </div>
                     <button onclick="toggleProfileEdit(false)" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">Cancel</button>
                 </div>
             </div>
@@ -146,9 +151,10 @@
                         <p class="text-sm"><strong>Time:</strong> <span id="booking-selected-time"></span></p>
                         <div>
                             <label class="block text-sm font-medium mb-1">Service (optional)</label>
-                            <select id="booking-service" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm">
+                            <select id="booking-service" onchange="showServiceDetail()" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm">
                                 <option value="">General Training</option>
                             </select>
+                            <div id="booking-service-detail" class="mt-2 text-sm text-gray-400 dark:text-gray-600 italic hidden"></div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Notes (optional)</label>
@@ -162,10 +168,15 @@
 
         <!-- My Appointments -->
         <div class="bg-card-dark dark:bg-card-light p-6 rounded-lg shadow mb-8 border border-border-dark dark:border-border-light">
-            <h3 class="text-xl font-bold mb-4 flex items-center">
-                <span class="material-icons mr-2 text-primary">calendar_today</span>
-                My Appointments
-            </h3>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold flex items-center">
+                    <span class="material-icons mr-2 text-primary">calendar_today</span>
+                    My Appointments
+                </h3>
+                <button onclick="showCalendarSubscribe()" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700 flex items-center gap-1">
+                    <span class="material-icons text-sm">event_note</span> Subscribe to Calendar
+                </button>
+            </div>
             <div id="my-appointments" class="space-y-3">
                 <p class="text-gray-400 dark:text-gray-600 text-sm">No appointments yet</p>
             </div>
@@ -221,6 +232,12 @@
                         </button>
                     </div>
                 </div>
+                <div class="flex justify-end mb-2">
+                    <select id="media-sort" onchange="sortAndRenderMedia()" class="rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-xs px-2 py-1">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                    </select>
+                </div>
                 <div id="media-list">
                     <p class="text-gray-400 dark:text-gray-600">No media files yet</p>
                 </div>
@@ -231,6 +248,7 @@
                 <h3 class="text-xl font-bold mb-4 flex items-center">
                     <span class="material-icons mr-2 text-primary">note</span>
                     Training Notes
+                    <span id="unread-badge" class="hidden ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">0</span>
                 </h3>
                 <div id="notes-list" class="space-y-4 max-h-64 overflow-y-auto mb-4">
                     <p class="text-gray-400 dark:text-gray-600">No notes yet</p>
@@ -465,6 +483,41 @@
         </div>
     </div>
 
+    <!-- Booking Confirmation Modal -->
+    <div id="booking-confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-sm w-full border border-border-dark dark:border-border-light text-center">
+            <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span class="material-icons text-white text-4xl">check</span>
+            </div>
+            <h3 class="text-2xl font-bold mb-2">Appointment Booked!</h3>
+            <div id="booking-confirm-details" class="text-sm text-gray-400 dark:text-gray-600 space-y-1 mb-4"></div>
+            <p class="text-xs text-gray-500 mb-4">A confirmation email has been sent.</p>
+            <button onclick="closeBookingConfirmModal()" class="bg-primary text-white px-6 py-2 rounded hover:bg-blue-700 font-semibold">OK</button>
+        </div>
+    </div>
+
+    <!-- Calendar Subscribe Modal -->
+    <div id="calendar-subscribe-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg p-6 max-w-md w-full border border-border-dark dark:border-border-light">
+            <h3 class="text-xl font-bold mb-4 flex items-center">
+                <span class="material-icons mr-2 text-primary">calendar_today</span>
+                Subscribe to Calendar
+            </h3>
+            <p class="text-sm text-gray-400 dark:text-gray-600 mb-3">Use this link to add your appointments to your calendar app (Google Calendar, Apple Calendar, Outlook, etc.).</p>
+            <div class="flex gap-2 mb-3">
+                <input type="text" id="ical-url" readonly class="flex-1 rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm">
+                <button onclick="copyCalendarUrl()" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Copy</button>
+            </div>
+            <a id="ical-webcal-link" href="#" class="inline-flex items-center gap-1 text-sm text-primary hover:underline mb-4">
+                <span class="material-icons text-sm">open_in_new</span> Open in Calendar App
+            </a>
+            <p class="text-xs text-gray-500 mb-4">Your calendar will automatically sync new appointments.</p>
+            <div class="flex justify-end">
+                <button onclick="document.getElementById('calendar-subscribe-modal').classList.add('hidden')" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-700">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Media Lightbox Modal (read-only for clients) -->
     <div id="media-lightbox-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[60]" onclick="closeMediaLightbox(event)">
         <div class="bg-card-dark dark:bg-card-light rounded-lg max-w-3xl w-full max-h-[90vh] overflow-auto border border-border-dark dark:border-border-light" onclick="event.stopPropagation()">
@@ -505,6 +558,26 @@
         let funFacts = [];
         let currentFactIndex = 0;
         let clientMediaItems = [];
+        let bookingServicesCache = [];
+        let mediaSortOrder = 'newest';
+
+        // Loading spinner helpers
+        function showLoading(containerId) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            el.dataset.prevHtml = el.innerHTML;
+            el.innerHTML = `<div class="flex items-center justify-center py-6 gap-2">
+                <svg class="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                <span class="text-sm text-gray-400 dark:text-gray-600">Loading...</span>
+            </div>`;
+        }
+
+        function hideLoading(containerId) {
+            // No-op; the load function replaces innerHTML anyway
+        }
 
         function checkAuth() {
             const token = localStorage.getItem('token');
@@ -564,6 +637,9 @@
 
         async function loadClientData() {
             if (!checkAuth()) return;
+            showLoading('dogs-list');
+            showLoading('media-list');
+            showLoading('notes-list');
 
             const user = JSON.parse(localStorage.getItem('user'));
 
@@ -625,28 +701,44 @@
 
         async function saveProfileName() {
             const client_name = document.getElementById('profile-name-input').value.trim();
-            const email = document.getElementById('profile-email-input').value.trim();
             if (!client_name) { showToast('Name cannot be empty', 'error'); return; }
             try {
-                const body = { client_name };
-                if (email) body.email = email;
                 const res = await fetch(`${API_BASE}/clients/user/${currentUserId}`, {
                     method: 'PUT',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify(body)
+                    body: JSON.stringify({ client_name })
                 });
                 if (res.ok) {
                     document.getElementById('profile-name-text').textContent = client_name;
                     document.getElementById('welcome-heading').textContent = `Welcome, ${client_name}!`;
-                    if (email) document.getElementById('profile-email-text').textContent = email;
-                    toggleProfileEdit(false);
-                    showToast('Profile updated successfully!', 'success');
+                    showToast('Name updated successfully!', 'success');
                 } else {
-                    showToast('Failed to update profile', 'error');
+                    showToast('Failed to update name', 'error');
                 }
             } catch (error) {
-                console.error('Save profile error:', error);
-                showToast('Failed to update profile', 'error');
+                console.error('Save name error:', error);
+                showToast('Failed to update name', 'error');
+            }
+        }
+
+        async function saveProfileEmail() {
+            const email = document.getElementById('profile-email-input').value.trim();
+            if (!email) { showToast('Email cannot be empty', 'error'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/clients/user/${currentUserId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ email })
+                });
+                if (res.ok) {
+                    document.getElementById('profile-email-text').textContent = email;
+                    showToast('Email updated successfully!', 'success');
+                } else {
+                    showToast('Failed to update email', 'error');
+                }
+            } catch (error) {
+                console.error('Save email error:', error);
+                showToast('Failed to update email', 'error');
             }
         }
 
@@ -871,6 +963,7 @@
         }
 
         async function loadMedia(clientId) {
+            showLoading('media-list');
             try {
                 const res = await fetch(`${API_BASE}/media/client/${clientId}`, {
                     headers: getAuthHeaders()
@@ -878,24 +971,61 @@
                 const data = await res.json();
                 const media = data.media || data || [];
                 clientMediaItems = Array.isArray(media) ? media : [];
-
-                const mediaList = document.getElementById('media-list');
-                if (clientMediaItems.length > 0) {
-                    mediaList.innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">${clientMediaItems.map((item, i) => {
-                        const preview = item.type === 'photo'
-                            ? `<img src="${item.url}" alt="${item.filename}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="openMediaLightbox(${i})">`
-                            : `<div class="bg-gray-700 dark:bg-gray-200 rounded flex flex-col items-center justify-center h-32 cursor-pointer" onclick="openMediaLightbox(${i})">
-                                <span class="material-icons text-3xl text-primary">play_circle</span>
-                                <span class="text-xs mt-1 px-1 truncate w-full text-center">${item.filename}</span>
-                              </div>`;
-                        const captionHtml = item.caption ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate" title="${item.caption}">${item.caption}</p>` : '';
-                        return `<div>${preview}${captionHtml}</div>`;
-                    }).join('')}</div>`;
-                } else {
-                    mediaList.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No media files yet</p>';
-                }
+                renderMediaGallery();
             } catch (error) {
                 console.error('Error loading media:', error);
+            }
+        }
+
+        function sortAndRenderMedia() {
+            mediaSortOrder = document.getElementById('media-sort').value;
+            renderMediaGallery();
+        }
+
+        function renderMediaGallery() {
+            const mediaList = document.getElementById('media-list');
+            if (clientMediaItems.length > 0) {
+                const sorted = [...clientMediaItems].sort((a, b) => {
+                    const da = new Date(a.uploaded_at || a.created_at || 0);
+                    const db = new Date(b.uploaded_at || b.created_at || 0);
+                    return mediaSortOrder === 'newest' ? db - da : da - db;
+                });
+                mediaList.innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">${sorted.map((item) => {
+                    const idx = clientMediaItems.indexOf(item);
+                    const dateStr = item.uploaded_at || item.created_at;
+                    const dateHtml = dateStr ? `<p class="text-xs text-gray-500 mt-1">${new Date(dateStr).toLocaleDateString()}</p>` : '';
+                    const preview = item.type === 'photo'
+                        ? `<img src="${item.url}" alt="${item.filename}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="openMediaLightbox(${idx})">`
+                        : `<div class="bg-gray-700 dark:bg-gray-200 rounded flex flex-col items-center justify-center h-32 cursor-pointer" onclick="openMediaLightbox(${idx})">
+                            <span class="material-icons text-3xl text-primary">play_circle</span>
+                            <span class="text-xs mt-1 px-1 truncate w-full text-center">${item.filename}</span>
+                          </div>`;
+                    const captionHtml = item.caption ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate" title="${item.caption}">${item.caption}</p>` : '';
+                    const deleteBtn = `<button onclick="deleteMedia(${item.id})" class="absolute top-1 right-1 bg-black bg-opacity-60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600" title="Delete"><span class="material-icons text-sm">delete</span></button>`;
+                    return `<div class="relative group">${preview}${deleteBtn}${captionHtml}${dateHtml}</div>`;
+                }).join('')}</div>`;
+            } else {
+                mediaList.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No media files yet</p>';
+            }
+        }
+
+        async function deleteMedia(mediaId) {
+            if (!confirm('Delete this media? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`${API_BASE}/media/${mediaId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (res.ok) {
+                    showToast('Media deleted', 'success');
+                    if (currentClientId) loadMedia(currentClientId);
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Failed to delete media', 'error');
+                }
+            } catch (error) {
+                console.error('Delete media error:', error);
+                showToast('Failed to delete media', 'error');
             }
         }
 
@@ -960,6 +1090,9 @@
                 const data = await res.json();
                 const notes = data.notes || [];
 
+                // Notification badge: count unread trainer notes
+                updateUnreadBadge(notes);
+
                 const notesList = document.getElementById('notes-list');
                 const conversation = document.getElementById('conversation');
 
@@ -968,11 +1101,15 @@
                         const isTrainer = note.author_role !== 'client';
                         const label = isTrainer ? 'Trainer' : 'You';
                         const labelColor = isTrainer ? 'text-blue-400' : 'text-green-400';
+                        const deleteBtn = !isTrainer ? `<button onclick="deleteNote(${note.id})" class="text-red-400 hover:text-red-300 ml-2" title="Delete"><span class="material-icons text-sm">delete</span></button>` : '';
                         return `
                         <div class="border border-border-dark dark:border-border-light rounded p-3">
                             <div class="flex items-center justify-between mb-1">
                                 <h4 class="font-semibold">${note.title}</h4>
-                                <span class="text-xs font-medium ${labelColor}">${label}</span>
+                                <div class="flex items-center">
+                                    <span class="text-xs font-medium ${labelColor}">${label}</span>
+                                    ${deleteBtn}
+                                </div>
                             </div>
                             <p class="text-sm text-gray-400 dark:text-gray-600 mt-1">${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''}</p>
                             <p class="text-xs text-gray-500 mt-2">${new Date(note.created_at).toLocaleString()}</p>
@@ -1008,7 +1145,10 @@
                                 <div class="flex items-start justify-between">
                                     <span class="text-xs text-gray-500">${new Date(note.created_at).toLocaleString()}</span>
                                     <div class="flex-1 ml-4">
-                                        <span class="text-xs font-bold text-green-400">You</span>
+                                        <div class="flex items-center justify-end gap-2">
+                                            <span class="text-xs font-bold text-green-400">You</span>
+                                            <button onclick="deleteNote(${note.id})" class="text-red-400 hover:text-red-300" title="Delete"><span class="material-icons text-sm">delete</span></button>
+                                        </div>
                                         <h4 class="font-semibold text-green-400">${note.title}</h4>
                                         <p class="text-sm mt-1">${note.content}</p>
                                         ${mediaHtml}
@@ -1282,12 +1422,27 @@
             try {
                 const res = await fetch(`${API_BASE}/services`);
                 const data = await res.json();
-                const services = (data.services || []).filter(s => s.active);
+                bookingServicesCache = (data.services || []).filter(s => s.active);
                 const select = document.getElementById('booking-service');
                 select.innerHTML = '<option value="">General Training</option>' +
-                    services.map(s => `<option value="${s.id}" data-name="${s.name}">${s.name}</option>`).join('');
+                    bookingServicesCache.map(s => `<option value="${s.id}" data-name="${s.name}">${s.name}</option>`).join('');
+                document.getElementById('booking-service-detail').classList.add('hidden');
             } catch (error) {
                 console.error('Error loading services:', error);
+            }
+        }
+
+        function showServiceDetail() {
+            const select = document.getElementById('booking-service');
+            const detailDiv = document.getElementById('booking-service-detail');
+            const serviceId = select.value;
+            if (!serviceId) { detailDiv.classList.add('hidden'); return; }
+            const svc = bookingServicesCache.find(s => String(s.id) === serviceId);
+            if (svc && svc.description) {
+                detailDiv.textContent = svc.description;
+                detailDiv.classList.remove('hidden');
+            } else {
+                detailDiv.classList.add('hidden');
             }
         }
 
@@ -1297,7 +1452,7 @@
             const date = document.getElementById('booking-date').value;
             const serviceSelect = document.getElementById('booking-service');
             const serviceId = serviceSelect.value || null;
-            const serviceName = serviceId ? serviceSelect.options[serviceSelect.selectedIndex].dataset.name : null;
+            const serviceName = serviceId ? serviceSelect.options[serviceSelect.selectedIndex].dataset.name : 'General Training';
             const notes = document.getElementById('booking-notes').value;
 
             try {
@@ -1316,10 +1471,19 @@
 
                 const data = await res.json();
                 if (res.ok) {
-                    showToast('Appointment booked successfully! Your trainer will confirm shortly.', 'success');
+                    // Show confirmation modal
+                    const details = document.getElementById('booking-confirm-details');
+                    details.innerHTML = `
+                        <p><strong>Date:</strong> ${new Date(date + 'T00:00:00').toLocaleDateString()}</p>
+                        <p><strong>Time:</strong> ${selectedSlot.start_time} - ${selectedSlot.end_time}</p>
+                        <p><strong>Service:</strong> ${serviceName}</p>
+                    `;
+                    document.getElementById('booking-confirm-modal').classList.remove('hidden');
+
                     document.getElementById('booking-summary').classList.add('hidden');
                     document.getElementById('booking-date').value = '';
                     document.getElementById('available-slots').innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">Pick a date to see available times</p>';
+                    document.getElementById('booking-service-detail').classList.add('hidden');
                     selectedSlot = null;
                     loadMyAppointments();
                 } else {
@@ -1331,7 +1495,12 @@
             }
         }
 
+        function closeBookingConfirmModal() {
+            document.getElementById('booking-confirm-modal').classList.add('hidden');
+        }
+
         async function loadMyAppointments() {
+            showLoading('my-appointments');
             try {
                 const res = await fetch(`${API_BASE}/appointments`, { headers: getAuthHeaders() });
                 const data = await res.json();
@@ -1431,6 +1600,7 @@
 
         // INVOICE FUNCTIONS
         async function loadInvoices() {
+            showLoading('my-invoices');
             try {
                 const res = await fetch(`${API_BASE}/invoices`, { headers: getAuthHeaders() });
                 const data = await res.json();
@@ -1792,6 +1962,7 @@
 
         // TRAINING PROGRESS / MILESTONES
         async function loadMilestones() {
+            showLoading('milestones-list');
             const token = localStorage.getItem('token');
             try {
                 const res = await fetch('/api/milestones', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -1936,6 +2107,90 @@
             } catch (err) {
                 showToast('Failed to send reset link', 'error');
             }
+        }
+
+        // Delete note (client can only delete own notes)
+        async function deleteNote(noteId) {
+            if (!confirm('Delete this message? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`${API_BASE}/notes/${noteId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (res.ok) {
+                    showToast('Message deleted', 'success');
+                    if (currentClientId) loadNotes(currentClientId);
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Failed to delete message', 'error');
+                }
+            } catch (error) {
+                console.error('Delete note error:', error);
+                showToast('Failed to delete message', 'error');
+            }
+        }
+
+        // Notification badge for unread trainer notes
+        function updateUnreadBadge(notes) {
+            const lastSeen = localStorage.getItem('lastSeenNoteTimestamp') || '1970-01-01T00:00:00Z';
+            const trainerNotes = notes.filter(n => n.author_role === 'admin' || n.author_role !== 'client');
+            const unread = trainerNotes.filter(n => new Date(n.created_at) > new Date(lastSeen)).length;
+            const badge = document.getElementById('unread-badge');
+            if (unread > 0) {
+                badge.textContent = unread;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function markNotesAsRead() {
+            localStorage.setItem('lastSeenNoteTimestamp', new Date().toISOString());
+            const badge = document.getElementById('unread-badge');
+            badge.classList.add('hidden');
+        }
+
+        // Mark notes read when conversation section is scrolled into view
+        const conversationEl = document.getElementById('conversation');
+        const notesObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) markNotesAsRead();
+            });
+        }, { threshold: 0.3 });
+        notesObserver.observe(conversationEl);
+
+        // iCal Calendar Subscribe
+        async function showCalendarSubscribe() {
+            try {
+                const res = await fetch(`${API_BASE}/calendar/feed/generate`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (res.ok && data.url) {
+                    const url = data.url;
+                    document.getElementById('ical-url').value = url;
+                    const webcalUrl = url.replace(/^https?:\/\//, 'webcal://');
+                    document.getElementById('ical-webcal-link').href = webcalUrl;
+                    document.getElementById('calendar-subscribe-modal').classList.remove('hidden');
+                } else {
+                    showToast(data.error || 'Failed to generate calendar link', 'error');
+                }
+            } catch (error) {
+                console.error('Calendar subscribe error:', error);
+                showToast('Failed to generate calendar link', 'error');
+            }
+        }
+
+        function copyCalendarUrl() {
+            const input = document.getElementById('ical-url');
+            input.select();
+            navigator.clipboard.writeText(input.value).then(() => {
+                showToast('Calendar URL copied!', 'success');
+            }).catch(() => {
+                document.execCommand('copy');
+                showToast('Calendar URL copied!', 'success');
+            });
         }
 
         loadClientData();
