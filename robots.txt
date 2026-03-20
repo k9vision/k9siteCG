@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /admin-dashboard.html
+Disallow: /client-dashboard.html
+Disallow: /portal.html
+Disallow: /api/
+Disallow: /setup-account.html
+Disallow: /reset-password.html
+Disallow: /forgot-password.html
+Disallow: /verify-email.html
+Disallow: /register.html
+
+Sitemap: https://k9visiontx.com/sitemap.xml
