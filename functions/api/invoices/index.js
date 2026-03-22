@@ -35,8 +35,11 @@ export async function onRequest(context) {
       let results;
       if (auth.user.role === 'admin') {
         const data = await env.DB.prepare(`
-          SELECT invoices.*, clients.client_name, clients.email as client_email, clients.dog_name, clients.dog_breed
-          FROM invoices JOIN clients ON invoices.client_id = clients.id
+          SELECT invoices.*,
+            COALESCE(invoices.recipient_name, clients.client_name) as client_name,
+            COALESCE(invoices.recipient_email, clients.email) as client_email,
+            clients.dog_name, clients.dog_breed
+          FROM invoices LEFT JOIN clients ON invoices.client_id = clients.id
           ORDER BY invoices.created_at DESC
         `).all();
         results = data.results;
@@ -49,8 +52,11 @@ export async function onRequest(context) {
           });
         }
         const data = await env.DB.prepare(`
-          SELECT invoices.*, clients.client_name, clients.email as client_email, clients.dog_name, clients.dog_breed
-          FROM invoices JOIN clients ON invoices.client_id = clients.id
+          SELECT invoices.*,
+            COALESCE(invoices.recipient_name, clients.client_name) as client_name,
+            COALESCE(invoices.recipient_email, clients.email) as client_email,
+            clients.dog_name, clients.dog_breed
+          FROM invoices LEFT JOIN clients ON invoices.client_id = clients.id
           WHERE invoices.client_id = ?
           ORDER BY invoices.created_at DESC
         `).bind(client.id).all();
@@ -83,6 +89,8 @@ export async function onRequest(context) {
       // Create new invoice
       const {
         client_id,
+        recipient_email,
+        recipient_name,
         trainer_name,
         date,
         due_date,
@@ -91,29 +99,36 @@ export async function onRequest(context) {
         notes
       } = await request.json();
 
-      if (!client_id || !trainer_name || !date || !items || items.length === 0) {
+      if ((!client_id || client_id === 0) && !recipient_email) {
         return new Response(JSON.stringify({
-          error: 'Client, trainer name, date, and at least one item are required'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+          error: 'Either a client or recipient email is required'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (!trainer_name || !date || !items || items.length === 0) {
+        return new Response(JSON.stringify({
+          error: 'Trainer name, date, and at least one item are required'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
-      // Get client info for invoice number generation
-      const client = await env.DB.prepare(
-        'SELECT client_name, dog_name FROM clients WHERE id = ?'
-      ).bind(client_id).first();
-
-      if (!client) {
-        return new Response(JSON.stringify({ error: 'Client not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+      // Get client info for invoice number generation (or use recipient name)
+      let clientName = recipient_name || 'GUEST';
+      let dogName = 'XX';
+      let client = null;
+      if (client_id && client_id !== 0) {
+        client = await env.DB.prepare(
+          'SELECT client_name, dog_name FROM clients WHERE id = ?'
+        ).bind(client_id).first();
+        if (!client) {
+          return new Response(JSON.stringify({ error: 'Client not found' }), {
+            status: 404, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        clientName = client.client_name;
+        dogName = client.dog_name;
       }
 
       // Generate invoice number
-      const invoice_number = generateInvoiceNumber(client.client_name, client.dog_name);
+      const invoice_number = generateInvoiceNumber(clientName, dogName);
 
       // Calculate totals
       let subtotal = 0;
@@ -127,11 +142,11 @@ export async function onRequest(context) {
       // Create invoice
       const invoiceResult = await env.DB.prepare(
         `INSERT INTO invoices
-         (invoice_number, client_id, trainer_name, date, due_date, subtotal, tax_rate, tax_amount, total, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         (invoice_number, client_id, trainer_name, date, due_date, subtotal, tax_rate, tax_amount, total, notes, recipient_email, recipient_name)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         invoice_number,
-        client_id,
+        (client_id && client_id !== 0) ? client_id : 0,
         trainer_name,
         date,
         due_date || null,
@@ -139,7 +154,9 @@ export async function onRequest(context) {
         tax_rate,
         tax_amount,
         total,
-        notes || null
+        notes || null,
+        recipient_email || null,
+        recipient_name || null
       ).run();
 
       const invoice_id = invoiceResult.meta.last_row_id;
@@ -164,12 +181,12 @@ export async function onRequest(context) {
       const invoice = await env.DB.prepare(`
         SELECT
           invoices.*,
-          clients.client_name,
-          clients.email as client_email,
+          COALESCE(invoices.recipient_name, clients.client_name) as client_name,
+          COALESCE(invoices.recipient_email, clients.email) as client_email,
           clients.dog_name,
           clients.dog_breed
         FROM invoices
-        JOIN clients ON invoices.client_id = clients.id
+        LEFT JOIN clients ON invoices.client_id = clients.id
         WHERE invoices.id = ?
       `).bind(invoice_id).first();
 
@@ -177,11 +194,46 @@ export async function onRequest(context) {
         'SELECT * FROM invoice_items WHERE invoice_id = ?'
       ).bind(invoice_id).all();
 
+      // Auto-send invoice email if recipient has a valid email
+      let email_sent = false;
+      let email_error = null;
+      const emailTo = invoice.client_email;
+      if (emailTo && emailTo.includes('@')) {
+        try {
+          const { sendEmail, invoiceEmailHtml } = await import('../../utils/emails.js');
+          const { generateInvoicePDF } = await import('../../utils/invoice-pdf.js');
+
+          const html = invoiceEmailHtml(invoice, invoiceItems.results);
+          const pdfBytes = await generateInvoicePDF(invoice, invoiceItems.results);
+          let binary = '';
+          for (let i = 0; i < pdfBytes.length; i++) {
+            binary += String.fromCharCode(pdfBytes[i]);
+          }
+          const pdfBase64 = btoa(binary);
+
+          await sendEmail(env, {
+            to: emailTo,
+            subject: `K9 Vision Invoice #${invoice.invoice_number}`,
+            html,
+            attachments: [{
+              filename: `K9Vision_Invoice_${invoice.invoice_number}.pdf`,
+              content: pdfBase64
+            }]
+          });
+          email_sent = true;
+        } catch (emailErr) {
+          console.error('Auto-send invoice email failed:', emailErr);
+          email_error = emailErr.message;
+        }
+      }
+
       return new Response(JSON.stringify({
         success: true,
         invoice: {
           ...invoice,
-          items: invoiceItems.results
+          items: invoiceItems.results,
+          email_sent,
+          email_error
         }
       }), {
         status: 201,

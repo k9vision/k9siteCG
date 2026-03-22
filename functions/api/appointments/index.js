@@ -106,8 +106,9 @@ export async function onRequestPost(context) {
       )
     `).bind(appointment_date, dayOfWeek, appointment_date, appointment_date).all();
 
+    // Default open availability: 8 AM - 6 PM every day when no explicit slots configured
     if (slots.length === 0) {
-      return new Response(JSON.stringify({ error: 'No availability set for this day' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      slots.push({ start_time: '08:00', end_time: '18:00', slot_duration_minutes: 60 });
     }
 
     // Check the requested time falls within an available slot

@@ -35,6 +35,24 @@ export async function onRequestGet(context) {
        ORDER BY notes.created_at DESC`
     ).bind(clientId).all();
 
+    // Resolve multi-media items for notes with media_ids
+    for (const note of notes.results) {
+      if (note.media_ids) {
+        try {
+          const ids = JSON.parse(note.media_ids);
+          if (ids.length > 0) {
+            const placeholders = ids.map(() => '?').join(',');
+            const mediaItems = await context.env.DB.prepare(
+              `SELECT id, url, type, filename, caption FROM media WHERE id IN (${placeholders})`
+            ).bind(...ids).all();
+            note.media_items = mediaItems.results;
+          }
+        } catch (e) {
+          console.error('Failed to parse media_ids for note:', note.id, e);
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, notes: notes.results }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }

@@ -556,12 +556,30 @@
             <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-4xl w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
                 <h3 class="text-2xl font-bold mb-4">Create Invoice</h3>
                 <form id="create-invoice-form" class="space-y-4">
+                    <!-- Non-client toggle -->
+                    <div class="flex items-center gap-3 mb-2">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="invoice-non-client-toggle" class="sr-only peer" onchange="toggleInvoiceNonClient()">
+                            <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+                        </label>
+                        <span class="text-sm">Send to non-client (email only)</span>
+                    </div>
                     <div class="grid md:grid-cols-3 gap-4">
-                        <div>
+                        <div id="invoice-client-field">
                             <label class="block text-sm font-medium mb-2">Client *</label>
                             <select id="invoice-client-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                                 <option value="">Choose a client...</option>
                             </select>
+                        </div>
+                        <div id="invoice-recipient-fields" class="hidden col-span-2 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Recipient Name *</label>
+                                <input type="text" id="invoice-recipient-name" placeholder="e.g. John Doe" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Recipient Email *</label>
+                                <input type="email" id="invoice-recipient-email" placeholder="e.g. john@example.com" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                            </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-2">Trainer Name *</label>
@@ -1502,7 +1520,7 @@
                             ? `<img src="${m.url}" alt="${m.filename}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="openMediaLightbox(window.currentDetailMedia[${i}])">`
                             : `<div class="bg-gray-700 dark:bg-gray-200 rounded flex flex-col items-center justify-center h-32 cursor-pointer" onclick="openMediaLightbox(window.currentDetailMedia[${i}])">
                                 <span class="material-icons text-3xl text-primary">play_circle</span>
-                                <span class="text-xs mt-1 px-1 truncate w-full text-center">${m.filename}</span>
+                                <span class="text-xs mt-1 px-1 truncate w-full text-center">${m.caption || (m.type === 'photo' ? 'Photo ' + (i+1) : 'Video ' + (i+1))}</span>
                               </div>`;
                         const captionHtml = m.caption ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate" title="${m.caption}">${m.caption}</p>` : '';
                         return `<div class="relative group">
@@ -1525,10 +1543,17 @@
                         const roleLabel = isClient ? 'Client' : 'Trainer';
                         const roleColor = isClient ? 'text-green-400' : 'text-blue-400';
                         const borderColor = isClient ? 'border-l-4 border-green-500' : 'border-l-4 border-blue-500';
-                        const mediaTag = n.media_url ? (n.media_type === 'photo'
-                            ? `<img src="${n.media_url}" alt="${n.media_filename || 'Photo'}" class="w-16 h-16 object-cover rounded mt-1 cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${n.media_url}', '_blank')">`
-                            : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_filename || 'Video'}</span></div>`)
-                            : '';
+                        let mediaTag = '';
+                        if (n.media_items && n.media_items.length > 0) {
+                            mediaTag = '<div class="flex flex-wrap gap-1 mt-1">' + n.media_items.map(m => {
+                                if (m.type === 'photo') return `<img src="${m.url}" alt="${m.caption || 'Photo'}" class="w-12 h-12 object-cover rounded cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${m.url}', '_blank')">`;
+                                return `<div class="inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${m.url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${m.caption || m.filename || 'Video'}</span></div>`;
+                            }).join('') + '</div>';
+                        } else if (n.media_url) {
+                            mediaTag = n.media_type === 'photo'
+                                ? `<img src="${n.media_url}" alt="${n.media_filename || 'Photo'}" class="w-16 h-16 object-cover rounded mt-1 cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${n.media_url}', '_blank')">`
+                                : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_filename || 'Video'}</span></div>`;
+                        }
                         return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start ${borderColor}">
                             <div class="flex-1">
                                 <span class="text-xs font-bold ${roleColor}">${roleLabel}</span>
@@ -1586,10 +1611,17 @@
                         const roleLabel = isClient ? 'Client' : 'Trainer';
                         const roleColor = isClient ? 'text-green-400' : 'text-blue-400';
                         const borderColor = isClient ? 'border-l-4 border-green-500' : 'border-l-4 border-blue-500';
-                        const mediaTag = n.media_url ? (n.media_type === 'photo'
-                            ? `<img src="${n.media_url}" alt="${n.media_filename || 'Photo'}" class="w-16 h-16 object-cover rounded mt-1 cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${n.media_url}', '_blank')">`
-                            : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_filename || 'Video'}</span></div>`)
-                            : '';
+                        let mediaTag = '';
+                        if (n.media_items && n.media_items.length > 0) {
+                            mediaTag = '<div class="flex flex-wrap gap-1 mt-1">' + n.media_items.map(m => {
+                                if (m.type === 'photo') return `<img src="${m.url}" alt="${m.caption || 'Photo'}" class="w-12 h-12 object-cover rounded cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${m.url}', '_blank')">`;
+                                return `<div class="inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${m.url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${m.caption || m.filename || 'Video'}</span></div>`;
+                            }).join('') + '</div>';
+                        } else if (n.media_url) {
+                            mediaTag = n.media_type === 'photo'
+                                ? `<img src="${n.media_url}" alt="${n.media_filename || 'Photo'}" class="w-16 h-16 object-cover rounded mt-1 cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${n.media_url}', '_blank')">`
+                                : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_filename || 'Video'}</span></div>`;
+                        }
                         return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start ${borderColor}">
                             <div class="flex-1">
                                 <span class="text-xs font-bold ${roleColor}">${roleLabel}</span>
@@ -1812,17 +1844,28 @@
         // Media lightbox
         let currentLightboxMediaId = null;
 
+        function getVideoMimeType(url) {
+            if (/\.webm$/i.test(url)) return 'video/webm';
+            if (/\.mov$/i.test(url)) return 'video/quicktime';
+            return 'video/mp4';
+        }
+
         function openMediaLightbox(mediaItem) {
             currentLightboxMediaId = mediaItem.id;
             const modal = document.getElementById('media-lightbox-modal');
             const content = document.getElementById('lightbox-content');
-            document.getElementById('lightbox-filename').textContent = mediaItem.filename;
+            const displayName = mediaItem.caption || (mediaItem.type === 'photo' ? 'Photo' : 'Video');
+            document.getElementById('lightbox-filename').textContent = displayName;
             document.getElementById('lightbox-caption').value = mediaItem.caption || '';
 
             if (mediaItem.type === 'photo') {
-                content.innerHTML = `<img src="${mediaItem.url}" alt="${mediaItem.filename}" class="max-w-full max-h-[60vh] object-contain rounded">`;
+                content.innerHTML = `<img src="${mediaItem.url}" alt="${displayName}" class="max-w-full max-h-[60vh] object-contain rounded">`;
             } else {
-                content.innerHTML = `<video src="${mediaItem.url}" controls autoplay class="max-w-full max-h-[60vh] rounded">Your browser does not support video.</video>`;
+                const mimeType = getVideoMimeType(mediaItem.url);
+                content.innerHTML = `<video controls autoplay playsinline class="max-w-full max-h-[60vh] rounded">
+                    <source src="${mediaItem.url}" type="${mimeType}">
+                    <p>Your browser does not support this video format. <a href="${mediaItem.url}" download class="text-primary underline">Download</a></p>
+                </video>`;
             }
             modal.classList.remove('hidden');
         }
@@ -2682,15 +2725,47 @@
 
         document.getElementById('invoice-tax-rate').addEventListener('input', calculateInvoiceTotal);
 
+        function toggleInvoiceNonClient() {
+            const isNonClient = document.getElementById('invoice-non-client-toggle').checked;
+            const clientField = document.getElementById('invoice-client-field');
+            const recipientFields = document.getElementById('invoice-recipient-fields');
+            const clientSelect = document.getElementById('invoice-client-select');
+
+            if (isNonClient) {
+                clientField.classList.add('hidden');
+                recipientFields.classList.remove('hidden');
+                clientSelect.removeAttribute('required');
+                clientSelect.value = '';
+                document.getElementById('invoice-recipient-name').setAttribute('required', '');
+                document.getElementById('invoice-recipient-email').setAttribute('required', '');
+            } else {
+                clientField.classList.remove('hidden');
+                recipientFields.classList.add('hidden');
+                clientSelect.setAttribute('required', '');
+                document.getElementById('invoice-recipient-name').removeAttribute('required');
+                document.getElementById('invoice-recipient-email').removeAttribute('required');
+                document.getElementById('invoice-recipient-name').value = '';
+                document.getElementById('invoice-recipient-email').value = '';
+            }
+        }
+
         document.getElementById('create-invoice-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const clientId = document.getElementById('invoice-client-select').value;
+            const isNonClient = document.getElementById('invoice-non-client-toggle').checked;
+            const clientId = isNonClient ? 0 : document.getElementById('invoice-client-select').value;
+            const recipientName = document.getElementById('invoice-recipient-name').value;
+            const recipientEmail = document.getElementById('invoice-recipient-email').value;
             const trainerName = document.getElementById('invoice-trainer').value;
             const date = document.getElementById('invoice-date').value;
             const dueDate = document.getElementById('invoice-due-date').value;
             const taxRate = parseFloat(document.getElementById('invoice-tax-rate').value);
             const notes = document.getElementById('invoice-notes').value;
+
+            if (isNonClient && (!recipientEmail || !recipientName)) {
+                showToast('Recipient name and email are required', 'error');
+                return;
+            }
 
             // Collect items
             const items = [];
@@ -2712,24 +2787,35 @@
             }
 
             try {
+                const body = {
+                    client_id: isNonClient ? 0 : parseInt(clientId),
+                    trainer_name: trainerName,
+                    date,
+                    due_date: dueDate || null,
+                    tax_rate: taxRate,
+                    items,
+                    notes
+                };
+                if (isNonClient) {
+                    body.recipient_name = recipientName;
+                    body.recipient_email = recipientEmail;
+                }
                 const res = await fetch(`${API_BASE}/invoices`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        client_id: clientId,
-                        trainer_name: trainerName,
-                        date,
-                        due_date: dueDate || null,
-                        tax_rate: taxRate,
-                        items,
-                        notes
-                    })
+                    body: JSON.stringify(body)
                 });
 
                 const data = await res.json();
 
                 if (res.ok) {
-                    showToast(`Invoice #${data.invoice.invoice_number} created successfully!`, 'success');
+                    if (data.invoice.email_sent) {
+                        showToast(`Invoice #${data.invoice.invoice_number} created and emailed!`, 'success');
+                    } else if (data.invoice.email_error) {
+                        showToast(`Invoice #${data.invoice.invoice_number} created but email failed`, 'warning');
+                    } else {
+                        showToast(`Invoice #${data.invoice.invoice_number} created (no email to send to)`, 'success');
+                    }
                     closeCreateInvoiceModal();
                     loadInvoices();
                 } else {
@@ -3303,7 +3389,7 @@
             const slots = cachedAvailabilitySlots;
             const container = document.getElementById('availability-table');
             if (slots.length === 0) {
-                container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No availability set. Select days on the calendar and click "Set Availability".</p>';
+                container.innerHTML = '<div class="p-3 border border-green-500/30 rounded bg-green-500/5 text-sm"><span class="material-icons text-green-500 text-sm align-middle mr-1">check_circle</span>Using default hours (8 AM - 6 PM, every day). Set custom availability below to override.</div>';
             } else {
                 container.innerHTML = slots.map(s => {
                     const dateRange = (s.recurring_start_date && s.recurring_end_date)
@@ -3450,9 +3536,9 @@
                     slotsDiv.innerHTML = '<p class="text-gray-400 text-sm col-span-3">No available slots for this date</p>';
                 } else {
                     slotsDiv.innerHTML = slots.map(s => `
-                        <button type="button" onclick="selectApptSlot(this, '${s.start}', '${s.end}')"
+                        <button type="button" onclick="selectApptSlot(this, '${s.start_time}', '${s.end_time}')"
                             class="appt-slot-btn border border-border-dark dark:border-border-light rounded px-2 py-1 text-sm hover:bg-teal-500 hover:text-white transition-colors">
-                            ${s.start} - ${s.end}
+                            ${s.start_time} - ${s.end_time}
                         </button>
                     `).join('');
                 }

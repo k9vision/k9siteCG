@@ -33,12 +33,12 @@ export async function onRequest(context) {
     const invoice = await env.DB.prepare(`
       SELECT
         invoices.*,
-        clients.client_name,
-        clients.email as client_email,
+        COALESCE(invoices.recipient_name, clients.client_name) as client_name,
+        COALESCE(invoices.recipient_email, clients.email) as client_email,
         clients.dog_name,
         clients.dog_breed
       FROM invoices
-      JOIN clients ON invoices.client_id = clients.id
+      LEFT JOIN clients ON invoices.client_id = clients.id
       WHERE invoices.id = ?
     `).bind(invoiceId).first();
 
@@ -49,10 +49,10 @@ export async function onRequest(context) {
       });
     }
 
-    // Validate client email exists
+    // Validate email exists (from client or recipient override)
     if (!invoice.client_email || !invoice.client_email.includes('@')) {
       return new Response(JSON.stringify({
-        error: 'Client does not have a valid email address. Please update their profile first.'
+        error: 'No valid email address for this invoice. Please add a recipient email or update the client profile.'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }

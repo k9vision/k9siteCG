@@ -13,7 +13,7 @@ export async function onRequestPost(context) {
       );
     }
 
-    const { client_id, content, title, media_id } = await context.request.json();
+    const { client_id, content, title, media_id, media_ids } = await context.request.json();
 
     if (!client_id || !content) {
       return new Response(
@@ -39,10 +39,14 @@ export async function onRequestPost(context) {
     const author_role = auth.user.role === 'admin' ? 'admin' : 'client';
 
     const note = await context.env.DB.prepare(`
-      INSERT INTO notes (client_id, content, title, author_role, media_id)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO notes (client_id, content, title, author_role, media_id, media_ids)
+      VALUES (?, ?, ?, ?, ?, ?)
       RETURNING *
-    `).bind(parseInt(client_id), content, title || 'Note', author_role, media_id ? parseInt(media_id) : null).first();
+    `).bind(
+      parseInt(client_id), content, title || 'Note', author_role,
+      media_id ? parseInt(media_id) : null,
+      media_ids && media_ids.length > 0 ? JSON.stringify(media_ids) : null
+    ).first();
 
     // Notify admin when a client sends a note
     if (author_role === 'client') {

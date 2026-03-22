@@ -284,8 +284,8 @@
                     <label class="block text-sm font-medium mb-2">Message</label>
                     <textarea id="note-message" rows="4" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required></textarea>
                 </div>
-                <!-- Media Attachment -->
-                <input type="hidden" id="note-media-id">
+                <!-- Media Attachment (multi-select) -->
+                <input type="hidden" id="note-media-ids" value="[]">
                 <div class="flex items-center gap-2">
                     <button type="button" onclick="toggleMediaPicker()" class="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition">
                         <span class="material-icons text-base">attach_file</span>
@@ -296,13 +296,16 @@
 
                 <!-- Thumbnail Picker Grid -->
                 <div id="media-picker-grid" class="hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <button type="button" onclick="selectAllMediaForNote()" class="text-xs text-blue-400 hover:text-blue-300">Select All</button>
+                        <button type="button" onclick="clearMediaSelection()" class="text-xs text-red-400 hover:text-red-300">Clear All</button>
+                    </div>
                     <div id="media-picker-items" class="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1"></div>
                 </div>
 
                 <!-- Selected Media Preview Chip -->
                 <div id="media-preview-chip" class="hidden flex items-center gap-2 bg-gray-700 dark:bg-gray-200 rounded-lg px-3 py-2">
-                    <img id="media-preview-thumb" class="w-10 h-10 rounded object-cover" src="" alt="">
-                    <span id="media-preview-icon" class="hidden material-icons text-blue-400 text-2xl">videocam</span>
+                    <span class="material-icons text-blue-400">photo_library</span>
                     <span id="media-preview-name" class="text-sm truncate flex-1"></span>
                     <button type="button" onclick="clearMediaSelection()" class="text-gray-400 hover:text-red-400 transition">
                         <span class="material-icons text-base">close</span>
@@ -982,6 +985,17 @@
             renderMediaGallery();
         }
 
+        function getMediaDisplayName(item, index) {
+            if (item.caption) return item.caption;
+            return item.type === 'photo' ? `Photo ${index + 1}` : `Video ${index + 1}`;
+        }
+
+        function getVideoMimeType(url) {
+            if (/\.webm$/i.test(url)) return 'video/webm';
+            if (/\.mov$/i.test(url)) return 'video/quicktime';
+            return 'video/mp4';
+        }
+
         function renderMediaGallery() {
             const mediaList = document.getElementById('media-list');
             if (clientMediaItems.length > 0) {
@@ -990,15 +1004,16 @@
                     const db = new Date(b.uploaded_at || b.created_at || 0);
                     return mediaSortOrder === 'newest' ? db - da : da - db;
                 });
-                mediaList.innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">${sorted.map((item) => {
+                mediaList.innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">${sorted.map((item, i) => {
                     const idx = clientMediaItems.indexOf(item);
                     const dateStr = item.uploaded_at || item.created_at;
                     const dateHtml = dateStr ? `<p class="text-xs text-gray-500 mt-1">${new Date(dateStr).toLocaleDateString()}</p>` : '';
+                    const displayName = getMediaDisplayName(item, i);
                     const preview = item.type === 'photo'
-                        ? `<img src="${item.url}" alt="${item.filename}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="openMediaLightbox(${idx})">`
+                        ? `<img src="${item.url}" alt="${displayName}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="openMediaLightbox(${idx})">`
                         : `<div class="bg-gray-700 dark:bg-gray-200 rounded flex flex-col items-center justify-center h-32 cursor-pointer" onclick="openMediaLightbox(${idx})">
                             <span class="material-icons text-3xl text-primary">play_circle</span>
-                            <span class="text-xs mt-1 px-1 truncate w-full text-center">${item.filename}</span>
+                            <span class="text-xs mt-1 px-1 truncate w-full text-center">${displayName}</span>
                           </div>`;
                     const captionHtml = item.caption ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate" title="${item.caption}">${item.caption}</p>` : '';
                     const deleteBtn = `<button onclick="deleteMedia(${item.id})" class="absolute top-1 right-1 bg-black bg-opacity-60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600" title="Delete"><span class="material-icons text-sm">delete</span></button>`;
@@ -1034,12 +1049,17 @@
             if (!item) return;
             const modal = document.getElementById('media-lightbox-modal');
             const content = document.getElementById('lightbox-content');
-            document.getElementById('lightbox-filename').textContent = item.filename;
+            const displayName = getMediaDisplayName(item, index);
+            document.getElementById('lightbox-filename').textContent = displayName;
 
             if (item.type === 'photo') {
-                content.innerHTML = `<img src="${item.url}" alt="${item.filename}" class="max-w-full max-h-[60vh] object-contain rounded">`;
+                content.innerHTML = `<img src="${item.url}" alt="${displayName}" class="max-w-full max-h-[60vh] object-contain rounded">`;
             } else {
-                content.innerHTML = `<video src="${item.url}" controls autoplay class="max-w-full max-h-[60vh] rounded">Your browser does not support video.</video>`;
+                const mimeType = getVideoMimeType(item.url);
+                content.innerHTML = `<video controls autoplay playsinline class="max-w-full max-h-[60vh] rounded">
+                    <source src="${item.url}" type="${mimeType}">
+                    <p>Your browser does not support this video format. <a href="${item.url}" download class="text-primary underline">Download</a></p>
+                </video>`;
             }
 
             const captionArea = document.getElementById('lightbox-caption-area');
@@ -1058,7 +1078,11 @@
             document.getElementById('lightbox-filename').textContent = filename || 'Media';
             const isVideo = /\.(mp4|mov|webm|avi)$/i.test(url);
             if (isVideo) {
-                content.innerHTML = `<video src="${url}" controls autoplay class="max-w-full max-h-[60vh] rounded">Your browser does not support video.</video>`;
+                const mimeType = getVideoMimeType(url);
+                content.innerHTML = `<video controls autoplay playsinline class="max-w-full max-h-[60vh] rounded">
+                    <source src="${url}" type="${mimeType}">
+                    <p>Your browser does not support this video format. <a href="${url}" download class="text-primary underline">Download</a></p>
+                </video>`;
             } else {
                 content.innerHTML = `<img src="${url}" alt="${filename}" class="max-w-full max-h-[60vh] object-contain rounded">`;
             }
@@ -1119,7 +1143,18 @@
                     conversation.innerHTML = notes.map(note => {
                         const isTrainer = note.author_role !== 'client';
                         let mediaHtml = '';
-                        if (note.media_url) {
+                        // Multi-media support
+                        if (note.media_items && note.media_items.length > 0) {
+                            mediaHtml = '<div class="flex flex-wrap gap-2 mt-2">' + note.media_items.map(m => {
+                                const safeName = (m.filename || '').replace(/'/g, "\\'");
+                                if (m.type === 'photo') {
+                                    return `<img src="${m.url}" alt="${m.caption || m.filename || 'Photo'}" class="w-16 h-16 object-cover rounded cursor-pointer border border-gray-600 hover:opacity-80" onclick="openMediaLightboxByUrl('${m.url}', '${safeName}')">`;
+                                } else {
+                                    return `<div class="inline-flex items-center gap-1 bg-gray-700 dark:bg-gray-200 rounded px-2 py-1 cursor-pointer hover:bg-gray-600 dark:hover:bg-gray-300" onclick="openMediaLightboxByUrl('${m.url}', '${safeName}')"><span class="material-icons text-sm">play_circle</span><span class="text-xs">${m.caption || m.filename || 'Video'}</span></div>`;
+                                }
+                            }).join('') + '</div>';
+                        } else if (note.media_url) {
+                            // Backward compat: single media via media_id
                             if (note.media_type === 'photo') {
                                 mediaHtml = `<img src="${note.media_url}" alt="${note.media_filename || 'Photo'}" class="w-24 h-24 object-cover rounded mt-2 cursor-pointer border border-gray-600 hover:opacity-80" onclick="openMediaLightboxByUrl('${note.media_url}', '${(note.media_filename || '').replace(/'/g, "\\'")}')">`;
                             } else {
@@ -1177,6 +1212,8 @@
             document.getElementById('media-picker-grid').classList.add('hidden');
         }
 
+        let selectedNoteMediaIds = [];
+
         function toggleMediaPicker() {
             if (clientMediaItems.length === 0) {
                 const hint = document.getElementById('no-media-hint');
@@ -1191,55 +1228,65 @@
 
         function renderMediaPicker() {
             const container = document.getElementById('media-picker-items');
-            const selectedId = document.getElementById('note-media-id').value;
-            container.innerHTML = clientMediaItems.map(item => {
-                const isSelected = String(item.id) === selectedId;
+            container.innerHTML = clientMediaItems.map((item, i) => {
+                const isSelected = selectedNoteMediaIds.includes(item.id);
                 const ring = isSelected ? 'ring-2 ring-blue-500' : 'ring-1 ring-gray-600 dark:ring-gray-300';
+                const checkMark = isSelected ? '<span class="absolute top-0.5 right-0.5 material-icons text-blue-400 text-sm bg-black bg-opacity-60 rounded-full">check_circle</span>' : '';
+                const displayName = item.caption || (item.type === 'photo' ? `Photo ${i+1}` : `Video ${i+1}`);
                 if (item.type === 'photo') {
                     return `<button type="button" onclick="selectMediaForNote(${item.id})" class="relative rounded overflow-hidden ${ring} aspect-square">
-                        <img src="${item.url}" class="w-full h-full object-cover" alt="${item.filename || ''}">
-                        ${isSelected ? '<span class="absolute top-0.5 right-0.5 material-icons text-blue-400 text-sm bg-black bg-opacity-60 rounded-full">check_circle</span>' : ''}
+                        <img src="${item.url}" class="w-full h-full object-cover" alt="${displayName}">
+                        ${checkMark}
                     </button>`;
                 } else {
                     return `<button type="button" onclick="selectMediaForNote(${item.id})" class="relative rounded overflow-hidden ${ring} aspect-square bg-gray-800 dark:bg-gray-100 flex flex-col items-center justify-center">
                         <span class="material-icons text-blue-400 text-2xl">videocam</span>
-                        <span class="text-xs truncate w-full px-1 text-center mt-1">${item.filename || 'Video'}</span>
-                        ${isSelected ? '<span class="absolute top-0.5 right-0.5 material-icons text-blue-400 text-sm bg-black bg-opacity-60 rounded-full">check_circle</span>' : ''}
+                        <span class="text-xs truncate w-full px-1 text-center mt-1">${displayName}</span>
+                        ${checkMark}
                     </button>`;
                 }
             }).join('');
         }
 
         function selectMediaForNote(mediaId) {
-            const item = clientMediaItems.find(m => m.id === mediaId);
-            if (!item) return;
-            document.getElementById('note-media-id').value = mediaId;
-
-            const chip = document.getElementById('media-preview-chip');
-            const thumb = document.getElementById('media-preview-thumb');
-            const icon = document.getElementById('media-preview-icon');
-            const name = document.getElementById('media-preview-name');
-
-            if (item.type === 'photo') {
-                thumb.src = item.url;
-                thumb.classList.remove('hidden');
-                icon.classList.add('hidden');
+            const idx = selectedNoteMediaIds.indexOf(mediaId);
+            if (idx >= 0) {
+                selectedNoteMediaIds.splice(idx, 1);
             } else {
-                thumb.classList.add('hidden');
-                icon.classList.remove('hidden');
+                selectedNoteMediaIds.push(mediaId);
             }
-            name.textContent = item.filename || item.caption || (item.type === 'photo' ? 'Photo' : 'Video');
-            chip.classList.remove('hidden');
+            updateMediaPreviewChip();
+            renderMediaPicker();
+        }
 
-            document.getElementById('media-picker-grid').classList.add('hidden');
+        function selectAllMediaForNote() {
+            selectedNoteMediaIds = clientMediaItems.map(m => m.id);
+            updateMediaPreviewChip();
             renderMediaPicker();
         }
 
         function clearMediaSelection() {
-            document.getElementById('note-media-id').value = '';
+            selectedNoteMediaIds = [];
+            document.getElementById('note-media-ids').value = '[]';
             document.getElementById('media-preview-chip').classList.add('hidden');
             if (!document.getElementById('media-picker-grid').classList.contains('hidden')) {
                 renderMediaPicker();
+            }
+        }
+
+        function updateMediaPreviewChip() {
+            const chip = document.getElementById('media-preview-chip');
+            const name = document.getElementById('media-preview-name');
+            document.getElementById('note-media-ids').value = JSON.stringify(selectedNoteMediaIds);
+
+            if (selectedNoteMediaIds.length === 0) {
+                chip.classList.add('hidden');
+            } else {
+                const count = selectedNoteMediaIds.length;
+                name.textContent = count === 1
+                    ? (clientMediaItems.find(m => m.id === selectedNoteMediaIds[0])?.caption || '1 item attached')
+                    : `${count} items attached`;
+                chip.classList.remove('hidden');
             }
         }
 
@@ -1304,8 +1351,11 @@
                     title: subject,
                     content: message
                 };
-                const mediaIdVal = document.getElementById('note-media-id').value;
-                if (mediaIdVal) noteBody.media_id = parseInt(mediaIdVal);
+                const mediaIdsVal = JSON.parse(document.getElementById('note-media-ids').value || '[]');
+                if (mediaIdsVal.length > 0) {
+                    noteBody.media_ids = mediaIdsVal;
+                    noteBody.media_id = mediaIdsVal[0]; // backward compat: first item as primary
+                }
 
                 const res = await fetch(`${API_BASE}/notes`, {
                     method: 'POST',
@@ -1813,7 +1863,8 @@
         function startRecording() {
             recordedChunks = [];
             recordSeconds = 0;
-            const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus'
+            const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4'
+                : MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus'
                 : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm'
                 : 'video/mp4';
             mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
