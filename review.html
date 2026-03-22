@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave a Review - K9 Vision</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] },
+                    colors: {
+                        primary: '#3B82F6',
+                        'background-dark': '#111827',
+                        'card-dark': '#1F2937',
+                        'text-dark': '#F9FAFB',
+                        'border-dark': '#374151',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background-dark text-text-dark font-sans min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-lg w-full">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-primary mb-2">K9 Vision</h1>
+            <p class="text-gray-400">Dog Training Services</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="bg-card-dark rounded-lg p-8 border border-border-dark text-center">
+            <p class="text-gray-400">Verifying your review link...</p>
+        </div>
+
+        <!-- Invalid Token -->
+        <div id="invalid" class="hidden bg-card-dark rounded-lg p-8 border border-border-dark text-center">
+            <span class="material-icons text-red-500 text-5xl mb-4">error</span>
+            <h2 class="text-xl font-bold mb-2">Invalid or Expired Link</h2>
+            <p class="text-gray-400">This review link is no longer valid. Please contact your trainer to request a new one.</p>
+        </div>
+
+        <!-- Review Form -->
+        <div id="review-form-container" class="hidden bg-card-dark rounded-lg p-8 border border-border-dark">
+            <h2 class="text-2xl font-bold mb-2 text-center">Leave a Review</h2>
+            <p class="text-gray-400 text-center mb-6">We'd love to hear about your experience with K9 Vision!</p>
+
+            <form id="review-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Your Name *</label>
+                    <input type="text" id="reviewer-name" required class="w-full rounded-md border-gray-600 bg-background-dark text-text-dark px-4 py-2" placeholder="e.g. John D.">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Rating *</label>
+                    <div id="star-rating" class="flex gap-1">
+                        <button type="button" onclick="setRating(1)" class="star-btn text-3xl text-yellow-400 hover:scale-110 transition-transform">
+                            <span class="material-icons">star</span>
+                        </button>
+                        <button type="button" onclick="setRating(2)" class="star-btn text-3xl text-yellow-400 hover:scale-110 transition-transform">
+                            <span class="material-icons">star</span>
+                        </button>
+                        <button type="button" onclick="setRating(3)" class="star-btn text-3xl text-yellow-400 hover:scale-110 transition-transform">
+                            <span class="material-icons">star</span>
+                        </button>
+                        <button type="button" onclick="setRating(4)" class="star-btn text-3xl text-yellow-400 hover:scale-110 transition-transform">
+                            <span class="material-icons">star</span>
+                        </button>
+                        <button type="button" onclick="setRating(5)" class="star-btn text-3xl text-yellow-400 hover:scale-110 transition-transform">
+                            <span class="material-icons">star</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Your Review *</label>
+                    <textarea id="review-content" rows="5" required class="w-full rounded-md border-gray-600 bg-background-dark text-text-dark px-4 py-2" placeholder="Tell us about your experience..."></textarea>
+                </div>
+
+                <button type="submit" id="submit-btn" class="w-full bg-primary text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                    Submit Review
+                </button>
+            </form>
+        </div>
+
+        <!-- Success -->
+        <div id="success" class="hidden bg-card-dark rounded-lg p-8 border border-border-dark text-center">
+            <span class="material-icons text-green-500 text-5xl mb-4">check_circle</span>
+            <h2 class="text-xl font-bold mb-2">Thank You!</h2>
+            <p class="text-gray-400 mb-4">Your review has been submitted and is pending approval. We appreciate your feedback!</p>
+            <a href="https://k9visiontx.com" class="text-primary hover:underline">Visit K9 Vision</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let selectedRating = 5;
+        let reviewToken = null;
+
+        // Get token from URL
+        const params = new URLSearchParams(window.location.search);
+        reviewToken = params.get('token');
+
+        function setRating(rating) {
+            selectedRating = rating;
+            document.querySelectorAll('.star-btn').forEach((btn, i) => {
+                const icon = btn.querySelector('.material-icons');
+                icon.textContent = i < rating ? 'star' : 'star_border';
+                icon.classList.toggle('text-yellow-400', i < rating);
+                icon.classList.toggle('text-gray-600', i >= rating);
+            });
+        }
+
+        // Validate token on load
+        async function validateToken() {
+            if (!reviewToken) {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('invalid').classList.remove('hidden');
+                return;
+            }
+
+            // Token validation happens on submit - just show the form
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('review-form-container').classList.remove('hidden');
+            setRating(5);
+        }
+
+        // Submit review
+        document.getElementById('review-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            try {
+                const res = await fetch(`${API_BASE}/reviews/submit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token: reviewToken,
+                        reviewer_name: document.getElementById('reviewer-name').value,
+                        rating: selectedRating,
+                        content: document.getElementById('review-content').value
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    document.getElementById('review-form-container').classList.add('hidden');
+                    document.getElementById('success').classList.remove('hidden');
+                } else {
+                    if (data.error && data.error.includes('expired')) {
+                        document.getElementById('review-form-container').classList.add('hidden');
+                        document.getElementById('invalid').classList.remove('hidden');
+                    } else {
+                        alert(data.error || 'Failed to submit review. Please try again.');
+                    }
+                }
+            } catch (error) {
+                console.error('Submit error:', error);
+                alert('Failed to submit review. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Review';
+            }
+        });
+
+        validateToken();
+    </script>
+</body>
+</html>

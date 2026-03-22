@@ -1,3 +1,4 @@
 /login /portal.html 200
 /admin /admin-dashboard.html 200
 /client /client-dashboard.html 200
+/review /review.html 200

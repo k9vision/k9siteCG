@@ -338,6 +338,25 @@
 Review Us on Yelp
 </a>
 </div>
+<script>
+// Load approved reviews from database and append to carousel
+(async function() {
+    try {
+        const res = await fetch('/api/reviews?status=approved');
+        const data = await res.json();
+        const reviews = data.reviews || [];
+        if (reviews.length === 0) return;
+        const container = document.querySelector('#reviews-container .flex');
+        reviews.forEach(r => {
+            const stars = '<span class="material-icons">star</span>'.repeat(r.rating) + '<span class="material-icons">star_border</span>'.repeat(5 - r.rating);
+            const card = document.createElement('div');
+            card.className = 'bg-card-dark dark:bg-card-light rounded-lg shadow-md p-6 border border-border-dark dark:border-border-light flex-shrink-0 w-80 md:w-auto';
+            card.innerHTML = `<div class="flex items-center mb-4"><div class="flex text-yellow-400">${stars}</div></div><p class="text-gray-400 dark:text-gray-600 mb-4">"${r.content}"</p><p class="font-semibold text-text-dark dark:text-text-light">- ${r.reviewer_name}</p>`;
+            container.appendChild(card);
+        });
+    } catch (e) { console.error('Failed to load reviews:', e); }
+})();
+</script>
 </div>
 </section>
 <section class="py-20 sm:py-24 bg-card-dark dark:bg-card-light" id="contact">

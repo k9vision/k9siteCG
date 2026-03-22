@@ -28,7 +28,7 @@ export async function onRequestGet(context) {
     }
 
     const notes = await context.env.DB.prepare(
-      `SELECT notes.*, media.url as media_url, media.type as media_type, media.filename as media_filename
+      `SELECT notes.*, media.url as media_url, media.type as media_type, media.filename as media_filename, media.original_name as media_original_name
        FROM notes
        LEFT JOIN media ON notes.media_id = media.id
        WHERE notes.client_id = ?
@@ -43,7 +43,7 @@ export async function onRequestGet(context) {
           if (ids.length > 0) {
             const placeholders = ids.map(() => '?').join(',');
             const mediaItems = await context.env.DB.prepare(
-              `SELECT id, url, type, filename, caption FROM media WHERE id IN (${placeholders})`
+              `SELECT id, url, type, filename, original_name, caption FROM media WHERE id IN (${placeholders})`
             ).bind(...ids).all();
             note.media_items = mediaItems.results;
           }

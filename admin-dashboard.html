@@ -118,6 +118,29 @@
         </div>
     </div>
 
+    <!-- Review Request Modal -->
+    <div id="review-request-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+            <h3 class="text-2xl font-bold mb-4">Send Review Request</h3>
+            <form id="review-request-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Select Client (optional)</label>
+                    <select id="review-client-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="fillReviewEmail()">
+                        <option value="">-- Or type email below --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Email Address *</label>
+                    <input type="email" id="review-email" required class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" placeholder="client@example.com">
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" id="review-request-btn" class="flex-1 bg-amber-500 text-white py-2 px-4 rounded hover:bg-amber-700">Send Request</button>
+                    <button type="button" onclick="closeReviewRequestModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <nav class="bg-card-dark dark:bg-card-light border-b border-border-dark dark:border-border-light">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
             <h1 class="text-2xl font-bold text-text-dark dark:text-text-light">K9 Vision - Admin</h1>
@@ -210,10 +233,33 @@
                 <button onclick="showBookAppointmentModal()" class="bg-cyan-500 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded transition-colors">
                     📋 Book Appointment
                 </button>
+                <button onclick="showReviewRequestModal()" class="bg-amber-500 hover:bg-amber-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                    ⭐ Send Review Request
+                </button>
+                <button onclick="showReviewsSection()" class="bg-orange-500 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                    📝 Manage Reviews
+                </button>
             </div>
         </div>
 
         <div id="sections-container">
+
+        <!-- Reviews Management -->
+        <div id="reviews-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">Manage Reviews</h3>
+                <button onclick="hideSection('reviews-section')" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none px-2" title="Close">&times;</button>
+            </div>
+            <div class="flex gap-2 mb-4">
+                <button onclick="loadReviews('pending')" class="bg-yellow-500 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700">Pending</button>
+                <button onclick="loadReviews('approved')" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-700">Approved</button>
+                <button onclick="loadReviews('rejected')" class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-700">Rejected</button>
+                <button onclick="loadReviews()" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">All</button>
+            </div>
+            <div id="reviews-list" class="space-y-3">
+                <p class="text-gray-400 dark:text-gray-600 text-sm">Loading reviews...</p>
+            </div>
+        </div>
 
         <!-- Clients List -->
         <div id="clients-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
@@ -1559,12 +1605,12 @@
                         if (n.media_items && n.media_items.length > 0) {
                             mediaTag = '<div class="flex flex-wrap gap-1 mt-1">' + n.media_items.map(m => {
                                 if (m.type === 'photo') return `<img src="${m.url}" alt="${m.caption || 'Photo'}" class="w-12 h-12 object-cover rounded cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${m.url}', '_blank')">`;
-                                return `<div class="inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${m.url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${m.caption || m.filename || 'Video'}</span></div>`;
+                                return `<div class="inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${m.url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${m.caption || m.original_name || m.filename || 'Video'}</span></div>`;
                             }).join('') + '</div>';
                         } else if (n.media_url) {
                             mediaTag = n.media_type === 'photo'
                                 ? `<img src="${n.media_url}" alt="${n.media_filename || 'Photo'}" class="w-16 h-16 object-cover rounded mt-1 cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${n.media_url}', '_blank')">`
-                                : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_filename || 'Video'}</span></div>`;
+                                : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_original_name || n.media_filename || 'Video'}</span></div>`;
                         }
                         return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start ${borderColor}">
                             <div class="flex-1">
@@ -1627,12 +1673,12 @@
                         if (n.media_items && n.media_items.length > 0) {
                             mediaTag = '<div class="flex flex-wrap gap-1 mt-1">' + n.media_items.map(m => {
                                 if (m.type === 'photo') return `<img src="${m.url}" alt="${m.caption || 'Photo'}" class="w-12 h-12 object-cover rounded cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${m.url}', '_blank')">`;
-                                return `<div class="inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${m.url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${m.caption || m.filename || 'Video'}</span></div>`;
+                                return `<div class="inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${m.url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${m.caption || m.original_name || m.filename || 'Video'}</span></div>`;
                             }).join('') + '</div>';
                         } else if (n.media_url) {
                             mediaTag = n.media_type === 'photo'
                                 ? `<img src="${n.media_url}" alt="${n.media_filename || 'Photo'}" class="w-16 h-16 object-cover rounded mt-1 cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${n.media_url}', '_blank')">`
-                                : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_filename || 'Video'}</span></div>`;
+                                : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_original_name || n.media_filename || 'Video'}</span></div>`;
                         }
                         return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start ${borderColor}">
                             <div class="flex-1">
@@ -3765,6 +3811,138 @@
         if (gcalParams.get('gcal') === 'connected') {
             showToast('Google Calendar connected successfully!', 'success');
             window.history.replaceState({}, '', window.location.pathname);
+        }
+
+        // Review Request Functions
+        let reviewClientsLoaded = false;
+        async function showReviewRequestModal() {
+            document.getElementById('review-request-form').reset();
+
+            if (!reviewClientsLoaded) {
+                const clientSelect = document.getElementById('review-client-select');
+                clientSelect.innerHTML = '<option value="">-- Or type email below --</option>';
+                try {
+                    const res = await fetch(`${API_BASE}/clients`, { headers: getAuthHeaders() });
+                    const data = await res.json();
+                    (data.clients || []).forEach(c => {
+                        const email = c.email || '';
+                        clientSelect.innerHTML += `<option value="${c.id}" data-email="${email}">${c.client_name || 'Unknown'} ${c.dog_name ? '(' + c.dog_name + ')' : ''} ${email ? '- ' + email : ''}</option>`;
+                    });
+                    reviewClientsLoaded = true;
+                } catch (e) { console.error('Failed to load clients for review:', e); }
+            }
+            document.getElementById('review-request-modal').classList.remove('hidden');
+        }
+
+        function closeReviewRequestModal() {
+            document.getElementById('review-request-modal').classList.add('hidden');
+        }
+
+        function fillReviewEmail() {
+            const select = document.getElementById('review-client-select');
+            const opt = select.options[select.selectedIndex];
+            if (opt && opt.dataset.email) {
+                document.getElementById('review-email').value = opt.dataset.email;
+            }
+        }
+
+        document.getElementById('review-request-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('review-email').value;
+            const clientId = document.getElementById('review-client-select').value;
+            if (!email) { showToast('Please enter an email address', 'error'); return; }
+
+            const btn = document.getElementById('review-request-btn');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+                const res = await fetch(`${API_BASE}/reviews/request`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ email, client_id: clientId ? parseInt(clientId) : null })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('Review request sent!', 'success');
+                    closeReviewRequestModal();
+                } else {
+                    showToast(data.error || 'Failed to send review request', 'error');
+                }
+            } catch (error) {
+                console.error('Review request error:', error);
+                showToast('Failed to send review request', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send Request';
+            }
+        });
+
+        // Reviews Management
+        function showReviewsSection() {
+            showSection('reviews-section');
+            loadReviews('pending');
+        }
+
+        async function loadReviews(status) {
+            const container = document.getElementById('reviews-list');
+            container.innerHTML = '<p class="text-gray-400 text-sm">Loading...</p>';
+
+            try {
+                const url = status ? `${API_BASE}/reviews?status=${status}` : `${API_BASE}/reviews`;
+                const res = await fetch(url, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const reviews = data.reviews || [];
+
+                if (reviews.length === 0) {
+                    container.innerHTML = '<p class="text-gray-400 text-sm">No reviews found</p>';
+                    return;
+                }
+
+                const statusColors = { pending: 'bg-yellow-500', approved: 'bg-green-500', rejected: 'bg-red-500' };
+                container.innerHTML = reviews.map(r => {
+                    const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+                    return `
+                    <div class="p-4 border border-border-dark dark:border-border-light rounded">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <span class="font-semibold">${r.reviewer_name}</span>
+                                ${r.reviewer_email ? `<span class="text-xs text-gray-500 ml-2">${r.reviewer_email}</span>` : ''}
+                                <div class="text-yellow-400 text-lg">${stars}</div>
+                            </div>
+                            <span class="text-xs px-2 py-0.5 rounded text-white ${statusColors[r.status] || 'bg-gray-500'}">${r.status}</span>
+                        </div>
+                        <p class="text-sm text-gray-300 dark:text-gray-600 mb-3">"${r.content}"</p>
+                        <div class="flex gap-2 items-center">
+                            <span class="text-xs text-gray-500">${new Date(r.created_at).toLocaleDateString()}</span>
+                            ${r.status !== 'approved' ? `<button onclick="updateReviewStatus(${r.id}, 'approved')" class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-700">Approve</button>` : ''}
+                            ${r.status !== 'rejected' ? `<button onclick="updateReviewStatus(${r.id}, 'rejected')" class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-700">Reject</button>` : ''}
+                            ${r.status !== 'pending' ? `<button onclick="updateReviewStatus(${r.id}, 'pending')" class="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-700">Pending</button>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (error) {
+                console.error('Load reviews error:', error);
+                container.innerHTML = '<p class="text-red-400 text-sm">Failed to load reviews</p>';
+            }
+        }
+
+        async function updateReviewStatus(reviewId, status) {
+            try {
+                const res = await fetch(`${API_BASE}/reviews`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ id: reviewId, status })
+                });
+                if (res.ok) {
+                    showToast(`Review ${status}!`, 'success');
+                    loadReviews();
+                } else {
+                    showToast('Failed to update review', 'error');
+                }
+            } catch (error) {
+                console.error('Update review error:', error);
+            }
         }
 
         loadDashboard();

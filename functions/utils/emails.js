@@ -504,3 +504,20 @@ export function resetEmailHtml(resetUrl, adminTriggered = false) {
     </div>
   `);
 }
+
+// Review request email
+export function reviewRequestHtml(clientName, reviewUrl) {
+  return emailWrapper(`
+    <h2 style="color: #F59E0B; margin-bottom: 20px;">We'd Love Your Feedback!</h2>
+    <p>Hello ${clientName},</p>
+    <p>Thank you for choosing K9 Vision for your dog training needs! Your experience matters to us, and we'd really appreciate it if you could take a moment to share your feedback.</p>
+    <p>Your review helps other dog owners find quality training and helps us continue to improve.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${reviewUrl}" style="background: #F59E0B; color: white; padding: 14px 35px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+        Leave a Review
+      </a>
+    </div>
+    <p style="font-size: 14px; color: #6b7280;">This link is valid for 30 days. It only takes a minute!</p>
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>
+  `);
+}
