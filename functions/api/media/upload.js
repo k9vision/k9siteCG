@@ -16,12 +16,13 @@ export async function onRequestPost(context) {
     const file = formData.get('file');
     const caption = formData.get('caption') || '';
 
-    // Validate file MIME type
-    const ALLOWED_MIME_TYPES = [
+    // Validate file MIME type (use startsWith to handle codec suffixes like video/webm;codecs=vp9,opus)
+    const ALLOWED_MIME_PREFIXES = [
       'image/jpeg', 'image/png', 'image/gif', 'image/webp',
       'video/mp4', 'video/quicktime', 'video/webm'
     ];
-    if (file && !ALLOWED_MIME_TYPES.includes(file.type)) {
+    const baseType = file ? file.type.split(';')[0].trim() : '';
+    if (file && !ALLOWED_MIME_PREFIXES.includes(baseType)) {
       return new Response(
         JSON.stringify({ error: `File type '${file.type}' is not allowed. Accepted types: JPEG, PNG, GIF, WebP, MP4, MOV, WebM` }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }

@@ -1519,6 +1519,7 @@
                                 <span class="text-xs px-2 py-0.5 rounded text-white ${statusColors[a.status] || 'bg-gray-500'}">${a.status}</span>
                             </div>
                             <div class="flex gap-2">
+                                ${a.status === 'pending' ? `<button onclick="confirmAppointment(${a.id})" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-700">Confirm</button>` : ''}
                                 ${['pending','confirmed'].includes(a.status) ? `<button onclick="showReschedule(${a.id}, '${a.appointment_date}', '${a.start_time}', '${a.end_time}')" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Reschedule</button>` : ''}
                                 ${['pending','confirmed'].includes(a.status) ? `<button onclick="cancelAppointment(${a.id})" class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-700">Cancel</button>` : ''}
                             </div>
@@ -1527,6 +1528,26 @@
                 }
             } catch (error) {
                 console.error('Error loading appointments:', error);
+            }
+        }
+
+        async function confirmAppointment(id) {
+            try {
+                const res = await fetch(`${API_BASE}/appointments/${id}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ status: 'confirmed' })
+                });
+                if (res.ok) {
+                    showToast('Appointment confirmed!', 'success');
+                    loadMyAppointments();
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Failed to confirm appointment', 'error');
+                }
+            } catch (error) {
+                console.error('Confirm appointment error:', error);
+                showToast('Failed to confirm appointment', 'error');
             }
         }
 
@@ -1564,6 +1585,11 @@
             const file = document.getElementById('upload-file').files[0];
             if (!file) { showToast('Please select a file', 'info'); return; }
 
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Uploading...';
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('caption', document.getElementById('upload-caption').value || '');
@@ -1578,7 +1604,6 @@
                 if (res.ok) {
                     showToast('Media uploaded successfully!', 'success');
                     closeUploadMedia();
-                    // Reload media for the client
                     const user = JSON.parse(localStorage.getItem('user'));
                     const clientRes = await fetch(`${API_BASE}/clients/user/${user.id}`, { headers: getAuthHeaders() });
                     const data = await clientRes.json();
@@ -1591,6 +1616,9 @@
             } catch (error) {
                 console.error('Upload error:', error);
                 showToast('Upload failed', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
             }
         });
 
@@ -1850,9 +1878,6 @@
             formData.append('caption', '');
 
             try {
-                const btn = event?.target;
-                if (btn) btn.disabled = true;
-
                 const res = await fetch(`${API_BASE}/media/upload`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },

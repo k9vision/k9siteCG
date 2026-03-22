@@ -47,7 +47,8 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ error: auth.error }), { status: auth.status, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const { appointment_date, start_time, end_time, service_id, service_name, notes } = await context.request.json();
+    const body = await context.request.json();
+    const { appointment_date, start_time, end_time, service_id, service_name, notes, client_id } = body;
 
     if (!appointment_date || !start_time || !end_time) {
       return new Response(JSON.stringify({ error: 'appointment_date, start_time, and end_time are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
@@ -86,8 +87,7 @@ export async function onRequestPost(context) {
       }
       clientId = client.id;
     } else {
-      const body = await context.request.clone().json().catch(() => ({}));
-      clientId = body.client_id;
+      clientId = client_id;
       if (!clientId) {
         return new Response(JSON.stringify({ error: 'client_id is required for admin bookings' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
@@ -168,21 +168,44 @@ export async function onRequestPost(context) {
       reference_type: 'appointment'
     });
 
-    // Send admin email notification
+    // Send email notifications
     try {
-      const { sendEmail, appointmentBookedNotificationHtml } = await import('../../utils/emails.js');
-      const adminEmail = 'trainercg@k9visiontx.com';
-      await sendEmail(context.env, {
-        to: adminEmail,
-        subject: `New Booking: ${client?.client_name || 'Client'} - ${appointment_date}`,
-        html: appointmentBookedNotificationHtml(
-          client?.client_name || 'A client',
-          client?.dog_name || 'their dog',
-          appointment_date,
-          start_time,
-          service_name || 'General'
-        )
-      });
+      if (auth.user.role === 'client') {
+        // Client booked: notify admin
+        const { sendEmail, appointmentBookedNotificationHtml } = await import('../../utils/emails.js');
+        await sendEmail(context.env, {
+          to: 'trainercg@k9visiontx.com',
+          subject: `New Booking: ${client?.client_name || 'Client'} - ${appointment_date}`,
+          html: appointmentBookedNotificationHtml(
+            client?.client_name || 'A client',
+            client?.dog_name || 'their dog',
+            appointment_date,
+            start_time,
+            service_name || 'General'
+          )
+        });
+      } else {
+        // Admin booked for client: notify client to confirm
+        const clientInfo = await context.env.DB.prepare(
+          'SELECT c.client_name, c.dog_name, c.email, u.username FROM clients c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?'
+        ).bind(clientId).first();
+        const clientEmail = clientInfo?.email || clientInfo?.username;
+        if (clientEmail && clientEmail.includes('@')) {
+          const { sendEmail, appointmentPendingConfirmHtml } = await import('../../utils/emails.js');
+          await sendEmail(context.env, {
+            to: clientEmail,
+            subject: `Appointment Scheduled - ${appointment_date} - Please Confirm`,
+            html: appointmentPendingConfirmHtml(
+              clientInfo?.client_name || 'Valued Client',
+              clientInfo?.dog_name || 'your dog',
+              appointment_date,
+              start_time,
+              service_name || 'General Training',
+              end_time
+            )
+          });
+        }
+      }
     } catch (emailErr) {
       console.error('Failed to send booking notification email:', emailErr);
     }

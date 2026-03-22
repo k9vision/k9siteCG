@@ -70,6 +70,43 @@
       </div>
     </div>
 
+    <!-- Book Appointment for Client Modal -->
+    <div id="book-appointment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold mb-4">Book Appointment for Client</h3>
+            <form id="book-appointment-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Client</label>
+                    <select id="appt-client-select" required class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        <option value="">Select a client...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Date</label>
+                    <input type="date" id="appt-date" required class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                </div>
+                <div id="appt-slots-container" class="hidden">
+                    <label class="block text-sm font-semibold mb-1">Available Time Slots</label>
+                    <div id="appt-slots" class="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto"></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Service (optional)</label>
+                    <select id="appt-service-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        <option value="">General Training</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Notes (optional)</label>
+                    <textarea id="appt-notes" rows="2" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" placeholder="Any notes for the client..."></textarea>
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" id="appt-submit-btn" class="flex-1 bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-700">Book Appointment</button>
+                    <button type="button" onclick="closeBookAppointmentModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <nav class="bg-card-dark dark:bg-card-light border-b border-border-dark dark:border-border-light">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
             <h1 class="text-2xl font-bold text-text-dark dark:text-text-light">K9 Vision - Admin</h1>
@@ -158,6 +195,9 @@
                 </button>
                 <button onclick="showSchedule()" class="bg-teal-500 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded transition-colors">
                     📅 Manage Schedule
+                </button>
+                <button onclick="showBookAppointmentModal()" class="bg-cyan-500 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                    📋 Book Appointment
                 </button>
             </div>
         </div>
@@ -3349,6 +3389,129 @@
                 console.error('Update appointment error:', error);
             }
         }
+
+        // Book Appointment for Client
+        let selectedApptSlot = null;
+
+        async function showBookAppointmentModal() {
+            selectedApptSlot = null;
+            document.getElementById('book-appointment-form').reset();
+            document.getElementById('appt-slots-container').classList.add('hidden');
+            document.getElementById('appt-slots').innerHTML = '';
+
+            // Set min date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('appt-date').setAttribute('min', today);
+
+            // Populate client dropdown
+            const clientSelect = document.getElementById('appt-client-select');
+            clientSelect.innerHTML = '<option value="">Select a client...</option>';
+            try {
+                const res = await fetch(`${API_BASE}/clients`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                (data.clients || []).forEach(c => {
+                    clientSelect.innerHTML += `<option value="${c.id}">${c.client_name || 'Unknown'} ${c.dog_name ? '(' + c.dog_name + ')' : ''}</option>`;
+                });
+            } catch (e) { console.error('Failed to load clients for appointment:', e); }
+
+            // Populate service dropdown
+            const serviceSelect = document.getElementById('appt-service-select');
+            serviceSelect.innerHTML = '<option value="">General Training</option>';
+            try {
+                const res = await fetch(`${API_BASE}/services`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                (data.services || []).filter(s => s.active).forEach(s => {
+                    serviceSelect.innerHTML += `<option value="${s.id}" data-name="${s.name}">${s.name}</option>`;
+                });
+            } catch (e) { console.error('Failed to load services for appointment:', e); }
+
+            document.getElementById('book-appointment-modal').classList.remove('hidden');
+        }
+
+        function closeBookAppointmentModal() {
+            document.getElementById('book-appointment-modal').classList.add('hidden');
+        }
+
+        // Load available slots when date changes
+        document.getElementById('appt-date').addEventListener('change', async (e) => {
+            const date = e.target.value;
+            if (!date) return;
+            selectedApptSlot = null;
+            const slotsContainer = document.getElementById('appt-slots-container');
+            const slotsDiv = document.getElementById('appt-slots');
+            slotsDiv.innerHTML = '<p class="text-gray-400 text-sm col-span-3">Loading...</p>';
+            slotsContainer.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`${API_BASE}/appointments/available-slots?date=${date}`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const slots = data.slots || [];
+                if (slots.length === 0) {
+                    slotsDiv.innerHTML = '<p class="text-gray-400 text-sm col-span-3">No available slots for this date</p>';
+                } else {
+                    slotsDiv.innerHTML = slots.map(s => `
+                        <button type="button" onclick="selectApptSlot(this, '${s.start}', '${s.end}')"
+                            class="appt-slot-btn border border-border-dark dark:border-border-light rounded px-2 py-1 text-sm hover:bg-teal-500 hover:text-white transition-colors">
+                            ${s.start} - ${s.end}
+                        </button>
+                    `).join('');
+                }
+            } catch (e) {
+                slotsDiv.innerHTML = '<p class="text-red-400 text-sm col-span-3">Failed to load slots</p>';
+            }
+        });
+
+        function selectApptSlot(btn, start, end) {
+            document.querySelectorAll('.appt-slot-btn').forEach(b => b.classList.remove('bg-teal-500', 'text-white'));
+            btn.classList.add('bg-teal-500', 'text-white');
+            selectedApptSlot = { start, end };
+        }
+
+        document.getElementById('book-appointment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!selectedApptSlot) { showToast('Please select a time slot', 'error'); return; }
+
+            const clientId = document.getElementById('appt-client-select').value;
+            if (!clientId) { showToast('Please select a client', 'error'); return; }
+
+            const serviceSelect = document.getElementById('appt-service-select');
+            const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+
+            const submitBtn = document.getElementById('appt-submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Booking...';
+
+            try {
+                const res = await fetch(`${API_BASE}/appointments`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        client_id: parseInt(clientId),
+                        appointment_date: document.getElementById('appt-date').value,
+                        start_time: selectedApptSlot.start,
+                        end_time: selectedApptSlot.end,
+                        service_id: serviceSelect.value ? parseInt(serviceSelect.value) : null,
+                        service_name: serviceSelect.value ? selectedOption.dataset.name : 'General Training',
+                        notes: document.getElementById('appt-notes').value || null
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('Appointment booked! Client will be notified to confirm.', 'success');
+                    closeBookAppointmentModal();
+                    await loadCalendarData();
+                    fetchUnreadCount();
+                } else {
+                    showToast(data.error || 'Failed to book appointment', 'error');
+                }
+            } catch (error) {
+                console.error('Book appointment error:', error);
+                showToast('Failed to book appointment', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Book Appointment';
+            }
+        });
 
         // Calendar Settings
         function openCalendarSettings() {

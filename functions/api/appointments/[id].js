@@ -56,8 +56,8 @@ export async function onRequestPut(context) {
       if (!client || existing.client_id !== client.id) {
         return new Response(JSON.stringify({ error: 'Access denied' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
       }
-      if (status && status !== 'cancelled') {
-        return new Response(JSON.stringify({ error: 'Clients can only cancel appointments' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      if (status && !['cancelled', 'confirmed'].includes(status)) {
+        return new Response(JSON.stringify({ error: 'Clients can only confirm or cancel appointments' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
       }
     }
 
@@ -151,7 +151,7 @@ export async function onRequestPut(context) {
       RETURNING *
     `).bind(status || null, notes || null, newDate, newStart, newEnd, id).first();
 
-    // Send confirmation email to client
+    // Send confirmation email and notifications
     if (status === 'confirmed') {
       try {
         const client = await context.env.DB.prepare(`
@@ -160,21 +160,47 @@ export async function onRequestPut(context) {
           LEFT JOIN users u ON c.user_id = u.id
           WHERE c.id = ?
         `).bind(existing.client_id).first();
-        const clientEmail = client?.email || client?.username;
-        if (clientEmail && clientEmail.includes('@')) {
-          const { sendEmail, appointmentConfirmedHtml } = await import('../../utils/emails.js');
-          await sendEmail(context.env, {
-            to: clientEmail,
-            subject: `Appointment Confirmed - ${existing.appointment_date}`,
-            html: appointmentConfirmedHtml(
-              client?.client_name || 'Valued Client',
-              client?.dog_name || 'your dog',
-              existing.appointment_date,
-              existing.start_time,
-              existing.service_name || 'General',
-              existing.end_time
-            )
+
+        // Send confirmation email to client (when admin confirms)
+        if (auth.user.role === 'admin') {
+          const clientEmail = client?.email || client?.username;
+          if (clientEmail && clientEmail.includes('@')) {
+            const { sendEmail, appointmentConfirmedHtml } = await import('../../utils/emails.js');
+            await sendEmail(context.env, {
+              to: clientEmail,
+              subject: `Appointment Confirmed - ${existing.appointment_date}`,
+              html: appointmentConfirmedHtml(
+                client?.client_name || 'Valued Client',
+                client?.dog_name || 'your dog',
+                existing.appointment_date,
+                existing.start_time,
+                existing.service_name || 'General',
+                existing.end_time
+              )
+            });
+          }
+        }
+
+        // Notify admin when client confirms
+        if (auth.user.role === 'client') {
+          await createNotification(context.env.DB, {
+            type: 'booking_confirmed',
+            title: 'Appointment Confirmed by Client',
+            message: `${client?.client_name || 'A client'} confirmed their appointment on ${existing.appointment_date} at ${existing.start_time}`,
+            client_id: existing.client_id,
+            reference_id: parseInt(id),
+            reference_type: 'appointment'
           });
+
+          // Email admin about confirmation
+          try {
+            const { sendEmail } = await import('../../utils/emails.js');
+            await sendEmail(context.env, {
+              to: 'trainercg@k9visiontx.com',
+              subject: `Client Confirmed: ${client?.client_name || 'Client'} - ${existing.appointment_date}`,
+              html: `<p><strong>${client?.client_name || 'A client'}</strong> has confirmed their appointment on <strong>${existing.appointment_date}</strong> at <strong>${existing.start_time}</strong>.</p>`
+            });
+          } catch (e) { console.error('Admin confirm notification email error:', e); }
         }
       } catch (emailErr) {
         console.error('Failed to send confirmation email:', emailErr);

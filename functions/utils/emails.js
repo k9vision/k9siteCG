@@ -215,6 +215,28 @@ export function appointmentBookedNotificationHtml(clientName, dogName, date, tim
   `);
 }
 
+// Client notification: admin booked an appointment, please confirm
+export function appointmentPendingConfirmHtml(clientName, dogName, date, time, serviceName, endTime) {
+  return emailWrapper(`
+    <h2 style="color: #F59E0B; margin-bottom: 20px;">New Appointment Scheduled</h2>
+    <p>Hello ${clientName},</p>
+    <p>Your trainer has scheduled an appointment for <strong>${dogName}</strong>. Please log in to confirm.</p>
+    <div style="background: #fffbeb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
+      <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+      <p style="margin: 5px 0;"><strong>Time:</strong> ${time}${endTime ? ' - ' + endTime : ''}</p>
+      <p style="margin: 5px 0;"><strong>Service:</strong> ${serviceName || 'General Training'}</p>
+      <p style="margin: 5px 0;"><strong>Status:</strong> Pending Your Confirmation</p>
+    </div>
+    <p>Please log in to your dashboard to <strong>confirm</strong> or <strong>reschedule</strong> this appointment.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/client-dashboard.html" style="background: #10B981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        Confirm Appointment
+      </a>
+    </div>
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>
+  `);
+}
+
 // Admin notification: client added a new dog
 export function newDogNotificationHtml(clientName, dogName, breed, age) {
   return emailWrapper(`
