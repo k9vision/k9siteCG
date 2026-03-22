@@ -1693,14 +1693,18 @@
                 const statusColors = { pending: 'bg-yellow-500', paid: 'bg-green-500', overdue: 'bg-red-500', cancelled: 'bg-gray-500' };
 
                 container.innerHTML = invoices.map(inv => {
-                    const itemsHtml = (inv.items || []).map(item => `
+                    const itemsHtml = (inv.items || []).map(item => {
+                        const itemStatus = item.status || 'pending';
+                        const itemStatusColor = itemStatus === 'paid' ? 'bg-green-500' : 'bg-yellow-500';
+                        return `
                         <tr class="text-sm">
                             <td class="py-1">${item.service_name}</td>
                             <td class="py-1 text-center">${item.quantity}</td>
                             <td class="py-1 text-right">$${Number(item.price).toFixed(2)}</td>
                             <td class="py-1 text-right">$${Number(item.total).toFixed(2)}</td>
-                        </tr>
-                    `).join('');
+                            <td class="py-1 text-right"><span class="text-xs px-2 py-0.5 rounded text-white ${itemStatusColor}">${itemStatus}</span></td>
+                        </tr>`;
+                    }).join('');
 
                     return `
                     <div class="border border-border-dark dark:border-border-light rounded p-4">
@@ -1720,7 +1724,7 @@
                             <div class="mt-2 border-t border-border-dark dark:border-border-light pt-2">
                                 <table class="w-full">
                                     <thead><tr class="text-xs text-gray-500 border-b border-border-dark dark:border-border-light">
-                                        <th class="text-left py-1">Service</th><th class="text-center py-1">Qty</th><th class="text-right py-1">Price</th><th class="text-right py-1">Total</th>
+                                        <th class="text-left py-1">Service</th><th class="text-center py-1">Qty</th><th class="text-right py-1">Price</th><th class="text-right py-1">Total</th><th class="text-right py-1">Status</th>
                                     </tr></thead>
                                     <tbody>${itemsHtml}</tbody>
                                 </table>

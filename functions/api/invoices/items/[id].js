@@ -66,6 +66,67 @@ export async function onRequest(context) {
       });
     }
 
+    if (request.method === 'PUT') {
+      const { status, notify_client } = await request.json();
+
+      if (!status || !['pending', 'paid'].includes(status)) {
+        return new Response(JSON.stringify({ error: 'Status must be "pending" or "paid"' }), {
+          status: 400, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      const item = await env.DB.prepare(
+        'SELECT * FROM invoice_items WHERE id = ?'
+      ).bind(itemId).first();
+
+      if (!item) {
+        return new Response(JSON.stringify({ error: 'Invoice item not found' }), {
+          status: 404, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      await env.DB.prepare(
+        'UPDATE invoice_items SET status = ? WHERE id = ?'
+      ).bind(status, itemId).run();
+
+      // Send email notification if requested
+      if (notify_client) {
+        try {
+          const invoice = await env.DB.prepare(`
+            SELECT invoices.*,
+              COALESCE(invoices.recipient_name, clients.client_name) as client_name,
+              COALESCE(invoices.recipient_email, clients.email) as client_email
+            FROM invoices LEFT JOIN clients ON invoices.client_id = clients.id
+            WHERE invoices.id = ?
+          `).bind(item.invoice_id).first();
+
+          const emailTo = invoice?.client_email;
+          if (emailTo && emailTo.includes('@')) {
+            const { sendEmail, invoiceItemStatusHtml } = await import('../../../utils/emails.js');
+            await sendEmail(env, {
+              to: emailTo,
+              subject: `Invoice #${invoice.invoice_number} - Service ${status === 'paid' ? 'Paid' : 'Updated'}`,
+              html: invoiceItemStatusHtml(
+                invoice.client_name || 'Valued Client',
+                invoice.invoice_number,
+                item.service_name,
+                status
+              )
+            });
+          }
+        } catch (emailErr) {
+          console.error('Failed to send item status notification:', emailErr);
+        }
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        item: { ...item, status }
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { 'Content-Type': 'application/json' }

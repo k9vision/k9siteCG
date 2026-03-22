@@ -128,7 +128,7 @@ export async function onRequestPost(context) {
           await sendEmailFn(context.env, {
             to: clientEmail,
             subject: 'New media added to your gallery',
-            html: mediaUploadClientNotificationHtml(clientInfo?.client_name || 'Valued Client', 1)
+            html: mediaUploadClientNotificationHtml(clientInfo?.client_name || 'Valued Client', 1, type, caption)
           });
         }
       } catch (notifyErr) {

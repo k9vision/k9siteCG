@@ -88,6 +88,17 @@
                 <div id="appt-slots-container" class="hidden">
                     <label class="block text-sm font-semibold mb-1">Available Time Slots</label>
                     <div id="appt-slots" class="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto"></div>
+                    <p class="text-xs text-gray-500 text-center mt-2">Click a slot above or enter a custom time below</p>
+                </div>
+                <div id="appt-time-inputs" class="hidden grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Start Time</label>
+                        <input type="time" id="appt-start-time" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">End Time</label>
+                        <input type="time" id="appt-end-time" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold mb-1">Service (optional)</label>
@@ -696,6 +707,7 @@
                                 <th class="text-right py-2">Qty</th>
                                 <th class="text-right py-2">Price</th>
                                 <th class="text-right py-2">Total</th>
+                                <th class="text-center py-2">Status</th>
                                 <th class="text-right py-2">Actions</th>
                             </tr>
                         </thead>
@@ -1365,7 +1377,7 @@
                 });
 
                 if (res.ok) {
-                    showToast('Media uploaded successfully!', 'success');
+                    showToast('Media uploaded! Client notified via email.', 'success');
                     closeUploadModal();
                     loadDashboard();
                 } else {
@@ -1395,7 +1407,7 @@
                 });
 
                 if (res.ok) {
-                    showToast('Note created successfully!', 'success');
+                    showToast('Note created! Client notified via email.', 'success');
                     closeNoteModal();
                     loadDashboard();
                 } else {
@@ -1421,7 +1433,7 @@
                 });
 
                 if (res.ok) {
-                    showToast('Fun fact added successfully!', 'success');
+                    showToast('Fun fact added! Client notified via email.', 'success');
                     closeFunFactModal();
                 } else {
                     showToast('Failed to add fun fact', 'error');
@@ -2443,17 +2455,30 @@
 
                 // Line items
                 const tbody = document.getElementById('detail-items-body');
-                tbody.innerHTML = (inv.items || []).map(item => `
+                tbody.innerHTML = (inv.items || []).map(item => {
+                    const itemStatus = item.status || 'pending';
+                    const statusColor = itemStatus === 'paid' ? 'bg-green-500' : 'bg-yellow-500';
+                    const statusLabel = itemStatus === 'paid' ? 'Paid' : 'Pending';
+                    return `
                     <tr class="border-b border-border-dark dark:border-border-light">
                         <td class="py-2">${item.service_name}</td>
                         <td class="text-right py-2">${item.quantity}</td>
                         <td class="text-right py-2">$${Number(item.price).toFixed(2)}</td>
                         <td class="text-right py-2">$${Number(item.total).toFixed(2)}</td>
+                        <td class="text-center py-2">
+                            <button onclick="toggleItemStatus(${item.id}, '${itemStatus}', ${inv.id})" class="text-xs px-2 py-0.5 rounded text-white ${statusColor} hover:opacity-80 cursor-pointer" title="Click to toggle">${statusLabel}</button>
+                        </td>
                         <td class="text-right py-2">
                             <button onclick="deleteInvoiceItem(${item.id})" class="text-red-500 hover:text-red-700 text-xs">Delete</button>
                         </td>
-                    </tr>
-                `).join('');
+                    </tr>`;
+                }).join('');
+
+                // Check if all items are paid - show suggestion
+                const allPaid = (inv.items || []).length > 0 && (inv.items || []).every(i => i.status === 'paid');
+                if (allPaid && inv.status !== 'paid') {
+                    showToast('All services are paid! Consider marking the invoice as "Paid".', 'info');
+                }
 
                 // Totals
                 document.getElementById('detail-subtotal').textContent = `$${Number(inv.subtotal).toFixed(2)}`;
@@ -2637,6 +2662,29 @@
                     showToast('Failed to delete item', 'error');
                 }
             });
+        }
+
+        async function toggleItemStatus(itemId, currentStatus, invoiceId) {
+            const newStatus = currentStatus === 'paid' ? 'pending' : 'paid';
+            const notifyClient = confirm(`Mark this service as "${newStatus}".\n\nClick OK to also notify the client via email.\nClick Cancel to update without emailing.`);
+
+            try {
+                const res = await fetch(`${API_BASE}/invoices/items/${itemId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ status: newStatus, notify_client: notifyClient })
+                });
+                if (res.ok) {
+                    await viewInvoiceDetails(invoiceId);
+                    showToast(`Service marked as ${newStatus}${notifyClient ? ' - client notified' : ''}`, 'success');
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Failed to update item status', 'error');
+                }
+            } catch (error) {
+                console.error('Toggle item status error:', error);
+                showToast('Failed to update item status', 'error');
+            }
         }
 
         async function showCreateInvoice() {
@@ -3518,22 +3566,34 @@
             document.getElementById('book-appointment-modal').classList.add('hidden');
         }
 
-        // Load available slots when date changes
+        // Load available slots and show time inputs when date changes
+        let cachedApptDateAppointments = [];
         document.getElementById('appt-date').addEventListener('change', async (e) => {
             const date = e.target.value;
             if (!date) return;
             selectedApptSlot = null;
+            document.getElementById('appt-start-time').value = '';
+            document.getElementById('appt-end-time').value = '';
+            document.getElementById('appt-time-inputs').classList.remove('hidden');
+
             const slotsContainer = document.getElementById('appt-slots-container');
             const slotsDiv = document.getElementById('appt-slots');
             slotsDiv.innerHTML = '<p class="text-gray-400 text-sm col-span-3">Loading...</p>';
             slotsContainer.classList.remove('hidden');
 
+            // Fetch available slots and existing appointments in parallel
             try {
-                const res = await fetch(`${API_BASE}/appointments/available-slots?date=${date}`, { headers: getAuthHeaders() });
-                const data = await res.json();
-                const slots = data.slots || [];
+                const [slotsRes, apptsRes] = await Promise.all([
+                    fetch(`${API_BASE}/appointments/available-slots?date=${date}`, { headers: getAuthHeaders() }),
+                    fetch(`${API_BASE}/appointments`, { headers: getAuthHeaders() })
+                ]);
+                const slotsData = await slotsRes.json();
+                const apptsData = await apptsRes.json();
+                const slots = slotsData.available_slots || [];
+                cachedApptDateAppointments = (apptsData.appointments || []).filter(a => a.appointment_date === date && ['pending','confirmed'].includes(a.status));
+
                 if (slots.length === 0) {
-                    slotsDiv.innerHTML = '<p class="text-gray-400 text-sm col-span-3">No available slots for this date</p>';
+                    slotsDiv.innerHTML = '<p class="text-gray-400 text-sm col-span-3">No pre-set slots — use custom time below</p>';
                 } else {
                     slotsDiv.innerHTML = slots.map(s => `
                         <button type="button" onclick="selectApptSlot(this, '${s.start_time}', '${s.end_time}')"
@@ -3551,14 +3611,27 @@
             document.querySelectorAll('.appt-slot-btn').forEach(b => b.classList.remove('bg-teal-500', 'text-white'));
             btn.classList.add('bg-teal-500', 'text-white');
             selectedApptSlot = { start, end };
+            document.getElementById('appt-start-time').value = start;
+            document.getElementById('appt-end-time').value = end;
         }
 
         document.getElementById('book-appointment-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!selectedApptSlot) { showToast('Please select a time slot', 'error'); return; }
+
+            const startTime = document.getElementById('appt-start-time').value;
+            const endTime = document.getElementById('appt-end-time').value;
+            if (!startTime || !endTime) { showToast('Please select or enter a start and end time', 'error'); return; }
+            if (endTime <= startTime) { showToast('End time must be after start time', 'error'); return; }
 
             const clientId = document.getElementById('appt-client-select').value;
             if (!clientId) { showToast('Please select a client', 'error'); return; }
+
+            // Check for conflicts with existing appointments
+            const conflict = cachedApptDateAppointments.find(a => startTime < a.end_time && endTime > a.start_time);
+            if (conflict) {
+                const proceed = confirm(`Scheduling conflict: There is an existing appointment at ${conflict.start_time} - ${conflict.end_time} with ${conflict.client_name || 'a client'}.\n\nBook anyway?`);
+                if (!proceed) return;
+            }
 
             const serviceSelect = document.getElementById('appt-service-select');
             const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
@@ -3574,11 +3647,12 @@
                     body: JSON.stringify({
                         client_id: parseInt(clientId),
                         appointment_date: document.getElementById('appt-date').value,
-                        start_time: selectedApptSlot.start,
-                        end_time: selectedApptSlot.end,
+                        start_time: startTime,
+                        end_time: endTime,
                         service_id: serviceSelect.value ? parseInt(serviceSelect.value) : null,
                         service_name: serviceSelect.value ? selectedOption.dataset.name : 'General Training',
-                        notes: document.getElementById('appt-notes').value || null
+                        notes: document.getElementById('appt-notes').value || null,
+                        admin_override: true
                     })
                 });
                 const data = await res.json();

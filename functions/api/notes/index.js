@@ -92,7 +92,7 @@ export async function onRequestPost(context) {
           await sendEmail(context.env, {
             to: clientEmail,
             subject: `New Training Note: ${title || 'Note'}`,
-            html: trainerNoteNotificationHtml(clientInfo?.client_name || 'Valued Client', title || 'Note')
+            html: trainerNoteNotificationHtml(clientInfo?.client_name || 'Valued Client', title || 'Note', content)
           });
         }
       } catch (notifyErr) {

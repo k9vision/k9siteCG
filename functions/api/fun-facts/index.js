@@ -27,6 +27,29 @@ export async function onRequestPost(context) {
       RETURNING *
     `).bind(client_id, fact).first();
 
+    // Notify client via email
+    try {
+      const clientInfo = await context.env.DB.prepare(
+        'SELECT c.client_name, c.dog_name, c.email, u.username FROM clients c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?'
+      ).bind(client_id).first();
+
+      const clientEmail = clientInfo?.email || clientInfo?.username;
+      if (clientEmail && clientEmail.includes('@')) {
+        const { sendEmail, funFactAddedHtml } = await import('../../utils/emails.js');
+        await sendEmail(context.env, {
+          to: clientEmail,
+          subject: `New Fun Fact About ${clientInfo?.dog_name || 'Your Dog'}!`,
+          html: funFactAddedHtml(
+            clientInfo?.client_name || 'Valued Client',
+            clientInfo?.dog_name || 'your dog',
+            fact
+          )
+        });
+      }
+    } catch (emailErr) {
+      console.error('Failed to send fun fact notification email:', emailErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true, fact: result }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }

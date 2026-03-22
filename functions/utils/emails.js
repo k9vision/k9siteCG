@@ -384,15 +384,17 @@ export function blockedDateNotificationHtml(blockedDate, reason, allDay, startTi
 }
 
 // Client notification: trainer added a training note
-export function trainerNoteNotificationHtml(clientName, noteTitle) {
+export function trainerNoteNotificationHtml(clientName, noteTitle, noteContent) {
+  const preview = noteContent ? (noteContent.length > 300 ? noteContent.substring(0, 300) + '...' : noteContent) : '';
   return emailWrapper(`
     <h2 style="color: #3B82F6; margin-bottom: 20px;">New Training Note</h2>
     <p>Hello ${clientName},</p>
     <p>Your trainer has added a new note for your dog's training.</p>
     <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
       <p style="margin: 5px 0;"><strong>Subject:</strong> ${noteTitle}</p>
+      ${preview ? `<p style="margin: 10px 0 5px 0; color: #4B5563;">${preview}</p>` : ''}
     </div>
-    <p>Log in to your dashboard to read the full note.</p>
+    <p>Log in to your dashboard to read the full note and reply.</p>
     <div style="text-align: center; margin: 30px 0;">
       <a href="${SITE_URL}/client-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
         View Note
@@ -403,15 +405,59 @@ export function trainerNoteNotificationHtml(clientName, noteTitle) {
 }
 
 // Client notification: trainer uploaded media
-export function mediaUploadClientNotificationHtml(clientName, mediaCount) {
+export function mediaUploadClientNotificationHtml(clientName, mediaCount, mediaType, caption) {
+  const typeLabel = mediaType === 'video' ? 'video' : 'photo';
+  const countText = mediaCount > 1 ? `${mediaCount} new ${typeLabel}s` : `a new ${typeLabel}`;
   return emailWrapper(`
     <h2 style="color: #3B82F6; margin-bottom: 20px;">New Media Added</h2>
     <p>Hello ${clientName},</p>
-    <p>Your trainer has uploaded ${mediaCount > 1 ? mediaCount + ' new files' : 'a new file'} for your dog's training gallery.</p>
+    <p>Your trainer has uploaded ${countText} to your dog's training gallery.</p>
+    ${caption ? `<div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;"><p style="margin: 5px 0;"><strong>Caption:</strong> ${caption}</p></div>` : ''}
     <p>Log in to your dashboard to view the new media.</p>
     <div style="text-align: center; margin: 30px 0;">
       <a href="${SITE_URL}/client-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
         View Gallery
+      </a>
+    </div>
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>
+  `);
+}
+
+// Client notification: trainer added a fun fact
+export function funFactAddedHtml(clientName, dogName, factText) {
+  return emailWrapper(`
+    <h2 style="color: #F59E0B; margin-bottom: 20px;">New Fun Fact About ${dogName || 'Your Dog'}!</h2>
+    <p>Hello ${clientName},</p>
+    <p>Your trainer has added a fun fact about <strong>${dogName || 'your dog'}</strong>:</p>
+    <div style="background: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
+      <p style="margin: 0; font-style: italic; color: #92400E; font-size: 16px;">"${factText}"</p>
+    </div>
+    <p>Log in to your dashboard to see all fun facts!</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/client-dashboard.html" style="background: #F59E0B; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View Dashboard
+      </a>
+    </div>
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>
+  `);
+}
+
+// Client notification: invoice item status changed
+export function invoiceItemStatusHtml(clientName, invoiceNumber, serviceName, newStatus) {
+  const statusColor = newStatus === 'paid' ? '#10B981' : '#F59E0B';
+  const statusLabel = newStatus === 'paid' ? 'Paid' : 'Pending';
+  return emailWrapper(`
+    <h2 style="color: ${statusColor}; margin-bottom: 20px;">Invoice Update</h2>
+    <p>Hello ${clientName},</p>
+    <p>A service on your invoice <strong>#${invoiceNumber}</strong> has been updated:</p>
+    <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <p style="margin: 5px 0;"><strong>Service:</strong> ${serviceName}</p>
+      <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: ${statusColor}; font-weight: bold;">${statusLabel}</span></p>
+    </div>
+    <p>Log in to your dashboard to view your invoice details.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/client-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View Invoice
       </a>
     </div>
     <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>

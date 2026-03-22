@@ -48,7 +48,7 @@ export async function onRequestPost(context) {
     }
 
     const body = await context.request.json();
-    const { appointment_date, start_time, end_time, service_id, service_name, notes, client_id } = body;
+    const { appointment_date, start_time, end_time, service_id, service_name, notes, client_id, admin_override } = body;
 
     if (!appointment_date || !start_time || !end_time) {
       return new Response(JSON.stringify({ error: 'appointment_date, start_time, and end_time are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
@@ -93,54 +93,59 @@ export async function onRequestPost(context) {
       }
     }
 
-    // Check availability: recurring (day_of_week) OR specific_date matches
-    const dateObj = new Date(appointment_date + 'T00:00:00');
-    const dayOfWeek = dateObj.getDay();
+    // Admin override: skip availability and blocked date checks
+    const isAdminOverride = admin_override && auth.user.role === 'admin';
 
-    const { results: slots } = await context.env.DB.prepare(`
-      SELECT * FROM availability_slots WHERE is_active = 1 AND (
-        specific_date = ?
-        OR (specific_date IS NULL AND day_of_week = ?
-            AND (recurring_start_date IS NULL OR recurring_start_date <= ?)
-            AND (recurring_end_date IS NULL OR recurring_end_date >= ?))
-      )
-    `).bind(appointment_date, dayOfWeek, appointment_date, appointment_date).all();
+    if (!isAdminOverride) {
+      // Check availability: recurring (day_of_week) OR specific_date matches
+      const dateObj = new Date(appointment_date + 'T00:00:00');
+      const dayOfWeek = dateObj.getDay();
 
-    // Default open availability: 8 AM - 6 PM every day when no explicit slots configured
-    if (slots.length === 0) {
-      slots.push({ start_time: '08:00', end_time: '18:00', slot_duration_minutes: 60 });
-    }
+      const { results: slots } = await context.env.DB.prepare(`
+        SELECT * FROM availability_slots WHERE is_active = 1 AND (
+          specific_date = ?
+          OR (specific_date IS NULL AND day_of_week = ?
+              AND (recurring_start_date IS NULL OR recurring_start_date <= ?)
+              AND (recurring_end_date IS NULL OR recurring_end_date >= ?))
+        )
+      `).bind(appointment_date, dayOfWeek, appointment_date, appointment_date).all();
 
-    // Check the requested time falls within an available slot
-    const timeInSlot = slots.some(s => start_time >= s.start_time && end_time <= s.end_time);
-    if (!timeInSlot) {
-      return new Response(JSON.stringify({ error: 'Requested time is outside available hours' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // Check blocked dates
-    const blocked = await context.env.DB.prepare(
-      'SELECT * FROM blocked_dates WHERE blocked_date = ?'
-    ).bind(appointment_date).first();
-
-    if (blocked) {
-      if (blocked.all_day) {
-        return new Response(JSON.stringify({ error: 'This date is blocked' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      // Default open availability: 8 AM - 6 PM every day when no explicit slots configured
+      if (slots.length === 0) {
+        slots.push({ start_time: '08:00', end_time: '18:00', slot_duration_minutes: 60 });
       }
-      if (blocked.start_time && blocked.end_time) {
-        if (start_time < blocked.end_time && end_time > blocked.start_time) {
-          return new Response(JSON.stringify({ error: 'This time slot is blocked' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+
+      // Check the requested time falls within an available slot
+      const timeInSlot = slots.some(s => start_time >= s.start_time && end_time <= s.end_time);
+      if (!timeInSlot) {
+        return new Response(JSON.stringify({ error: 'Requested time is outside available hours' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      // Check blocked dates
+      const blocked = await context.env.DB.prepare(
+        'SELECT * FROM blocked_dates WHERE blocked_date = ?'
+      ).bind(appointment_date).first();
+
+      if (blocked) {
+        if (blocked.all_day) {
+          return new Response(JSON.stringify({ error: 'This date is blocked' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+        if (blocked.start_time && blocked.end_time) {
+          if (start_time < blocked.end_time && end_time > blocked.start_time) {
+            return new Response(JSON.stringify({ error: 'This time slot is blocked' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          }
         }
       }
-    }
 
-    // Check double-booking
-    const existing = await context.env.DB.prepare(`
-      SELECT id FROM appointments
-      WHERE appointment_date = ? AND start_time = ? AND status IN ('pending', 'confirmed')
-    `).bind(appointment_date, start_time).first();
+      // Check double-booking (clients can't double-book)
+      const existing = await context.env.DB.prepare(`
+        SELECT id FROM appointments
+        WHERE appointment_date = ? AND start_time = ? AND status IN ('pending', 'confirmed')
+      `).bind(appointment_date, start_time).first();
 
-    if (existing) {
-      return new Response(JSON.stringify({ error: 'This time slot is already booked' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+      if (existing) {
+        return new Response(JSON.stringify({ error: 'This time slot is already booked' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+      }
     }
 
     const appointment = await context.env.DB.prepare(`
