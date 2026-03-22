@@ -151,79 +151,109 @@ export async function onRequestPut(context) {
       RETURNING *
     `).bind(status || null, notes || null, newDate, newStart, newEnd, id).first();
 
-    // Send confirmation email and notifications
+    // Helper: get client info for emails
+    const getClientInfo = async () => {
+      return await context.env.DB.prepare(`
+        SELECT c.client_name, c.dog_name, c.email, u.username
+        FROM clients c LEFT JOIN users u ON c.user_id = u.id
+        WHERE c.id = ?
+      `).bind(existing.client_id).first();
+    };
+    const getClientEmail = (client) => {
+      const email = client?.email || client?.username;
+      return (email && email.includes('@')) ? email : null;
+    };
+
+    // --- RESCHEDULE NOTIFICATIONS ---
+    const wasRescheduled = newDate !== existing.appointment_date || newStart !== existing.start_time || newEnd !== existing.end_time;
+    if (wasRescheduled) {
+      try {
+        const client = await getClientInfo();
+        const clientEmail = getClientEmail(client);
+        const { sendEmail, appointmentRescheduledHtml } = await import('../../utils/emails.js');
+        const rescheduledBy = auth.user.role === 'client' ? 'client' : 'trainer';
+
+        // Email client about reschedule
+        if (clientEmail) {
+          await sendEmail(context.env, {
+            to: clientEmail,
+            subject: `Appointment Rescheduled - ${newDate}`,
+            html: appointmentRescheduledHtml(
+              client?.client_name || 'Valued Client', client?.dog_name || 'your dog',
+              existing.appointment_date, existing.start_time,
+              newDate, newStart, rescheduledBy
+            )
+          });
+        }
+
+        // Email admin when client reschedules
+        if (auth.user.role === 'client') {
+          await sendEmail(context.env, {
+            to: 'trainercg@k9visiontx.com',
+            subject: `Client Rescheduled: ${client?.client_name || 'Client'} - ${newDate}`,
+            html: appointmentRescheduledHtml(
+              client?.client_name || 'A client', client?.dog_name || 'their dog',
+              existing.appointment_date, existing.start_time,
+              newDate, newStart, 'client'
+            )
+          });
+        }
+      } catch (emailErr) {
+        console.error('Failed to send reschedule email:', emailErr);
+      }
+    }
+
+    // --- CONFIRMATION NOTIFICATIONS ---
     if (status === 'confirmed') {
       try {
-        const client = await context.env.DB.prepare(`
-          SELECT c.client_name, c.dog_name, c.email, u.username
-          FROM clients c
-          LEFT JOIN users u ON c.user_id = u.id
-          WHERE c.id = ?
-        `).bind(existing.client_id).first();
+        const client = await getClientInfo();
+        const clientEmail = getClientEmail(client);
+        const { sendEmail, appointmentConfirmedHtml } = await import('../../utils/emails.js');
 
-        // Send confirmation email to client (when admin confirms)
-        if (auth.user.role === 'admin') {
-          const clientEmail = client?.email || client?.username;
-          if (clientEmail && clientEmail.includes('@')) {
-            const { sendEmail, appointmentConfirmedHtml } = await import('../../utils/emails.js');
-            await sendEmail(context.env, {
-              to: clientEmail,
-              subject: `Appointment Confirmed - ${existing.appointment_date}`,
-              html: appointmentConfirmedHtml(
-                client?.client_name || 'Valued Client',
-                client?.dog_name || 'your dog',
-                existing.appointment_date,
-                existing.start_time,
-                existing.service_name || 'General',
-                existing.end_time
-              )
-            });
-          }
+        // Always send confirmation email to client (whether admin or client confirms)
+        if (clientEmail) {
+          await sendEmail(context.env, {
+            to: clientEmail,
+            subject: `Appointment Confirmed - ${existing.appointment_date}`,
+            html: appointmentConfirmedHtml(
+              client?.client_name || 'Valued Client', client?.dog_name || 'your dog',
+              existing.appointment_date, existing.start_time,
+              existing.service_name || 'General', existing.end_time
+            )
+          });
         }
 
         // Notify admin when client confirms
         if (auth.user.role === 'client') {
           await createNotification(context.env.DB, {
-            type: 'booking_confirmed',
-            title: 'Appointment Confirmed by Client',
+            type: 'booking_confirmed', title: 'Appointment Confirmed by Client',
             message: `${client?.client_name || 'A client'} confirmed their appointment on ${existing.appointment_date} at ${existing.start_time}`,
-            client_id: existing.client_id,
-            reference_id: parseInt(id),
-            reference_type: 'appointment'
+            client_id: existing.client_id, reference_id: parseInt(id), reference_type: 'appointment'
           });
 
-          // Email admin about confirmation
-          try {
-            const { sendEmail } = await import('../../utils/emails.js');
-            await sendEmail(context.env, {
-              to: 'trainercg@k9visiontx.com',
-              subject: `Client Confirmed: ${client?.client_name || 'Client'} - ${existing.appointment_date}`,
-              html: `<p><strong>${client?.client_name || 'A client'}</strong> has confirmed their appointment on <strong>${existing.appointment_date}</strong> at <strong>${existing.start_time}</strong>.</p>`
-            });
-          } catch (e) { console.error('Admin confirm notification email error:', e); }
+          await sendEmail(context.env, {
+            to: 'trainercg@k9visiontx.com',
+            subject: `Client Confirmed: ${client?.client_name || 'Client'} - ${existing.appointment_date}`,
+            html: `<p><strong>${client?.client_name || 'A client'}</strong> has confirmed their appointment on <strong>${existing.appointment_date}</strong> at <strong>${existing.start_time}</strong>.</p>`
+          });
         }
       } catch (emailErr) {
         console.error('Failed to send confirmation email:', emailErr);
       }
     }
 
-    // Send completion email to client
+    // --- COMPLETION NOTIFICATIONS ---
     if (status === 'completed') {
       try {
-        const client = await context.env.DB.prepare(`
-          SELECT c.client_name, c.dog_name, c.email, u.username
-          FROM clients c LEFT JOIN users u ON c.user_id = u.id
-          WHERE c.id = ?
-        `).bind(existing.client_id).first();
-        const clientEmail = client?.email || client?.username;
-        if (clientEmail && clientEmail.includes('@')) {
+        const client = await getClientInfo();
+        const clientEmail = getClientEmail(client);
+        if (clientEmail) {
           const { sendEmail, appointmentCompletedHtml } = await import('../../utils/emails.js');
           await sendEmail(context.env, {
             to: clientEmail,
             subject: `Training Session Complete - ${existing.appointment_date}`,
             html: appointmentCompletedHtml(
-              client?.client_name || 'Valued Client',
-              client?.dog_name || 'your dog',
+              client?.client_name || 'Valued Client', client?.dog_name || 'your dog',
               existing.appointment_date
             )
           });
@@ -233,21 +263,49 @@ export async function onRequestPut(context) {
       }
     }
 
-    // Create notification for cancellations
+    // --- CANCELLATION NOTIFICATIONS ---
     if (status === 'cancelled') {
-      const client = await context.env.DB.prepare('SELECT client_name, dog_name FROM clients WHERE id = ?').bind(existing.client_id).first();
-      await createNotification(context.env.DB, {
-        type: 'booking_cancelled',
-        title: 'Appointment Cancelled',
-        message: `${client?.client_name || 'A client'} cancelled their appointment on ${existing.appointment_date} at ${existing.start_time}`,
-        client_id: existing.client_id,
-        reference_id: parseInt(id),
-        reference_type: 'appointment'
-      });
-    }
+      try {
+        const client = await getClientInfo();
+        const clientEmail = getClientEmail(client);
+        const cancelledBy = auth.user.role === 'client' ? 'client' : 'trainer';
 
-    // Remove synced Google Calendar events on cancellation
-    if (status === 'cancelled') {
+        await createNotification(context.env.DB, {
+          type: 'booking_cancelled', title: 'Appointment Cancelled',
+          message: `${client?.client_name || 'A client'} cancelled their appointment on ${existing.appointment_date} at ${existing.start_time}`,
+          client_id: existing.client_id, reference_id: parseInt(id), reference_type: 'appointment'
+        });
+
+        const { sendEmail, appointmentCancelledHtml } = await import('../../utils/emails.js');
+
+        // Email client about cancellation
+        if (clientEmail) {
+          await sendEmail(context.env, {
+            to: clientEmail,
+            subject: `Appointment Cancelled - ${existing.appointment_date}`,
+            html: appointmentCancelledHtml(
+              client?.client_name || 'Valued Client', client?.dog_name || 'your dog',
+              existing.appointment_date, existing.start_time, cancelledBy
+            )
+          });
+        }
+
+        // Email admin when client cancels
+        if (auth.user.role === 'client') {
+          await sendEmail(context.env, {
+            to: 'trainercg@k9visiontx.com',
+            subject: `Client Cancelled: ${client?.client_name || 'Client'} - ${existing.appointment_date}`,
+            html: appointmentCancelledHtml(
+              client?.client_name || 'A client', client?.dog_name || 'their dog',
+              existing.appointment_date, existing.start_time, 'client'
+            )
+          });
+        }
+      } catch (emailErr) {
+        console.error('Failed to send cancellation email:', emailErr);
+      }
+
+      // Remove synced Google Calendar events
       try {
         const { removeSyncedEvents } = await import('../../utils/gcal.js');
         await removeSyncedEvents(context.env.DB, context.env, 'appointment', parseInt(id));
@@ -275,6 +333,31 @@ export async function onRequestDelete(context) {
     // Only admin can delete
     if (auth.user.role !== 'admin') {
       return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Look up appointment and client before deleting to send notification
+    const appt = await context.env.DB.prepare('SELECT * FROM appointments WHERE id = ?').bind(id).first();
+    if (appt) {
+      try {
+        const client = await context.env.DB.prepare(`
+          SELECT c.client_name, c.dog_name, c.email, u.username
+          FROM clients c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?
+        `).bind(appt.client_id).first();
+        const clientEmail = client?.email || client?.username;
+        if (clientEmail && clientEmail.includes('@')) {
+          const { sendEmail, appointmentCancelledHtml } = await import('../../utils/emails.js');
+          await sendEmail(context.env, {
+            to: clientEmail,
+            subject: `Appointment Cancelled - ${appt.appointment_date}`,
+            html: appointmentCancelledHtml(
+              client?.client_name || 'Valued Client', client?.dog_name || 'your dog',
+              appt.appointment_date, appt.start_time, 'trainer'
+            )
+          });
+        }
+      } catch (emailErr) {
+        console.error('Failed to send deletion notification:', emailErr);
+      }
     }
 
     await context.env.DB.prepare('DELETE FROM appointments WHERE id = ?').bind(id).run();

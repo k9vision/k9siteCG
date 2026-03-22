@@ -483,6 +483,53 @@ export function appointmentCompletedHtml(clientName, dogName, date) {
   `);
 }
 
+// Appointment cancelled notification
+export function appointmentCancelledHtml(clientName, dogName, date, time, cancelledBy) {
+  const byText = cancelledBy === 'client' ? 'you' : 'your trainer';
+  return emailWrapper(`
+    <h2 style="color: #EF4444; margin-bottom: 20px;">Appointment Cancelled</h2>
+    <p>Hello ${clientName},</p>
+    <p>The following appointment for <strong>${dogName}</strong> has been cancelled by ${byText}:</p>
+    <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #EF4444;">
+      <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+      <p style="margin: 5px 0;"><strong>Time:</strong> ${time}</p>
+      <p style="margin: 5px 0;"><strong>Status:</strong> Cancelled</p>
+    </div>
+    <p>If you'd like to reschedule, please log in to your dashboard or contact your trainer.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/client-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        Book New Appointment
+      </a>
+    </div>
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>
+  `);
+}
+
+// Appointment rescheduled notification
+export function appointmentRescheduledHtml(clientName, dogName, oldDate, oldTime, newDate, newTime, rescheduledBy) {
+  const byText = rescheduledBy === 'client' ? 'you' : 'your trainer';
+  return emailWrapper(`
+    <h2 style="color: #F59E0B; margin-bottom: 20px;">Appointment Rescheduled</h2>
+    <p>Hello ${clientName},</p>
+    <p>The following appointment for <strong>${dogName}</strong> has been rescheduled by ${byText}:</p>
+    <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #EF4444; text-decoration: line-through; color: #9CA3AF;">
+      <p style="margin: 5px 0;"><strong>Old Date:</strong> ${oldDate}</p>
+      <p style="margin: 5px 0;"><strong>Old Time:</strong> ${oldTime}</p>
+    </div>
+    <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10B981;">
+      <p style="margin: 5px 0;"><strong>New Date:</strong> ${newDate}</p>
+      <p style="margin: 5px 0;"><strong>New Time:</strong> ${newTime}</p>
+    </div>
+    <p>Please log in to your dashboard to view the updated appointment.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/client-dashboard.html" style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View My Appointments
+      </a>
+    </div>
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles</p>
+  `);
+}
+
 // Password reset email
 export function resetEmailHtml(resetUrl, adminTriggered = false) {
   const intro = adminTriggered
