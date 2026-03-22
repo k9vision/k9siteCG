@@ -289,6 +289,10 @@
                         </select>
                     </div>
                     <div>
+                        <label class="block text-sm font-medium mb-2">Also email to (optional)</label>
+                        <input type="email" id="upload-additional-email" placeholder="Extra email address..." class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
+                    <div>
                         <label class="block text-sm font-medium mb-2">Media Type</label>
                         <select id="media-type" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                             <option value="photo">Photo</option>
@@ -313,7 +317,7 @@
 
         <!-- Create Note Modal -->
         <div id="note-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
                 <h3 class="text-2xl font-bold mb-4">Create Note</h3>
                 <form id="note-form" class="space-y-4">
                     <div>
@@ -321,6 +325,10 @@
                         <select id="note-client-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                             <option value="">Choose a client...</option>
                         </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Also email to (optional)</label>
+                        <input type="email" id="note-additional-email" placeholder="Extra email address..." class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Title</label>
@@ -335,6 +343,23 @@
                         <select id="note-media-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                             <option value="">No media reference</option>
                         </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Or capture new media</label>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="adminNoteCapture('image')" class="flex items-center gap-1 text-xs bg-gray-600 dark:bg-gray-300 text-white dark:text-gray-800 rounded px-2 py-1 hover:bg-gray-500 transition">
+                                <span class="material-icons text-sm">photo_camera</span> Take Photo
+                            </button>
+                            <button type="button" onclick="adminNoteCapture('video')" class="flex items-center gap-1 text-xs bg-gray-600 dark:bg-gray-300 text-white dark:text-gray-800 rounded px-2 py-1 hover:bg-gray-500 transition">
+                                <span class="material-icons text-sm">videocam</span> Record Video
+                            </button>
+                            <button type="button" onclick="adminNoteUpload()" class="flex items-center gap-1 text-xs bg-gray-600 dark:bg-gray-300 text-white dark:text-gray-800 rounded px-2 py-1 hover:bg-gray-500 transition">
+                                <span class="material-icons text-sm">upload</span> Upload File
+                            </button>
+                        </div>
+                        <input type="file" id="admin-note-photo-input" class="hidden" accept="image/*" capture="environment">
+                        <input type="file" id="admin-note-video-input" class="hidden" accept="video/*" capture="environment">
+                        <input type="file" id="admin-note-file-input" class="hidden" accept="image/*,video/*">
                     </div>
                     <div class="flex gap-4">
                         <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Create</button>
@@ -354,6 +379,10 @@
                         <select id="fun-fact-client-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                             <option value="">Choose a client...</option>
                         </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Also email to (optional)</label>
+                        <input type="email" id="fun-fact-additional-email" placeholder="Extra email address..." class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Fun Fact</label>
@@ -464,8 +493,8 @@
         </div>
 
         <!-- Client Detail Modal -->
-        <div id="client-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-3xl w-full border border-border-dark dark:border-border-light my-8">
+        <div id="client-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-4 sm:p-8 max-w-4xl w-full border border-border-dark dark:border-border-light my-4 sm:my-8 max-h-[95vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-2xl font-bold">Client Details</h3>
                     <button onclick="closeClientDetailModal()" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl">&times;</button>
@@ -475,7 +504,7 @@
 
                 <!-- Client Info (editable) -->
                 <div class="mb-6 p-4 bg-background-dark dark:bg-gray-50 rounded-lg">
-                    <div class="grid grid-cols-2 gap-3 text-sm mb-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-3">
                         <div>
                             <label class="text-gray-400 dark:text-gray-600 block mb-1">Client Name</label>
                             <input type="text" id="detail-client-name-input" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light">
@@ -484,7 +513,7 @@
                             <button onclick="saveClientName()" class="bg-primary text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Save Name</button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                         <div>
                             <label class="text-gray-400 dark:text-gray-600 block mb-1">Email</label>
                             <input type="email" id="detail-email" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light">
@@ -518,7 +547,7 @@
                 <!-- Media -->
                 <div class="mb-6">
                     <h4 class="font-semibold text-lg mb-2">Media</h4>
-                    <div id="detail-media" class="grid grid-cols-3 gap-2"></div>
+                    <div id="detail-media" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
                 </div>
 
                 <!-- Notes -->
@@ -1412,6 +1441,8 @@
             formData.append('client_id', clientId);
             formData.append('type', type);
             formData.append('caption', document.getElementById('media-caption').value || '');
+            const uploadAdditionalEmail = document.getElementById('upload-additional-email').value;
+            if (uploadAdditionalEmail) formData.append('additional_email', uploadAdditionalEmail);
 
             try {
                 const res = await fetch(`${API_BASE}/media/upload`, {
@@ -1446,6 +1477,8 @@
             try {
                 const body = { client_id: clientId, title, content, author_role: 'admin' };
                 if (mediaId) body.media_id = parseInt(mediaId);
+                const noteAdditionalEmail = document.getElementById('note-additional-email').value;
+                if (noteAdditionalEmail) body.additional_email = noteAdditionalEmail;
                 const res = await fetch(`${API_BASE}/notes`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
@@ -1475,7 +1508,7 @@
                 const res = await fetch(`${API_BASE}/fun-facts`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ client_id: clientId, fact })
+                    body: JSON.stringify({ client_id: clientId, fact, additional_email: document.getElementById('fun-fact-additional-email').value || undefined })
                 });
 
                 if (res.ok) {
@@ -1489,6 +1522,67 @@
                 showToast('Failed to add fun fact', 'error');
             }
         });
+
+        // Admin note media capture functions
+        function adminNoteCapture(type) {
+            const inputId = type === 'image' ? 'admin-note-photo-input' : 'admin-note-video-input';
+            document.getElementById(inputId).onchange = async function() {
+                await adminNoteHandleFile(this);
+            };
+            document.getElementById(inputId).click();
+        }
+
+        function adminNoteUpload() {
+            document.getElementById('admin-note-file-input').onchange = async function() {
+                await adminNoteHandleFile(this);
+            };
+            document.getElementById('admin-note-file-input').click();
+        }
+
+        async function adminNoteHandleFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const clientId = document.getElementById('note-client-select').value;
+            if (!clientId) { showToast('Please select a client first', 'error'); input.value = ''; return; }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('clientId', clientId);
+            formData.append('caption', '');
+
+            try {
+                showToast('Uploading media...', 'info');
+                const res = await fetch(`${API_BASE}/media/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                    body: formData
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    // Refresh media dropdown and auto-select new item
+                    const mediaRes = await fetch(`${API_BASE}/media/client/${clientId}`, { headers: getAuthHeaders() });
+                    const mediaData = await mediaRes.json();
+                    const mediaItems = mediaData.media || mediaData || [];
+                    const select = document.getElementById('note-media-select');
+                    select.innerHTML = '<option value="">No media reference</option>' +
+                        mediaItems.map(m => `<option value="${m.id}">${m.original_name || m.filename} (${m.type})</option>`).join('');
+                    // Auto-select the newest item
+                    if (data.media && data.media.id) {
+                        select.value = data.media.id;
+                    } else if (mediaItems.length > 0) {
+                        select.value = mediaItems[mediaItems.length - 1].id;
+                    }
+                    showToast('Media uploaded and attached!', 'success');
+                } else {
+                    const errData = await res.json();
+                    showToast(errData.error || 'Upload failed', 'error');
+                }
+            } catch (error) {
+                console.error('Admin note upload error:', error);
+                showToast('Upload failed', 'error');
+            }
+            input.value = '';
+        }
 
         let currentDetailClientId = null;
 
@@ -2712,7 +2806,8 @@
 
         async function toggleItemStatus(itemId, currentStatus, invoiceId) {
             const newStatus = currentStatus === 'paid' ? 'pending' : 'paid';
-            const notifyClient = confirm(`Mark this service as "${newStatus}".\n\nClick OK to also notify the client via email.\nClick Cancel to update without emailing.`);
+            if (!confirm(`Change this service from "${currentStatus}" to "${newStatus}"?\n\nClick Cancel to keep as is.`)) return;
+            const notifyClient = confirm('Notify the client via email about this change?\n\nOK = Send email\nCancel = Skip email');
 
             try {
                 const res = await fetch(`${API_BASE}/invoices/items/${itemId}`, {

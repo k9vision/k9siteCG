@@ -13,7 +13,7 @@ export async function onRequestPost(context) {
       );
     }
 
-    const { client_id, content, title, media_id, media_ids } = await context.request.json();
+    const { client_id, content, title, media_id, media_ids, additional_email } = await context.request.json();
 
     if (!client_id || !content) {
       return new Response(
@@ -97,6 +97,18 @@ export async function onRequestPost(context) {
         }
       } catch (notifyErr) {
         console.error('Failed to send trainer note notification:', notifyErr);
+      }
+
+      // Send to additional email if provided
+      if (additional_email && additional_email.includes('@')) {
+        try {
+          const { trainerNoteNotificationHtml } = await import('../../utils/emails.js');
+          await sendEmail(context.env, {
+            to: additional_email,
+            subject: `New Training Note: ${title || 'Note'}`,
+            html: trainerNoteNotificationHtml('Valued Client', title || 'Note', content)
+          });
+        } catch (e) { console.error('Additional email error:', e); }
       }
     }
 

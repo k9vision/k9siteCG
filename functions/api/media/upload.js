@@ -15,6 +15,7 @@ export async function onRequestPost(context) {
     const formData = await context.request.formData();
     const file = formData.get('file');
     const caption = formData.get('caption') || '';
+    const additionalEmail = formData.get('additional_email') || '';
 
     // Validate file MIME type (use startsWith to handle codec suffixes like video/webm;codecs=vp9,opus)
     const ALLOWED_MIME_PREFIXES = [
@@ -133,6 +134,18 @@ export async function onRequestPost(context) {
         }
       } catch (notifyErr) {
         console.error('Failed to send media upload client notification:', notifyErr);
+      }
+
+      // Send to additional email if provided
+      if (additionalEmail && additionalEmail.includes('@')) {
+        try {
+          const { sendEmail: sendExtraFn, mediaUploadClientNotificationHtml: extraHtml } = await import('../../utils/emails.js');
+          await sendExtraFn(context.env, {
+            to: additionalEmail,
+            subject: 'New media shared with you - K9 Vision',
+            html: extraHtml('Valued Client', 1, type, caption)
+          });
+        } catch (e) { console.error('Additional email error:', e); }
       }
     }
 

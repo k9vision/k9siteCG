@@ -12,7 +12,7 @@ export async function onRequestPost(context) {
       );
     }
 
-    const { client_id, fact } = await context.request.json();
+    const { client_id, fact, additional_email } = await context.request.json();
 
     if (!client_id || !fact) {
       return new Response(
@@ -48,6 +48,18 @@ export async function onRequestPost(context) {
       }
     } catch (emailErr) {
       console.error('Failed to send fun fact notification email:', emailErr);
+    }
+
+    // Send to additional email if provided
+    if (additional_email && additional_email.includes('@')) {
+      try {
+        const { sendEmail, funFactAddedHtml } = await import('../../utils/emails.js');
+        await sendEmail(context.env, {
+          to: additional_email,
+          subject: 'New Fun Fact - K9 Vision',
+          html: funFactAddedHtml('Valued Client', 'your dog', fact)
+        });
+      } catch (e) { console.error('Additional email error:', e); }
     }
 
     return new Response(

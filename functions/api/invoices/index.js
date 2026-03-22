@@ -197,6 +197,10 @@ export async function onRequest(context) {
       // Auto-send invoice email if recipient has a valid email
       let email_sent = false;
       let email_error = null;
+      // Ensure null-safe fields for non-client invoices
+      invoice.client_name = invoice.client_name || invoice.recipient_name || 'Valued Client';
+      invoice.dog_name = invoice.dog_name || '';
+      invoice.dog_breed = invoice.dog_breed || '';
       const emailTo = invoice.client_email;
       if (emailTo && emailTo.includes('@')) {
         try {
