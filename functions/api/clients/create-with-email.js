@@ -196,7 +196,7 @@ function generateWelcomeEmail(clientName, dogName, username, password) {
         </div>
 
         <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-          <p style="margin: 0;"><strong>⚠️ Important:</strong> Please save these credentials in a secure place. For your security, we recommend changing your password after your first login.</p>
+          <p style="margin: 0;"><strong>⚠️ Important:</strong> Please save these credentials in a secure place. For your security, we recommend changing your password after your first login. Please choose a password that is unique and not associated with any other accounts.</p>
         </div>
 
         <h3 style="color: #1F2937; margin-top: 30px;">What's Next?</h3>

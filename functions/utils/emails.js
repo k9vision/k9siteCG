@@ -69,6 +69,9 @@ export function inviteEmailHtml(clientName, dogName, setupUrl) {
         Click here to set up your account
       </a>
     </div>
+    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
+      <p style="margin: 0; font-size: 14px;"><strong>Security Tip:</strong> Please choose a unique password that is not associated with any other accounts.</p>
+    </div>
     <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
       <p style="margin: 0; font-size: 14px; color: #6b7280;">This invite link expires in 7 days. If it has expired, please contact your trainer to send a new one.</p>
     </div>
@@ -495,6 +498,7 @@ export function resetEmailHtml(resetUrl, adminTriggered = false) {
         Reset Password
       </a>
     </div>
+    <p style="font-size: 14px; color: #4b5563;">When setting your new password, please choose one that is unique and not associated with any other accounts.</p>
     <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
       <p style="margin: 0; font-size: 14px;"><strong>This link expires in 1 hour.</strong> If you didn't request this reset, you can safely ignore this email.</p>
     </div>

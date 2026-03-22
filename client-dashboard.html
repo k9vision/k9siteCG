@@ -286,12 +286,27 @@
                 </div>
                 <!-- Media Attachment (multi-select) -->
                 <input type="hidden" id="note-media-ids" value="[]">
-                <div class="flex items-center gap-2">
-                    <button type="button" onclick="toggleMediaPicker()" class="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition">
-                        <span class="material-icons text-base">attach_file</span>
-                        Attach Media
-                    </button>
-                    <span id="no-media-hint" class="hidden text-xs text-gray-500 italic">No photos or videos yet</span>
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button type="button" onclick="toggleMediaPicker()" class="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition">
+                            <span class="material-icons text-base">attach_file</span>
+                            Attach Existing Media
+                        </button>
+                        <span id="no-media-hint" class="hidden text-xs text-gray-500 italic">No photos or videos yet</span>
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                        <button type="button" onclick="noteCapturePhoto()" class="flex items-center gap-1 text-xs bg-gray-600 dark:bg-gray-300 text-white dark:text-gray-800 rounded px-2 py-1 hover:bg-gray-500 dark:hover:bg-gray-400 transition">
+                            <span class="material-icons text-sm">photo_camera</span> Take Photo
+                        </button>
+                        <button type="button" onclick="noteCaptureVideo()" class="flex items-center gap-1 text-xs bg-gray-600 dark:bg-gray-300 text-white dark:text-gray-800 rounded px-2 py-1 hover:bg-gray-500 dark:hover:bg-gray-400 transition">
+                            <span class="material-icons text-sm">videocam</span> Record Video
+                        </button>
+                        <button type="button" onclick="noteUploadFile()" class="flex items-center gap-1 text-xs bg-gray-600 dark:bg-gray-300 text-white dark:text-gray-800 rounded px-2 py-1 hover:bg-gray-500 dark:hover:bg-gray-400 transition">
+                            <span class="material-icons text-sm">upload</span> Upload File
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Select existing media, capture new photos/videos, or send without attachments.</p>
+                    <input type="file" id="note-file-input" class="hidden" accept="image/*,video/*" onchange="handleNoteFileUpload(this)">
                 </div>
 
                 <!-- Thumbnail Picker Grid -->
@@ -965,8 +980,11 @@
             useBtn.innerHTML = '<span class="material-icons text-sm">check</span> Use Photo';
         }
 
+        let noteMediaPending = false;
+
         async function loadMedia(clientId) {
             showLoading('media-list');
+            const prevCount = clientMediaItems.length;
             try {
                 const res = await fetch(`${API_BASE}/media/client/${clientId}`, {
                     headers: getAuthHeaders()
@@ -975,6 +993,22 @@
                 const media = data.media || data || [];
                 clientMediaItems = Array.isArray(media) ? media : [];
                 renderMediaGallery();
+
+                // Auto-attach newly captured/uploaded media to note if pending
+                if (noteMediaPending && clientMediaItems.length > prevCount) {
+                    const newest = clientMediaItems.reduce((a, b) => {
+                        const da = new Date(a.created_at || 0);
+                        const db = new Date(b.created_at || 0);
+                        return db > da ? b : a;
+                    });
+                    if (newest && !selectedNoteMediaIds.includes(newest.id)) {
+                        selectedNoteMediaIds.push(newest.id);
+                        updateMediaPreviewChip();
+                        renderMediaPicker();
+                        showToast('Media attached to your note!', 'success');
+                    }
+                    noteMediaPending = false;
+                }
             } catch (error) {
                 console.error('Error loading media:', error);
             }
@@ -1288,6 +1322,29 @@
                     : `${count} items attached`;
                 chip.classList.remove('hidden');
             }
+        }
+
+        // Note-specific capture functions: capture new media and auto-attach to note
+        function noteCapturePhoto() {
+            noteMediaPending = true;
+            takePhoto();
+        }
+
+        function noteCaptureVideo() {
+            noteMediaPending = true;
+            takeVideo();
+        }
+
+        function noteUploadFile() {
+            noteMediaPending = true;
+            document.getElementById('note-file-input').click();
+        }
+
+        async function handleNoteFileUpload(input) {
+            const file = input.files[0];
+            if (!file) { noteMediaPending = false; return; }
+            await uploadCapturedFile(file);
+            input.value = '';
         }
 
         function showRequestService() {
