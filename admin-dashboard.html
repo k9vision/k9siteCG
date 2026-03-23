@@ -73,13 +73,30 @@
     <!-- Book Appointment for Client Modal -->
     <div id="book-appointment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold mb-4">Book Appointment for Client</h3>
+            <h3 class="text-2xl font-bold mb-4">Book Appointment</h3>
             <form id="book-appointment-form" class="space-y-4">
-                <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="appt-nonclient-toggle" class="sr-only peer" onchange="toggleApptNonClient()">
+                        <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+                    </label>
+                    <span class="text-sm">Book for non-client (email only)</span>
+                </div>
+                <div id="appt-client-field">
                     <label class="block text-sm font-semibold mb-1">Client</label>
                     <select id="appt-client-select" required class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                         <option value="">Select a client...</option>
                     </select>
+                </div>
+                <div id="appt-nonclient-fields" class="hidden space-y-3">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Name *</label>
+                        <input type="text" id="appt-nonclient-name" placeholder="Recipient name..." class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">Email *</label>
+                        <input type="email" id="appt-nonclient-email" placeholder="email@example.com" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold mb-1">Date</label>
@@ -1477,12 +1494,20 @@
             if (!file) { showToast('Please select a file', 'error'); return; }
 
             if (isNonClient) {
-                // Email-only mode: send email about the media
+                // Email-only mode: send email with media file attached
                 const email = document.getElementById('upload-nonclient-email').value;
                 if (!email) { showToast('Please enter an email address', 'error'); return; }
                 const caption = document.getElementById('media-caption').value || '';
                 const type = document.getElementById('media-type').value;
+                showToast('Preparing file for email...', 'info');
                 try {
+                    // Read file as base64
+                    const fileBase64 = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result.split(',')[1]); // strip data:... prefix
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
                     const res = await fetch(`${API_BASE}/email/send-content`, {
                         method: 'POST',
                         headers: getAuthHeaders(),
@@ -1491,10 +1516,11 @@
                             subject: `Media Shared - K9 Vision`,
                             content_type: 'media',
                             title: `New ${type} shared with you`,
-                            content_body: caption || `A ${type} has been shared with you by your trainer at K9 Vision. Please contact us for details.`
+                            content_body: caption || `A ${type} has been shared with you by your trainer at K9 Vision.`,
+                            attachment: { filename: file.name, content: fileBase64 }
                         })
                     });
-                    if (res.ok) { showToast('Email sent!', 'success'); closeUploadModal(); }
+                    if (res.ok) { showToast('Media emailed with attachment!', 'success'); closeUploadModal(); }
                     else { const d = await res.json(); showToast(d.error || 'Failed to send', 'error'); }
                 } catch (err) { console.error(err); showToast('Failed to send email', 'error'); }
             } else {
@@ -3723,6 +3749,14 @@
         // Book Appointment for Client
         let selectedApptSlot = null;
 
+        function toggleApptNonClient() {
+            const isNonClient = document.getElementById('appt-nonclient-toggle').checked;
+            document.getElementById('appt-client-field').classList.toggle('hidden', isNonClient);
+            document.getElementById('appt-nonclient-fields').classList.toggle('hidden', !isNonClient);
+            const sel = document.getElementById('appt-client-select');
+            if (isNonClient) { sel.removeAttribute('required'); sel.value = ''; } else { sel.setAttribute('required', ''); }
+        }
+
         async function showBookAppointmentModal() {
             selectedApptSlot = null;
             document.getElementById('book-appointment-form').reset();
@@ -3813,28 +3847,61 @@
 
         document.getElementById('book-appointment-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const isNonClient = document.getElementById('appt-nonclient-toggle').checked;
 
             const startTime = document.getElementById('appt-start-time').value;
             const endTime = document.getElementById('appt-end-time').value;
             if (!startTime || !endTime) { showToast('Please select or enter a start and end time', 'error'); return; }
             if (endTime <= startTime) { showToast('End time must be after start time', 'error'); return; }
 
+            const apptDate = document.getElementById('appt-date').value;
+            if (!apptDate) { showToast('Please select a date', 'error'); return; }
+
+            const serviceSelect = document.getElementById('appt-service-select');
+            const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+            const serviceName = serviceSelect.value ? selectedOption.dataset.name : 'General Training';
+            const notes = document.getElementById('appt-notes').value || '';
+
+            const submitBtn = document.getElementById('appt-submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Booking...';
+
+            if (isNonClient) {
+                // Non-client: send appointment email only (no DB storage)
+                const ncName = document.getElementById('appt-nonclient-name').value;
+                const ncEmail = document.getElementById('appt-nonclient-email').value;
+                if (!ncName || !ncEmail) { showToast('Please enter name and email', 'error'); submitBtn.disabled = false; submitBtn.textContent = 'Book Appointment'; return; }
+
+                try {
+                    const res = await fetch(`${API_BASE}/email/send-content`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({
+                            to: ncEmail,
+                            subject: `Appointment Scheduled - ${apptDate} - K9 Vision`,
+                            content_type: 'appointment',
+                            title: `Appointment for ${ncName}`,
+                            content_body: `Date: ${new Date(apptDate + 'T00:00:00').toLocaleDateString()}\nTime: ${startTime} - ${endTime}\nService: ${serviceName}${notes ? '\nNotes: ' + notes : ''}\n\nTo confirm, reschedule, or cancel, please reply to this email or contact us at trainercg@k9visiontx.com or visit k9visiontx.com/contact`
+                        })
+                    });
+                    if (res.ok) { showToast('Appointment email sent!', 'success'); closeBookAppointmentModal(); }
+                    else { const d = await res.json(); showToast(d.error || 'Failed to send', 'error'); }
+                } catch (error) { console.error('Non-client appointment error:', error); showToast('Failed to send', 'error'); }
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Book Appointment';
+                return;
+            }
+
+            // Client appointment: normal flow
             const clientId = document.getElementById('appt-client-select').value;
-            if (!clientId) { showToast('Please select a client', 'error'); return; }
+            if (!clientId) { showToast('Please select a client', 'error'); submitBtn.disabled = false; submitBtn.textContent = 'Book Appointment'; return; }
 
             // Check for conflicts with existing appointments
             const conflict = cachedApptDateAppointments.find(a => startTime < a.end_time && endTime > a.start_time);
             if (conflict) {
                 const proceed = confirm(`Scheduling conflict: There is an existing appointment at ${conflict.start_time} - ${conflict.end_time} with ${conflict.client_name || 'a client'}.\n\nBook anyway?`);
-                if (!proceed) return;
+                if (!proceed) { submitBtn.disabled = false; submitBtn.textContent = 'Book Appointment'; return; }
             }
-
-            const serviceSelect = document.getElementById('appt-service-select');
-            const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
-
-            const submitBtn = document.getElementById('appt-submit-btn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Booking...';
 
             try {
                 const res = await fetch(`${API_BASE}/appointments`, {
@@ -3842,12 +3909,12 @@
                     headers: getAuthHeaders(),
                     body: JSON.stringify({
                         client_id: parseInt(clientId),
-                        appointment_date: document.getElementById('appt-date').value,
+                        appointment_date: apptDate,
                         start_time: startTime,
                         end_time: endTime,
                         service_id: serviceSelect.value ? parseInt(serviceSelect.value) : null,
-                        service_name: serviceSelect.value ? selectedOption.dataset.name : 'General Training',
-                        notes: document.getElementById('appt-notes').value || null,
+                        service_name: serviceName,
+                        notes: notes || null,
                         admin_override: true
                     })
                 });

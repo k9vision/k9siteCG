@@ -102,10 +102,10 @@ export async function generateInvoicePDF(invoice, items) {
   // Table rows
   for (const item of items) {
     const rowValues = [
-      item.service_name,
-      String(item.quantity),
-      `$${item.price.toFixed(2)}`,
-      `$${item.total.toFixed(2)}`
+      item.service_name || 'Service',
+      String(item.quantity || 0),
+      `$${Number(item.price || 0).toFixed(2)}`,
+      `$${Number(item.total || 0).toFixed(2)}`
     ];
 
     for (let i = 0; i < rowValues.length; i++) {
@@ -130,8 +130,8 @@ export async function generateInvoicePDF(invoice, items) {
   const valuesX = margin + 420;
 
   const totalsData = [
-    ['Subtotal:', `$${invoice.subtotal.toFixed(2)}`],
-    [`Tax (${invoice.tax_rate}%):`, `$${invoice.tax_amount.toFixed(2)}`],
+    ['Subtotal:', `$${Number(invoice.subtotal || 0).toFixed(2)}`],
+    [`Tax (${invoice.tax_rate || 0}%):`, `$${Number(invoice.tax_amount || 0).toFixed(2)}`],
   ];
 
   for (const [label, value] of totalsData) {
@@ -144,7 +144,7 @@ export async function generateInvoicePDF(invoice, items) {
   // Total line
   page.drawLine({ start: { x: totalsX, y: y + 12 }, end: { x: valuesX + 70, y: y + 12 }, thickness: 1, color: BLUE });
   const totalLabel = 'Total:';
-  const totalValue = `$${invoice.total.toFixed(2)}`;
+  const totalValue = `$${Number(invoice.total || 0).toFixed(2)}`;
   page.drawText(totalLabel, { x: totalsX, y, size: 14, font: fontBold, color: BLUE });
   const totalValWidth = fontBold.widthOfTextAtSize(totalValue, 14);
   page.drawText(totalValue, { x: valuesX + 70 - totalValWidth, y, size: 14, font: fontBold, color: BLUE });

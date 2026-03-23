@@ -10,7 +10,7 @@ export async function onRequestPost(context) {
       });
     }
 
-    const { to, subject, content_type, content_body, title } = await context.request.json();
+    const { to, subject, content_type, content_body, title, attachment } = await context.request.json();
 
     if (!to || !to.includes('@')) {
       return new Response(JSON.stringify({ error: 'Valid email address required' }), {
@@ -26,11 +26,15 @@ export async function onRequestPost(context) {
 
     const { sendEmail, genericContentEmailHtml } = await import('../../utils/emails.js');
 
-    await sendEmail(context.env, {
+    const emailPayload = {
       to,
       subject: subject || 'Message from K9 Vision',
       html: genericContentEmailHtml(content_type || 'message', title || '', content_body)
-    });
+    };
+    if (attachment && attachment.filename && attachment.content) {
+      emailPayload.attachments = [{ filename: attachment.filename, content: attachment.content }];
+    }
+    await sendEmail(context.env, emailPayload);
 
     return new Response(JSON.stringify({ success: true, message: 'Email sent' }), {
       headers: { 'Content-Type': 'application/json' }

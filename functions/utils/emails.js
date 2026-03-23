@@ -559,13 +559,26 @@ export function genericContentEmailHtml(contentType, title, body) {
     note: { heading: 'Training Note', color: '#3B82F6', icon: 'A training note has been shared with you:' },
     fun_fact: { heading: 'Fun Fact', color: '#F59E0B', icon: 'A fun fact has been shared with you:' },
     media: { heading: 'Media Shared', color: '#3B82F6', icon: 'New media has been shared with you:' },
+    appointment: { heading: 'Appointment Scheduled', color: '#10B981', icon: 'An appointment has been scheduled for you:' },
     message: { heading: 'Message', color: '#3B82F6', icon: 'You have a new message:' }
   };
   const cfg = typeLabels[contentType] || typeLabels.message;
+  const bodyHtml = body.replace(/\n/g, '<br>');
+  let extra = '';
+  if (contentType === 'appointment') {
+    extra = `
+    <div style="text-align: center; margin: 25px 0;">
+      <p style="font-weight: bold; margin-bottom: 15px;">Please respond to this appointment:</p>
+      <a href="mailto:trainercg@k9visiontx.com?subject=CONFIRM%20Appointment%20${encodeURIComponent(title)}" style="background: #10B981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; margin: 4px;">Confirm</a>
+      <a href="mailto:trainercg@k9visiontx.com?subject=RESCHEDULE%20Appointment%20${encodeURIComponent(title)}" style="background: #F59E0B; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; margin: 4px;">Reschedule</a>
+      <a href="mailto:trainercg@k9visiontx.com?subject=CANCEL%20Appointment%20${encodeURIComponent(title)}" style="background: #EF4444; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; margin: 4px;">Cancel</a>
+    </div>`;
+  }
   return emailWrapper(`
     <h2 style="color: ${cfg.color}; margin-bottom: 20px;">${cfg.heading}</h2>
     <p>${cfg.icon}</p>
-    ${title ? `<div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${cfg.color};"><p style="margin: 0 0 5px 0;"><strong>${title}</strong></p><p style="margin: 0; color: #4B5563;">${body}</p></div>` : `<div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${cfg.color};"><p style="margin: 0; color: #4B5563;">${body}</p></div>`}
+    ${title ? `<div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${cfg.color};"><p style="margin: 0 0 5px 0;"><strong>${title}</strong></p><p style="margin: 0; color: #4B5563;">${bodyHtml}</p></div>` : `<div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${cfg.color};"><p style="margin: 0; color: #4B5563;">${bodyHtml}</p></div>`}
+    ${extra}
     <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles<br/>K9 Vision Dog Training</p>
   `);
 }
