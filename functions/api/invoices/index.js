@@ -198,7 +198,13 @@ export async function onRequest(context) {
       let email_sent = false;
       let email_error = null;
       // Ensure null-safe fields for non-client invoices
-      invoice.client_name = invoice.client_name || invoice.recipient_name || 'Valued Client';
+      if (!invoice) {
+        return new Response(JSON.stringify({
+          success: true,
+          invoice: { invoice_number, items: invoiceItems.results, email_sent: false }
+        }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+      }
+      invoice.client_name = invoice.client_name || invoice.recipient_name || recipient_name || 'Valued Client';
       invoice.dog_name = invoice.dog_name || '';
       invoice.dog_breed = invoice.dog_breed || '';
       const emailTo = invoice.client_email;

@@ -282,15 +282,22 @@
             <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
                 <h3 class="text-2xl font-bold mb-4">Upload Media</h3>
                 <form id="upload-form" class="space-y-4">
-                    <div>
+                    <div class="flex items-center gap-3 mb-1">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="upload-nonclient-toggle" class="sr-only peer" onchange="toggleUploadNonClient()">
+                            <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+                        </label>
+                        <span class="text-sm">Send to non-client (email only)</span>
+                    </div>
+                    <div id="upload-client-field">
                         <label class="block text-sm font-medium mb-2">Select Client</label>
                         <select id="upload-client-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                             <option value="">Choose a client...</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Also email to (optional)</label>
-                        <input type="email" id="upload-additional-email" placeholder="Extra email address..." class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    <div id="upload-email-field" class="hidden">
+                        <label class="block text-sm font-medium mb-2">Recipient Email *</label>
+                        <input type="email" id="upload-nonclient-email" placeholder="email@example.com" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Media Type</label>
@@ -320,15 +327,22 @@
             <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
                 <h3 class="text-2xl font-bold mb-4">Create Note</h3>
                 <form id="note-form" class="space-y-4">
-                    <div>
+                    <div class="flex items-center gap-3 mb-1">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="note-nonclient-toggle" class="sr-only peer" onchange="toggleNoteNonClient()">
+                            <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+                        </label>
+                        <span class="text-sm">Send to non-client (email only)</span>
+                    </div>
+                    <div id="note-client-field">
                         <label class="block text-sm font-medium mb-2">Select Client</label>
                         <select id="note-client-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                             <option value="">Choose a client...</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Also email to (optional)</label>
-                        <input type="email" id="note-additional-email" placeholder="Extra email address..." class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    <div id="note-email-field" class="hidden">
+                        <label class="block text-sm font-medium mb-2">Recipient Email *</label>
+                        <input type="email" id="note-nonclient-email" placeholder="email@example.com" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Title</label>
@@ -374,15 +388,22 @@
             <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
                 <h3 class="text-2xl font-bold mb-4">Add Fun Fact</h3>
                 <form id="fun-fact-form" class="space-y-4">
-                    <div>
+                    <div class="flex items-center gap-3 mb-1">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="fact-nonclient-toggle" class="sr-only peer" onchange="toggleFactNonClient()">
+                            <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
+                        </label>
+                        <span class="text-sm">Send to non-client (email only)</span>
+                    </div>
+                    <div id="fact-client-field">
                         <label class="block text-sm font-medium mb-2">Select Client</label>
                         <select id="fun-fact-client-select" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                             <option value="">Choose a client...</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Also email to (optional)</label>
-                        <input type="email" id="fun-fact-additional-email" placeholder="Extra email address..." class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    <div id="fact-email-field" class="hidden">
+                        <label class="block text-sm font-medium mb-2">Recipient Email *</label>
+                        <input type="email" id="fact-nonclient-email" placeholder="email@example.com" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-2">Fun Fact</label>
@@ -1424,102 +1445,136 @@
             document.getElementById('fun-fact-form').reset();
         }
 
+        // Non-client toggle functions
+        function toggleUploadNonClient() {
+            const isNonClient = document.getElementById('upload-nonclient-toggle').checked;
+            document.getElementById('upload-client-field').classList.toggle('hidden', isNonClient);
+            document.getElementById('upload-email-field').classList.toggle('hidden', !isNonClient);
+            const sel = document.getElementById('upload-client-select');
+            if (isNonClient) { sel.removeAttribute('required'); sel.value = ''; } else { sel.setAttribute('required', ''); }
+        }
+
+        function toggleNoteNonClient() {
+            const isNonClient = document.getElementById('note-nonclient-toggle').checked;
+            document.getElementById('note-client-field').classList.toggle('hidden', isNonClient);
+            document.getElementById('note-email-field').classList.toggle('hidden', !isNonClient);
+            const sel = document.getElementById('note-client-select');
+            if (isNonClient) { sel.removeAttribute('required'); sel.value = ''; } else { sel.setAttribute('required', ''); }
+        }
+
+        function toggleFactNonClient() {
+            const isNonClient = document.getElementById('fact-nonclient-toggle').checked;
+            document.getElementById('fact-client-field').classList.toggle('hidden', isNonClient);
+            document.getElementById('fact-email-field').classList.toggle('hidden', !isNonClient);
+            const sel = document.getElementById('fun-fact-client-select');
+            if (isNonClient) { sel.removeAttribute('required'); sel.value = ''; } else { sel.setAttribute('required', ''); }
+        }
+
         document.getElementById('upload-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            const clientId = document.getElementById('upload-client-select').value;
-            const type = document.getElementById('media-type').value;
+            const isNonClient = document.getElementById('upload-nonclient-toggle').checked;
             const file = document.getElementById('media-file').files[0];
+            if (!file) { showToast('Please select a file', 'error'); return; }
 
-            if (!file) {
-                showToast('Please select a file', 'error');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('client_id', clientId);
-            formData.append('type', type);
-            formData.append('caption', document.getElementById('media-caption').value || '');
-            const uploadAdditionalEmail = document.getElementById('upload-additional-email').value;
-            if (uploadAdditionalEmail) formData.append('additional_email', uploadAdditionalEmail);
-
-            try {
-                const res = await fetch(`${API_BASE}/media/upload`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: formData
-                });
-
-                if (res.ok) {
-                    showToast('Media uploaded! Client notified via email.', 'success');
-                    closeUploadModal();
-                    loadDashboard();
-                } else {
-                    showToast('Upload failed', 'error');
-                }
-            } catch (error) {
-                console.error('Upload error:', error);
-                showToast('Upload failed', 'error');
+            if (isNonClient) {
+                // Email-only mode: send email about the media
+                const email = document.getElementById('upload-nonclient-email').value;
+                if (!email) { showToast('Please enter an email address', 'error'); return; }
+                const caption = document.getElementById('media-caption').value || '';
+                const type = document.getElementById('media-type').value;
+                try {
+                    const res = await fetch(`${API_BASE}/email/send-content`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({
+                            to: email,
+                            subject: `Media Shared - K9 Vision`,
+                            content_type: 'media',
+                            title: `New ${type} shared with you`,
+                            content_body: caption || `A ${type} has been shared with you by your trainer at K9 Vision. Please contact us for details.`
+                        })
+                    });
+                    if (res.ok) { showToast('Email sent!', 'success'); closeUploadModal(); }
+                    else { const d = await res.json(); showToast(d.error || 'Failed to send', 'error'); }
+                } catch (err) { console.error(err); showToast('Failed to send email', 'error'); }
+            } else {
+                // Normal client upload
+                const clientId = document.getElementById('upload-client-select').value;
+                if (!clientId) { showToast('Please select a client', 'error'); return; }
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('client_id', clientId);
+                formData.append('type', document.getElementById('media-type').value);
+                formData.append('caption', document.getElementById('media-caption').value || '');
+                try {
+                    const res = await fetch(`${API_BASE}/media/upload`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                        body: formData
+                    });
+                    if (res.ok) { showToast('Media uploaded! Client notified via email.', 'success'); closeUploadModal(); loadDashboard(); }
+                    else { showToast('Upload failed', 'error'); }
+                } catch (error) { console.error('Upload error:', error); showToast('Upload failed', 'error'); }
             }
         });
 
         document.getElementById('note-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            const clientId = document.getElementById('note-client-select').value;
+            const isNonClient = document.getElementById('note-nonclient-toggle').checked;
             const title = document.getElementById('note-title').value;
             const content = document.getElementById('note-content').value;
-            const mediaId = document.getElementById('note-media-select').value;
 
-            try {
+            if (isNonClient) {
+                const email = document.getElementById('note-nonclient-email').value;
+                if (!email) { showToast('Please enter an email address', 'error'); return; }
+                try {
+                    const res = await fetch(`${API_BASE}/email/send-content`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({ to: email, subject: `Training Note: ${title}`, content_type: 'note', title, content_body: content })
+                    });
+                    if (res.ok) { showToast('Note emailed!', 'success'); closeNoteModal(); }
+                    else { const d = await res.json(); showToast(d.error || 'Failed to send', 'error'); }
+                } catch (err) { console.error(err); showToast('Failed to send email', 'error'); }
+            } else {
+                const clientId = document.getElementById('note-client-select').value;
+                if (!clientId) { showToast('Please select a client', 'error'); return; }
+                const mediaId = document.getElementById('note-media-select').value;
                 const body = { client_id: clientId, title, content, author_role: 'admin' };
                 if (mediaId) body.media_id = parseInt(mediaId);
-                const noteAdditionalEmail = document.getElementById('note-additional-email').value;
-                if (noteAdditionalEmail) body.additional_email = noteAdditionalEmail;
-                const res = await fetch(`${API_BASE}/notes`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify(body)
-                });
-
-                if (res.ok) {
-                    showToast('Note created! Client notified via email.', 'success');
-                    closeNoteModal();
-                    loadDashboard();
-                } else {
-                    showToast('Failed to create note', 'error');
-                }
-            } catch (error) {
-                console.error('Note error:', error);
-                showToast('Failed to create note', 'error');
+                try {
+                    const res = await fetch(`${API_BASE}/notes`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(body) });
+                    if (res.ok) { showToast('Note created! Client notified via email.', 'success'); closeNoteModal(); loadDashboard(); }
+                    else { showToast('Failed to create note', 'error'); }
+                } catch (error) { console.error('Note error:', error); showToast('Failed to create note', 'error'); }
             }
         });
 
         document.getElementById('fun-fact-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            const clientId = document.getElementById('fun-fact-client-select').value;
+            const isNonClient = document.getElementById('fact-nonclient-toggle').checked;
             const fact = document.getElementById('fun-fact-content').value;
 
-            try {
-                const res = await fetch(`${API_BASE}/fun-facts`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({ client_id: clientId, fact, additional_email: document.getElementById('fun-fact-additional-email').value || undefined })
-                });
-
-                if (res.ok) {
-                    showToast('Fun fact added! Client notified via email.', 'success');
-                    closeFunFactModal();
-                } else {
-                    showToast('Failed to add fun fact', 'error');
-                }
-            } catch (error) {
-                console.error('Fun fact error:', error);
-                showToast('Failed to add fun fact', 'error');
+            if (isNonClient) {
+                const email = document.getElementById('fact-nonclient-email').value;
+                if (!email) { showToast('Please enter an email address', 'error'); return; }
+                try {
+                    const res = await fetch(`${API_BASE}/email/send-content`, {
+                        method: 'POST',
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify({ to: email, subject: 'Fun Fact - K9 Vision', content_type: 'fun_fact', title: 'Fun Fact', content_body: fact })
+                    });
+                    if (res.ok) { showToast('Fun fact emailed!', 'success'); closeFunFactModal(); }
+                    else { const d = await res.json(); showToast(d.error || 'Failed to send', 'error'); }
+                } catch (err) { console.error(err); showToast('Failed to send email', 'error'); }
+            } else {
+                const clientId = document.getElementById('fun-fact-client-select').value;
+                if (!clientId) { showToast('Please select a client', 'error'); return; }
+                try {
+                    const res = await fetch(`${API_BASE}/fun-facts`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ client_id: clientId, fact }) });
+                    if (res.ok) { showToast('Fun fact added! Client notified via email.', 'success'); closeFunFactModal(); }
+                    else { showToast('Failed to add fun fact', 'error'); }
+                } catch (error) { console.error('Fun fact error:', error); showToast('Failed to add fun fact', 'error'); }
             }
         });
 

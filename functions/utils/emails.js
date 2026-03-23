@@ -265,15 +265,15 @@ export function invoiceEmailHtml(invoice, items) {
     <tr>
       <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;">${item.service_name}</td>
       <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.price.toFixed(2)}</td>
-      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${item.total.toFixed(2)}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${Number(item.price).toFixed(2)}</td>
+      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${Number(item.total).toFixed(2)}</td>
     </tr>
   `).join('');
 
   return emailWrapper(`
     <h2 style="color: #3B82F6; margin-bottom: 20px;">Invoice #${invoice.invoice_number}</h2>
     <p>Hello ${invoice.client_name},</p>
-    <p>Thank you so much for trusting me with ${invoice.dog_name}'s training journey. It's truly a privilege to work with you both, and I'm grateful for every session we share together.</p>
+    <p>Thank you so much for trusting K9 Vision${invoice.dog_name ? ` with ${invoice.dog_name}'s training journey` : ''}. It's truly a privilege, and I'm grateful for every session we share together.</p>
     <p>Please find the details of your invoice below:</p>
 
     <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -285,7 +285,7 @@ export function invoiceEmailHtml(invoice, items) {
 
     <div style="margin-bottom: 15px;">
       <p style="margin: 5px 0;"><strong>Bill To:</strong> ${invoice.client_name}</p>
-      <p style="margin: 5px 0;"><strong>Dog:</strong> ${invoice.dog_name}${invoice.dog_breed ? ` (${invoice.dog_breed})` : ''}</p>
+      ${invoice.dog_name ? `<p style="margin: 5px 0;"><strong>Dog:</strong> ${invoice.dog_name}${invoice.dog_breed ? ` (${invoice.dog_breed})` : ''}</p>` : ''}
     </div>
 
     <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
@@ -303,9 +303,9 @@ export function invoiceEmailHtml(invoice, items) {
     </table>
 
     <div style="text-align: right; margin-bottom: 20px;">
-      <p style="margin: 6px 0; font-size: 15px;"><strong>Subtotal:</strong> $${invoice.subtotal.toFixed(2)}</p>
-      <p style="margin: 6px 0; font-size: 15px;"><strong>Tax (${invoice.tax_rate}%):</strong> $${invoice.tax_amount.toFixed(2)}</p>
-      <p style="margin: 6px 0; font-size: 20px; color: #3B82F6;"><strong>Total: $${invoice.total.toFixed(2)}</strong></p>
+      <p style="margin: 6px 0; font-size: 15px;"><strong>Subtotal:</strong> $${Number(invoice.subtotal).toFixed(2)}</p>
+      <p style="margin: 6px 0; font-size: 15px;"><strong>Tax (${invoice.tax_rate}%):</strong> $${Number(invoice.tax_amount).toFixed(2)}</p>
+      <p style="margin: 6px 0; font-size: 20px; color: #3B82F6;"><strong>Total: $${Number(invoice.total).toFixed(2)}</strong></p>
     </div>
 
     ${invoice.notes ? `
@@ -553,6 +553,23 @@ export function resetEmailHtml(resetUrl, adminTriggered = false) {
 }
 
 // Review request email
+// Generic content email for non-client communications
+export function genericContentEmailHtml(contentType, title, body) {
+  const typeLabels = {
+    note: { heading: 'Training Note', color: '#3B82F6', icon: 'A training note has been shared with you:' },
+    fun_fact: { heading: 'Fun Fact', color: '#F59E0B', icon: 'A fun fact has been shared with you:' },
+    media: { heading: 'Media Shared', color: '#3B82F6', icon: 'New media has been shared with you:' },
+    message: { heading: 'Message', color: '#3B82F6', icon: 'You have a new message:' }
+  };
+  const cfg = typeLabels[contentType] || typeLabels.message;
+  return emailWrapper(`
+    <h2 style="color: ${cfg.color}; margin-bottom: 20px;">${cfg.heading}</h2>
+    <p>${cfg.icon}</p>
+    ${title ? `<div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${cfg.color};"><p style="margin: 0 0 5px 0;"><strong>${title}</strong></p><p style="margin: 0; color: #4B5563;">${body}</p></div>` : `<div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${cfg.color};"><p style="margin: 0; color: #4B5563;">${body}</p></div>`}
+    <p style="margin-top: 20px;">Warmly,<br/>Your Expert Trainer Charles<br/>K9 Vision Dog Training</p>
+  `);
+}
+
 export function reviewRequestHtml(clientName, reviewUrl) {
   return emailWrapper(`
     <h2 style="color: #F59E0B; margin-bottom: 20px;">We'd Love Your Feedback!</h2>
