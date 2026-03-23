@@ -99,123 +99,56 @@ export async function onRequest(context) {
         notes
       } = await request.json();
 
-      if ((!client_id || client_id === 0) && !recipient_email) {
-        return new Response(JSON.stringify({
-          error: 'Either a client or recipient email is required'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      const isNonClient = !client_id || client_id === 0;
+
+      if (isNonClient && !recipient_email) {
+        return new Response(JSON.stringify({ error: 'Either a client or recipient email is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
       if (!trainer_name || !date || !items || items.length === 0) {
-        return new Response(JSON.stringify({
-          error: 'Trainer name, date, and at least one item are required'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'Trainer name, date, and at least one item are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
+
+      // Get client info or use recipient info
+      let clientName = recipient_name || 'GUEST';
+      let dogName = 'XX';
+      if (!isNonClient) {
+        const client = await env.DB.prepare('SELECT client_name, dog_name FROM clients WHERE id = ?').bind(client_id).first();
+        if (!client) {
+          return new Response(JSON.stringify({ error: 'Client not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        }
+        clientName = client.client_name;
+        dogName = client.dog_name;
+      }
+
+      const invoice_number = generateInvoiceNumber(clientName, dogName);
 
       // Calculate totals
       let subtotal = 0;
-      items.forEach(item => {
-        subtotal += (Number(item.price) * Number(item.quantity));
-      });
+      items.forEach(item => { subtotal += (Number(item.price) * Number(item.quantity)); });
       const tax_amount = subtotal * ((tax_rate || 0) / 100);
       const total = subtotal + tax_amount;
 
-      const isNonClient = !client_id || client_id === 0;
-
-      // --- NON-CLIENT INVOICE: email-only, no DB storage ---
-      if (isNonClient) {
-        const invoice_number = generateInvoiceNumber(recipient_name || 'GUEST', 'XX');
-
-        // Build virtual invoice object for PDF/email generation
-        const virtualInvoice = {
-          invoice_number,
-          client_name: recipient_name || 'Valued Client',
-          client_email: recipient_email,
-          dog_name: '',
-          dog_breed: '',
-          trainer_name,
-          date,
-          due_date: due_date || null,
-          subtotal,
-          tax_rate: tax_rate || 0,
-          tax_amount,
-          total,
-          notes: notes || null
-        };
-
-        const virtualItems = items.map(item => ({
-          service_name: item.service_name || 'Service',
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-          total: Number(item.price) * Number(item.quantity)
-        }));
-
-        let email_sent = false;
-        let email_error = null;
-
-        if (recipient_email && recipient_email.includes('@')) {
-          try {
-            const { sendEmail, invoiceEmailHtml } = await import('../../utils/emails.js');
-            const { generateInvoicePDF } = await import('../../utils/invoice-pdf.js');
-
-            const html = invoiceEmailHtml(virtualInvoice, virtualItems);
-            const pdfBytes = await generateInvoicePDF(virtualInvoice, virtualItems);
-            let binary = '';
-            for (let i = 0; i < pdfBytes.length; i++) {
-              binary += String.fromCharCode(pdfBytes[i]);
-            }
-            const pdfBase64 = btoa(binary);
-
-            await sendEmail(env, {
-              to: recipient_email,
-              subject: `K9 Vision Invoice #${invoice_number}`,
-              html,
-              attachments: [{
-                filename: `K9Vision_Invoice_${invoice_number}.pdf`,
-                content: pdfBase64
-              }]
-            });
-            email_sent = true;
-          } catch (emailErr) {
-            console.error('Non-client invoice email failed:', emailErr);
-            email_error = emailErr.message;
-          }
-        }
-
-        return new Response(JSON.stringify({
-          success: true,
-          invoice: { ...virtualInvoice, items: virtualItems, email_sent, email_error }
-        }), { status: 201, headers: { 'Content-Type': 'application/json' } });
-      }
-
-      // --- CLIENT INVOICE: store in DB + auto-email ---
-      const client = await env.DB.prepare(
-        'SELECT client_name, dog_name FROM clients WHERE id = ?'
-      ).bind(client_id).first();
-      if (!client) {
-        return new Response(JSON.stringify({ error: 'Client not found' }), {
-          status: 404, headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
-      const invoice_number = generateInvoiceNumber(client.client_name, client.dog_name);
-
+      // INSERT into DB — client_id is NULL for non-clients
       const invoiceResult = await env.DB.prepare(
-        `INSERT INTO invoices
-         (invoice_number, client_id, trainer_name, date, due_date, subtotal, tax_rate, tax_amount, total, notes, recipient_email, recipient_name)
+        `INSERT INTO invoices (invoice_number, client_id, trainer_name, date, due_date, subtotal, tax_rate, tax_amount, total, notes, recipient_email, recipient_name)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
-        invoice_number, client_id, trainer_name, date, due_date || null,
-        subtotal, tax_rate, tax_amount, total, notes || null,
-        recipient_email || null, recipient_name || null
+        invoice_number,
+        isNonClient ? null : client_id,
+        trainer_name, date, due_date || null,
+        subtotal, tax_rate || 0, tax_amount, total,
+        notes || null, recipient_email || null, recipient_name || null
       ).run();
 
       const invoice_id = invoiceResult.meta.last_row_id;
 
       for (const item of items) {
         await env.DB.prepare(
-          `INSERT INTO invoice_items (invoice_id, service_id, service_name, quantity, price, total) VALUES (?, ?, ?, ?, ?, ?)`
-        ).bind(invoice_id, item.service_id || null, item.service_name, item.quantity, item.price, Number(item.price) * Number(item.quantity)).run();
+          'INSERT INTO invoice_items (invoice_id, service_id, service_name, quantity, price, total) VALUES (?, ?, ?, ?, ?, ?)'
+        ).bind(invoice_id, item.service_id || null, item.service_name || 'Service', Number(item.quantity), Number(item.price), Number(item.price) * Number(item.quantity)).run();
       }
 
+      // Fetch complete invoice
       const invoice = await env.DB.prepare(`
         SELECT invoices.*,
           COALESCE(invoices.recipient_name, clients.client_name) as client_name,
@@ -225,15 +158,16 @@ export async function onRequest(context) {
         WHERE invoices.id = ?
       `).bind(invoice_id).first();
 
-      const invoiceItems = await env.DB.prepare(
-        'SELECT * FROM invoice_items WHERE invoice_id = ?'
-      ).bind(invoice_id).all();
+      const invoiceItems = await env.DB.prepare('SELECT * FROM invoice_items WHERE invoice_id = ?').bind(invoice_id).all();
 
-      let email_sent = false;
-      let email_error = null;
-      invoice.client_name = invoice.client_name || 'Valued Client';
+      // Null-safe for non-client invoices
+      invoice.client_name = invoice.client_name || recipient_name || 'Valued Client';
       invoice.dog_name = invoice.dog_name || '';
       invoice.dog_breed = invoice.dog_breed || '';
+
+      // Auto-send email
+      let email_sent = false;
+      let email_error = null;
       const emailTo = invoice.client_email;
       if (emailTo && emailTo.includes('@')) {
         try {
@@ -242,9 +176,7 @@ export async function onRequest(context) {
           const html = invoiceEmailHtml(invoice, invoiceItems.results);
           const pdfBytes = await generateInvoicePDF(invoice, invoiceItems.results);
           let binary = '';
-          for (let i = 0; i < pdfBytes.length; i++) {
-            binary += String.fromCharCode(pdfBytes[i]);
-          }
+          for (let i = 0; i < pdfBytes.length; i++) { binary += String.fromCharCode(pdfBytes[i]); }
           await sendEmail(env, {
             to: emailTo,
             subject: `K9 Vision Invoice #${invoice.invoice_number}`,
