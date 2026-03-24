@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K9 Vision - Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
     <script>
@@ -49,7 +50,7 @@
 
     <!-- Invoice Preview Modal -->
     <div id="invoice-preview-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9997]">
-      <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-2xl w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
+      <div class="bg-card-dark dark:bg-card-light rounded-lg p-4 sm:p-8 max-w-2xl w-full mx-2 sm:mx-auto border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
         <h3 class="text-2xl font-bold mb-4">Invoice Preview</h3>
         <div id="invoice-preview-content"></div>
         <div class="flex gap-4 mt-6">
@@ -104,10 +105,10 @@
                 </div>
                 <div id="appt-slots-container" class="hidden">
                     <label class="block text-sm font-semibold mb-1">Available Time Slots</label>
-                    <div id="appt-slots" class="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto"></div>
+                    <div id="appt-slots" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto"></div>
                     <p class="text-xs text-gray-500 text-center mt-2">Click a slot above or enter a custom time below</p>
                 </div>
-                <div id="appt-time-inputs" class="hidden grid grid-cols-2 gap-3">
+                <div id="appt-time-inputs" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-sm font-semibold mb-1">Start Time</label>
                         <input type="time" id="appt-start-time" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
@@ -256,10 +257,115 @@
                 <button onclick="showReviewsSection()" class="bg-orange-500 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded transition-colors">
                     📝 Manage Reviews
                 </button>
+                <button onclick="showContacts()" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition-colors">
+                    📇 Contacts
+                </button>
+                <button onclick="showReports()" class="bg-emerald-600 hover:bg-emerald-800 text-white font-bold py-3 px-6 rounded transition-colors">
+                    📊 Reports
+                </button>
             </div>
         </div>
 
         <div id="sections-container">
+
+        <!-- Contacts Management -->
+        <div id="contacts-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">Contacts</h3>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="contacts-search" placeholder="Search contacts..." class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light px-3 py-1" oninput="searchContacts()">
+                    <button onclick="showAddContactModal()" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700">+ Add Contact</button>
+                    <button onclick="hideSection('contacts-section')" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none px-2" title="Close">&times;</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-border-dark dark:border-border-light text-left">
+                            <th class="pb-2 font-semibold">Name</th>
+                            <th class="pb-2 font-semibold">Email</th>
+                            <th class="pb-2 font-semibold hidden sm:table-cell">Phone</th>
+                            <th class="pb-2 font-semibold hidden sm:table-cell">Dog</th>
+                            <th class="pb-2 font-semibold hidden md:table-cell">Source</th>
+                            <th class="pb-2 font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contacts-table-body">
+                        <tr><td colspan="6" class="py-4 text-gray-400 dark:text-gray-600 text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Add/Edit Contact Modal -->
+        <div id="contact-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-4 sm:p-6 max-w-md w-full mx-2 sm:mx-auto border border-border-dark dark:border-border-light">
+                <h3 id="contact-modal-title" class="text-lg font-semibold mb-4">Add Contact</h3>
+                <input type="hidden" id="contact-edit-id">
+                <div class="space-y-3">
+                    <input type="text" id="contact-name" placeholder="Name *" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <input type="email" id="contact-email" placeholder="Email" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        <input type="tel" id="contact-phone" placeholder="Phone" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
+                    <input type="text" id="contact-dog" placeholder="Dog name" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    <textarea id="contact-notes" placeholder="Notes" rows="2" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light"></textarea>
+                </div>
+                <div class="flex gap-3 mt-4">
+                    <button onclick="saveContact()" class="flex-1 bg-primary text-white py-2 rounded hover:bg-blue-700 text-sm">Save</button>
+                    <button onclick="document.getElementById('contact-modal').classList.add('hidden')" class="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-700 text-sm">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Dashboard -->
+        <div id="reports-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">Reports</h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="exportReportsCSV()" class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Export CSV</button>
+                    <button onclick="hideSection('reports-section')" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none px-2" title="Close">&times;</button>
+                </div>
+            </div>
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="reports-summary-cards">
+                <div class="bg-background-dark dark:bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-xs text-gray-400 dark:text-gray-600 mb-1">Outstanding Balance</p>
+                    <p id="report-outstanding" class="text-xl font-bold text-red-400">$0</p>
+                </div>
+                <div class="bg-background-dark dark:bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-xs text-gray-400 dark:text-gray-600 mb-1">Total Services Sold</p>
+                    <p id="report-total-services" class="text-xl font-bold text-primary">0</p>
+                </div>
+                <div class="bg-background-dark dark:bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-xs text-gray-400 dark:text-gray-600 mb-1">Top Service</p>
+                    <p id="report-top-service" class="text-sm font-bold text-green-400 truncate">—</p>
+                </div>
+                <div class="bg-background-dark dark:bg-gray-50 rounded-lg p-4 text-center">
+                    <p class="text-xs text-gray-400 dark:text-gray-600 mb-1">Paid Invoices (12mo)</p>
+                    <p id="report-paid-count" class="text-xl font-bold text-primary">0</p>
+                </div>
+            </div>
+            <!-- Charts -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-background-dark dark:bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-sm font-semibold mb-3">Monthly Revenue (12 months)</h4>
+                    <canvas id="revenue-chart" height="200"></canvas>
+                </div>
+                <div class="bg-background-dark dark:bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-sm font-semibold mb-3">Invoice Status</h4>
+                    <canvas id="invoice-status-chart" height="200"></canvas>
+                </div>
+                <div class="bg-background-dark dark:bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-sm font-semibold mb-3">Service Popularity</h4>
+                    <canvas id="service-chart" height="200"></canvas>
+                </div>
+                <div class="bg-background-dark dark:bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-sm font-semibold mb-3">Client Growth (12 months)</h4>
+                    <canvas id="client-growth-chart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
 
         <!-- Reviews Management -->
         <div id="reviews-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
@@ -436,7 +542,7 @@
 
         <!-- Create Client Modal -->
         <div id="create-client-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-2xl w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-4 sm:p-8 max-w-2xl w-full mx-2 sm:mx-auto border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
                 <h3 class="text-2xl font-bold mb-4">Create New Client</h3>
                 <form id="create-client-form" class="space-y-4">
                     <div class="border-b border-border-dark dark:border-border-light pb-4 mb-4">
@@ -570,11 +676,11 @@
                     </div>
                     <!-- Add Dog Form (hidden by default) -->
                     <div id="add-dog-form-admin" class="hidden border border-dashed border-border-dark dark:border-border-light rounded p-3 mb-3">
-                        <div class="grid grid-cols-2 gap-2 mb-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                             <input type="text" id="new-dog-name" placeholder="Dog name *" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                             <input type="text" id="new-dog-breed" placeholder="Breed" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <input type="number" id="new-dog-age" placeholder="Age" min="0" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                             <button onclick="addDogAdmin()" class="bg-green-500 text-white px-3 py-1.5 rounded text-sm hover:bg-green-700">Add Dog</button>
                         </div>
@@ -584,7 +690,14 @@
 
                 <!-- Media -->
                 <div class="mb-6">
-                    <h4 class="font-semibold text-lg mb-2">Media</h4>
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-semibold text-lg">Media</h4>
+                        <div class="flex items-center gap-2">
+                            <button onclick="toggleAdminMediaSelect()" id="admin-media-select-toggle" class="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500">Select</button>
+                            <button onclick="selectAllAdminMedia()" id="admin-media-select-all" class="hidden text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500">Select All</button>
+                            <button onclick="bulkDeleteAdminMedia()" id="admin-media-bulk-delete" class="hidden text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete (<span id="admin-media-sel-count">0</span>)</button>
+                        </div>
+                    </div>
                     <div id="detail-media" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
                 </div>
 
@@ -600,13 +713,38 @@
                     <div id="detail-fun-facts" class="space-y-2"></div>
                 </div>
 
+                <!-- Training Milestones -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-semibold text-lg">Training Progress</h4>
+                        <button onclick="toggleMilestoneForm()" class="text-xs bg-primary text-white px-3 py-1 rounded hover:bg-blue-700">+ Add Milestone</button>
+                    </div>
+                    <!-- Add Milestone Form (hidden) -->
+                    <div id="milestone-form" class="hidden border border-dashed border-border-dark dark:border-border-light rounded p-3 mb-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                            <input type="text" id="new-milestone-title" placeholder="Milestone title *" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                            <select id="new-milestone-status" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                                <option value="not_started">Not Started</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                        <textarea id="new-milestone-desc" placeholder="Description (optional)" rows="2" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light mb-2"></textarea>
+                        <div class="flex gap-2">
+                            <button onclick="createMilestone()" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-700">Save</button>
+                            <button onclick="toggleMilestoneForm()" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">Cancel</button>
+                        </div>
+                    </div>
+                    <div id="detail-milestones" class="space-y-2"></div>
+                </div>
+
                 <button onclick="closeClientDetailModal()" class="w-full bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Close</button>
             </div>
         </div>
 
         <!-- Media Lightbox Modal -->
         <div id="media-lightbox-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-[60]" onclick="closeMediaLightbox(event)">
-            <div class="bg-card-dark dark:bg-card-light rounded-lg max-w-3xl w-full max-h-[90vh] overflow-auto border border-border-dark dark:border-border-light" onclick="event.stopPropagation()">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg max-w-3xl w-full mx-2 sm:mx-auto max-h-[90vh] overflow-auto border border-border-dark dark:border-border-light" onclick="event.stopPropagation()">
                 <div class="flex justify-between items-center p-4 border-b border-border-dark dark:border-border-light">
                     <span id="lightbox-filename" class="text-sm text-gray-400 dark:text-gray-600 truncate"></span>
                     <button onclick="closeMediaLightbox()" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none">&times;</button>
@@ -677,7 +815,7 @@
 
         <!-- Create Invoice Modal -->
         <div id="create-invoice-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-4xl w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-4 sm:p-8 max-w-4xl w-full mx-2 sm:mx-auto border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
                 <h3 class="text-2xl font-bold mb-4">Create Invoice</h3>
                 <form id="create-invoice-form" class="space-y-4">
                     <!-- Non-client toggle -->
@@ -695,7 +833,7 @@
                                 <option value="">Choose a client...</option>
                             </select>
                         </div>
-                        <div id="invoice-recipient-fields" class="hidden col-span-2 grid grid-cols-2 gap-4">
+                        <div id="invoice-recipient-fields" class="hidden col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-2">Recipient Name *</label>
                                 <input type="text" id="invoice-recipient-name" placeholder="e.g. John Doe" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
@@ -766,7 +904,7 @@
         </div>
         <!-- Invoice Detail Modal -->
         <div id="invoice-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-4xl w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-4 sm:p-8 max-w-4xl w-full mx-2 sm:mx-auto border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-start mb-4">
                     <h3 class="text-2xl font-bold" id="detail-invoice-title">Invoice Details</h3>
                     <button onclick="closeInvoiceDetailModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
@@ -831,7 +969,7 @@
                 <!-- Add Item Row -->
                 <div class="border border-dashed border-border-dark dark:border-border-light rounded p-3 mb-4">
                     <h5 class="text-sm font-medium mb-2">Add New Item</h5>
-                    <div class="grid grid-cols-5 gap-2 items-end">
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
                         <div class="col-span-2">
                             <select id="detail-new-service" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="updateDetailNewItemPrice()">
                                 <option value="">Select service...</option>
@@ -890,6 +1028,9 @@
                     </button>
                 </h3>
                 <div class="flex items-center gap-2">
+                    <button onclick="sendAppointmentReminders()" id="send-reminders-btn" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 text-sm flex items-center gap-1">
+                        <span class="material-icons text-sm">notifications_active</span> Send Reminders <span id="reminder-badge" class="hidden bg-white text-yellow-600 text-xs font-bold px-1.5 py-0.5 rounded-full ml-1">0</span>
+                    </button>
                     <button onclick="openBulkAvailabilityModal()" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">+ Add Hours</button>
                     <button onclick="openBulkBlockModal()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 text-sm">Block Date</button>
                     <button onclick="clearAllAvailability()" class="bg-red-700 text-white px-4 py-2 rounded hover:bg-red-900 text-sm">Clear All</button>
@@ -924,7 +1065,8 @@
             </div>
 
             <!-- Day Headers -->
-            <div class="grid grid-cols-7 gap-1 mb-1">
+            <div class="overflow-x-auto">
+            <div class="grid grid-cols-7 gap-1 mb-1 min-w-[320px]">
                 <div class="text-center text-xs font-semibold text-gray-400 dark:text-gray-600 py-1">Sun</div>
                 <div class="text-center text-xs font-semibold text-gray-400 dark:text-gray-600 py-1">Mon</div>
                 <div class="text-center text-xs font-semibold text-gray-400 dark:text-gray-600 py-1">Tue</div>
@@ -935,7 +1077,8 @@
             </div>
 
             <!-- Calendar Grid -->
-            <div id="calendar-grid" class="grid grid-cols-7 gap-1 mb-4"></div>
+            <div id="calendar-grid" class="grid grid-cols-7 gap-1 mb-4 min-w-[320px]"></div>
+            </div><!-- end overflow-x-auto -->
 
             <!-- Selection Action Bar -->
             <div id="selection-bar" class="hidden flex flex-wrap items-center gap-3 p-3 mb-4 rounded border border-primary bg-primary/10">
@@ -977,7 +1120,7 @@
 
         <!-- Bulk Availability Modal -->
         <div id="bulk-availability-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-lg w-full border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-4 sm:p-8 max-w-lg w-full mx-2 sm:mx-auto border border-border-dark dark:border-border-light max-h-[90vh] overflow-y-auto">
                 <h3 class="text-2xl font-bold mb-4">Set Availability</h3>
                 <div id="bulk-avail-days" class="text-sm text-gray-400 dark:text-gray-600 mb-4"></div>
 
@@ -1686,15 +1829,18 @@
             document.getElementById('detail-media').innerHTML = '<p class="text-gray-400 dark:text-gray-600 col-span-3">Loading...</p>';
             document.getElementById('detail-notes').innerHTML = '<p class="text-gray-400 dark:text-gray-600">Loading...</p>';
             document.getElementById('detail-fun-facts').innerHTML = '<p class="text-gray-400 dark:text-gray-600">Loading...</p>';
+            document.getElementById('detail-milestones').innerHTML = '<p class="text-gray-400 dark:text-gray-600">Loading...</p>';
             document.getElementById('add-dog-form-admin').classList.add('hidden');
+            document.getElementById('milestone-form').classList.add('hidden');
 
             try {
                 const headers = getAuthHeaders();
-                const [dogsRes, mediaRes, notesRes, factsRes] = await Promise.all([
+                const [dogsRes, mediaRes, notesRes, factsRes, milestonesRes] = await Promise.all([
                     fetch(`${API_BASE}/dogs?client_id=${clientId}`, { headers }),
                     fetch(`${API_BASE}/media/client/${clientId}`, { headers }),
                     fetch(`${API_BASE}/notes/client/${clientId}`, { headers }),
-                    fetch(`${API_BASE}/fun-facts/client/${clientId}`, { headers })
+                    fetch(`${API_BASE}/fun-facts/client/${clientId}`, { headers }),
+                    fetch(`${API_BASE}/milestones?client_id=${clientId}`, { headers })
                 ]);
 
                 // Dogs
@@ -1716,11 +1862,11 @@
                                         <span class="font-semibold">${d.dog_name}</span>
                                         ${d.is_primary ? '<span class="text-xs bg-primary text-white px-2 py-0.5 rounded">Primary</span>' : ''}
                                     </div>
-                                    <div class="grid grid-cols-3 gap-2 text-sm" id="dog-display-${d.id}">
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm" id="dog-display-${d.id}">
                                         <span class="text-gray-400 dark:text-gray-600">Breed: ${d.breed || 'N/A'}</span>
                                         <span class="text-gray-400 dark:text-gray-600">Age: ${d.age || 'N/A'}</span>
                                     </div>
-                                    <div class="hidden grid grid-cols-3 gap-2 mt-1" id="dog-edit-${d.id}">
+                                    <div class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1" id="dog-edit-${d.id}">
                                         <input type="text" value="${d.dog_name || ''}" placeholder="Name" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-name-${d.id}">
                                         <input type="text" value="${d.breed || ''}" placeholder="Breed" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-breed-${d.id}">
                                         <input type="number" value="${d.age || ''}" placeholder="Age" min="0" class="text-sm rounded border-gray-600 dark:border-gray-300 bg-card-dark dark:bg-white text-text-dark dark:text-text-light" id="dog-edit-age-${d.id}">
@@ -1746,25 +1892,7 @@
                 const mediaData = await mediaRes.json();
                 const media = mediaData.media || mediaData || [];
                 window.currentDetailMedia = media;
-                const mediaEl = document.getElementById('detail-media');
-                if (Array.isArray(media) && media.length > 0) {
-                    mediaEl.innerHTML = media.map((m, i) => {
-                        const preview = m.type === 'photo'
-                            ? `<img src="${m.url}" alt="${m.filename}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="openMediaLightbox(window.currentDetailMedia[${i}])">`
-                            : `<div class="bg-gray-700 dark:bg-gray-200 rounded flex flex-col items-center justify-center h-32 cursor-pointer" onclick="openMediaLightbox(window.currentDetailMedia[${i}])">
-                                <span class="material-icons text-3xl text-primary">play_circle</span>
-                                <span class="text-xs mt-1 px-1 truncate w-full text-center">${m.caption || (m.type === 'photo' ? 'Photo ' + (i+1) : 'Video ' + (i+1))}</span>
-                              </div>`;
-                        const captionHtml = m.caption ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate" title="${m.caption}">${m.caption}</p>` : '';
-                        return `<div class="relative group">
-                            ${preview}
-                            ${captionHtml}
-                            <button onclick="event.stopPropagation(); deleteMedia(${m.id})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">&times;</button>
-                        </div>`;
-                    }).join('');
-                } else {
-                    mediaEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600 col-span-3">No media yet</p>';
-                }
+                renderAdminMedia(media);
 
                 // Notes (with delete buttons)
                 const notesData = await notesRes.json();
@@ -1816,10 +1944,132 @@
                 } else {
                     factsEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No fun facts yet</p>';
                 }
+
+                // Training Milestones
+                const milestonesData = await milestonesRes.json();
+                const milestones = milestonesData.milestones || [];
+                renderMilestones(milestones);
+
                 startAdminNotesPolling();
             } catch (error) {
                 console.error('Error loading client details:', error);
             }
+        }
+
+        // --- Training Milestones ---
+        function toggleMilestoneForm() {
+            const form = document.getElementById('milestone-form');
+            form.classList.toggle('hidden');
+            if (!form.classList.contains('hidden')) {
+                document.getElementById('new-milestone-title').value = '';
+                document.getElementById('new-milestone-desc').value = '';
+                document.getElementById('new-milestone-status').value = 'not_started';
+            }
+        }
+
+        function renderMilestones(milestones) {
+            const el = document.getElementById('detail-milestones');
+            if (!milestones || milestones.length === 0) {
+                el.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No milestones yet</p>';
+                return;
+            }
+            const statusConfig = {
+                not_started: { label: 'Not Started', bg: 'bg-gray-500', icon: 'radio_button_unchecked' },
+                in_progress: { label: 'In Progress', bg: 'bg-yellow-500', icon: 'pending' },
+                completed: { label: 'Completed', bg: 'bg-green-500', icon: 'check_circle' }
+            };
+            // Progress bar
+            const completed = milestones.filter(m => m.status === 'completed').length;
+            const pct = Math.round((completed / milestones.length) * 100);
+            el.innerHTML = `
+                <div class="mb-3">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span>${completed}/${milestones.length} completed</span>
+                        <span>${pct}%</span>
+                    </div>
+                    <div class="w-full bg-gray-700 dark:bg-gray-200 rounded-full h-2">
+                        <div class="bg-green-500 h-2 rounded-full transition-all" style="width:${pct}%"></div>
+                    </div>
+                </div>
+            ` + milestones.map(m => {
+                const cfg = statusConfig[m.status] || statusConfig.not_started;
+                return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded text-sm flex items-start gap-3">
+                    <span class="material-icons ${cfg.bg} text-white rounded-full text-base mt-0.5" style="font-size:18px">${cfg.icon}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold">${m.title}</div>
+                        ${m.description ? `<p class="text-gray-400 dark:text-gray-600 text-xs mt-0.5">${m.description}</p>` : ''}
+                        ${m.completed_at ? `<p class="text-green-400 text-xs mt-0.5">Completed ${new Date(m.completed_at).toLocaleDateString()}</p>` : ''}
+                    </div>
+                    <select onchange="updateMilestoneStatus(${m.id}, this.value)" class="text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light py-1 px-2">
+                        <option value="not_started" ${m.status === 'not_started' ? 'selected' : ''}>Not Started</option>
+                        <option value="in_progress" ${m.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="completed" ${m.status === 'completed' ? 'selected' : ''}>Completed</option>
+                    </select>
+                    <button onclick="deleteMilestone(${m.id})" class="text-red-500 hover:text-red-300 text-xs flex-shrink-0">Delete</button>
+                </div>`;
+            }).join('');
+        }
+
+        async function createMilestone() {
+            const title = document.getElementById('new-milestone-title').value.trim();
+            const description = document.getElementById('new-milestone-desc').value.trim();
+            const status = document.getElementById('new-milestone-status').value;
+            if (!title) { showToast('Title is required', 'error'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/milestones`, {
+                    method: 'POST',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_id: currentDetailClientId, title, description, status })
+                });
+                if (res.ok) {
+                    showToast('Milestone added');
+                    toggleMilestoneForm();
+                    await refreshMilestones();
+                } else {
+                    const err = await res.json();
+                    showToast(err.error || 'Failed to add milestone', 'error');
+                }
+            } catch (e) { showToast('Failed to add milestone', 'error'); }
+        }
+
+        async function updateMilestoneStatus(id, status) {
+            try {
+                const res = await fetch(`${API_BASE}/milestones/${id}`, {
+                    method: 'PUT',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                if (res.ok) {
+                    showToast('Milestone updated');
+                    await refreshMilestones();
+                } else {
+                    showToast('Failed to update milestone', 'error');
+                }
+            } catch (e) { showToast('Failed to update milestone', 'error'); }
+        }
+
+        async function deleteMilestone(id) {
+            if (!confirm('Delete this milestone?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/milestones/${id}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (res.ok) {
+                    showToast('Milestone deleted');
+                    await refreshMilestones();
+                } else {
+                    showToast('Failed to delete milestone', 'error');
+                }
+            } catch (e) { showToast('Failed to delete milestone', 'error'); }
+        }
+
+        async function refreshMilestones() {
+            try {
+                const res = await fetch(`${API_BASE}/milestones?client_id=${currentDetailClientId}`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                renderMilestones(data.milestones || []);
+            } catch (e) { console.error('Refresh milestones error:', e); }
         }
 
         // Notes polling for client detail view
@@ -2055,6 +2305,87 @@
         }
 
         // Delete media from detail modal
+        // --- Admin Media Select/Bulk Delete ---
+        let adminMediaSelectMode = false;
+        let adminSelectedMediaIds = new Set();
+
+        function renderAdminMedia(media) {
+            const mediaEl = document.getElementById('detail-media');
+            if (Array.isArray(media) && media.length > 0) {
+                mediaEl.innerHTML = media.map((m, i) => {
+                    const clickAction = adminMediaSelectMode ? `toggleAdminMediaItem(${m.id})` : `openMediaLightbox(window.currentDetailMedia[${i}])`;
+                    const preview = m.type === 'photo'
+                        ? `<img src="${m.url}" alt="${m.filename}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="${clickAction}">`
+                        : `<div class="bg-gray-700 dark:bg-gray-200 rounded flex flex-col items-center justify-center h-32 cursor-pointer" onclick="${clickAction}">
+                            <span class="material-icons text-3xl text-primary">play_circle</span>
+                            <span class="text-xs mt-1 px-1 truncate w-full text-center">${m.caption || (m.type === 'photo' ? 'Photo ' + (i+1) : 'Video ' + (i+1))}</span>
+                          </div>`;
+                    const captionHtml = m.caption ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate" title="${m.caption}">${m.caption}</p>` : '';
+                    const deleteBtn = adminMediaSelectMode ? '' : `<button onclick="event.stopPropagation(); deleteMedia(${m.id})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">&times;</button>`;
+                    const checkbox = adminMediaSelectMode ? `<label class="absolute top-1 left-1 z-10"><input type="checkbox" ${adminSelectedMediaIds.has(m.id) ? 'checked' : ''} onchange="toggleAdminMediaItem(${m.id})" class="rounded border-gray-400 text-primary focus:ring-primary"></label>` : '';
+                    const ring = adminMediaSelectMode && adminSelectedMediaIds.has(m.id) ? 'ring-2 ring-primary rounded' : '';
+                    return `<div class="relative group ${ring}">${checkbox}${preview}${captionHtml}${deleteBtn}</div>`;
+                }).join('');
+            } else {
+                mediaEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600 col-span-3">No media yet</p>';
+            }
+        }
+
+        function toggleAdminMediaSelect() {
+            adminMediaSelectMode = !adminMediaSelectMode;
+            adminSelectedMediaIds.clear();
+            document.getElementById('admin-media-select-toggle').textContent = adminMediaSelectMode ? 'Cancel' : 'Select';
+            document.getElementById('admin-media-select-all').classList.toggle('hidden', !adminMediaSelectMode);
+            document.getElementById('admin-media-bulk-delete').classList.toggle('hidden', !adminMediaSelectMode);
+            updateAdminMediaCount();
+            renderAdminMedia(window.currentDetailMedia || []);
+        }
+
+        function toggleAdminMediaItem(id) {
+            if (adminSelectedMediaIds.has(id)) adminSelectedMediaIds.delete(id);
+            else adminSelectedMediaIds.add(id);
+            updateAdminMediaCount();
+            renderAdminMedia(window.currentDetailMedia || []);
+        }
+
+        function selectAllAdminMedia() {
+            const media = window.currentDetailMedia || [];
+            if (adminSelectedMediaIds.size === media.length) adminSelectedMediaIds.clear();
+            else media.forEach(m => adminSelectedMediaIds.add(m.id));
+            updateAdminMediaCount();
+            renderAdminMedia(media);
+        }
+
+        function updateAdminMediaCount() {
+            const el = document.getElementById('admin-media-sel-count');
+            if (el) el.textContent = adminSelectedMediaIds.size;
+        }
+
+        async function bulkDeleteAdminMedia() {
+            if (adminSelectedMediaIds.size === 0) { showToast('No items selected', 'error'); return; }
+            showConfirmModal('Bulk Delete Media', `Delete ${adminSelectedMediaIds.size} selected item(s)?`, async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/media/bulk-delete`, {
+                        method: 'POST',
+                        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: [...adminSelectedMediaIds] })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        showToast(`Deleted ${data.deleted} item(s)`, 'success');
+                        adminMediaSelectMode = false;
+                        adminSelectedMediaIds.clear();
+                        document.getElementById('admin-media-select-toggle').textContent = 'Select';
+                        document.getElementById('admin-media-select-all').classList.add('hidden');
+                        document.getElementById('admin-media-bulk-delete').classList.add('hidden');
+                        await viewClient(currentDetailClientId);
+                    } else {
+                        showToast('Bulk delete failed', 'error');
+                    }
+                } catch (e) { showToast('Bulk delete failed', 'error'); }
+            });
+        }
+
         async function deleteMedia(mediaId) {
             showConfirmModal('Delete Media', 'Are you sure you want to delete this media file?', async () => {
                 try {
@@ -2929,7 +3260,7 @@
             const container = document.getElementById('invoice-items-container');
             const itemHtml = `
                 <div class="invoice-item border border-border-dark dark:border-border-light rounded p-3" data-item-id="${invoiceItemCounter}">
-                    <div class="grid grid-cols-5 gap-2">
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
                         <div class="col-span-2">
                             <label class="block text-xs mb-1">Service</label>
                             <select class="item-service w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="updateItemPrice(${invoiceItemCounter})" required>
@@ -3228,6 +3559,55 @@
             calendarYear = now.getFullYear();
             calendarMonth = now.getMonth();
             await loadCalendarData();
+            checkPendingReminders();
+        }
+
+        async function checkPendingReminders() {
+            try {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                const res = await fetch(`${API_BASE}/appointments?date=${tomorrowStr}`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                const appts = (data.appointments || []).filter(a =>
+                    ['pending', 'confirmed'].includes(a.status) && !a.reminder_sent
+                );
+                const badge = document.getElementById('reminder-badge');
+                if (appts.length > 0) {
+                    badge.textContent = appts.length;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            } catch (e) { console.error('Check reminders error:', e); }
+        }
+
+        async function sendAppointmentReminders() {
+            const btn = document.getElementById('send-reminders-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-icons text-sm animate-spin">sync</span> Sending...';
+            try {
+                const res = await fetch(`${API_BASE}/appointments/send-reminders`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    if (data.sent > 0) {
+                        showToast(`Sent ${data.sent} reminder(s) for ${data.date}`, 'success');
+                    } else {
+                        showToast('No reminders to send for tomorrow', 'info');
+                    }
+                    document.getElementById('reminder-badge').classList.add('hidden');
+                } else {
+                    showToast(data.error || 'Failed to send reminders', 'error');
+                }
+            } catch (e) {
+                showToast('Failed to send reminders', 'error');
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-icons text-sm">notifications_active</span> Send Reminders <span id="reminder-badge" class="hidden bg-white text-yellow-600 text-xs font-bold px-1.5 py-0.5 rounded-full ml-1">0</span>';
+            checkPendingReminders();
         }
 
         async function loadCalendarData() {
@@ -4099,6 +4479,260 @@
         function showReviewsSection() {
             showSection('reviews-section');
             loadReviews('pending');
+        }
+
+        // --- Contacts Management ---
+        let allContacts = [];
+
+        function showContacts() {
+            showSection('contacts-section');
+            loadContacts();
+        }
+
+        async function loadContacts(search) {
+            try {
+                let url = `${API_BASE}/contacts`;
+                if (search) url += `?search=${encodeURIComponent(search)}`;
+                const res = await fetch(url, { headers: getAuthHeaders() });
+                const data = await res.json();
+                allContacts = data.contacts || [];
+                renderContacts(allContacts);
+            } catch (e) { console.error('Load contacts error:', e); }
+        }
+
+        function searchContacts() {
+            const q = document.getElementById('contacts-search').value.trim();
+            loadContacts(q || undefined);
+        }
+
+        function renderContacts(contacts) {
+            const tbody = document.getElementById('contacts-table-body');
+            if (!contacts || contacts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-gray-400 dark:text-gray-600 text-center">No contacts found</td></tr>';
+                return;
+            }
+            const sourceColors = { contact_form: 'bg-blue-500', manual: 'bg-gray-500', invoice: 'bg-pink-500' };
+            tbody.innerHTML = contacts.map(c => `
+                <tr class="border-b border-border-dark dark:border-border-light">
+                    <td class="py-2 font-medium">${c.name}</td>
+                    <td class="py-2 text-gray-400 dark:text-gray-600">${c.email || '—'}</td>
+                    <td class="py-2 text-gray-400 dark:text-gray-600 hidden sm:table-cell">${c.phone || '—'}</td>
+                    <td class="py-2 text-gray-400 dark:text-gray-600 hidden sm:table-cell">${c.dog_name || '—'}</td>
+                    <td class="py-2 hidden md:table-cell"><span class="text-xs ${sourceColors[c.source] || 'bg-gray-500'} text-white px-2 py-0.5 rounded">${c.source}</span></td>
+                    <td class="py-2">
+                        <div class="flex gap-1">
+                            <button onclick="editContact(${c.id})" class="text-xs bg-primary text-white px-2 py-1 rounded hover:bg-blue-700">Edit</button>
+                            <button onclick="convertContactToClient(${c.id})" class="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-700" title="Convert to client">Client</button>
+                            <button onclick="deleteContact(${c.id})" class="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-700">Del</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddContactModal() {
+            document.getElementById('contact-modal-title').textContent = 'Add Contact';
+            document.getElementById('contact-edit-id').value = '';
+            document.getElementById('contact-name').value = '';
+            document.getElementById('contact-email').value = '';
+            document.getElementById('contact-phone').value = '';
+            document.getElementById('contact-dog').value = '';
+            document.getElementById('contact-notes').value = '';
+            document.getElementById('contact-modal').classList.remove('hidden');
+        }
+
+        function editContact(id) {
+            const c = allContacts.find(x => x.id === id);
+            if (!c) return;
+            document.getElementById('contact-modal-title').textContent = 'Edit Contact';
+            document.getElementById('contact-edit-id').value = id;
+            document.getElementById('contact-name').value = c.name || '';
+            document.getElementById('contact-email').value = c.email || '';
+            document.getElementById('contact-phone').value = c.phone || '';
+            document.getElementById('contact-dog').value = c.dog_name || '';
+            document.getElementById('contact-notes').value = c.notes || '';
+            document.getElementById('contact-modal').classList.remove('hidden');
+        }
+
+        async function saveContact() {
+            const id = document.getElementById('contact-edit-id').value;
+            const name = document.getElementById('contact-name').value.trim();
+            const email = document.getElementById('contact-email').value.trim();
+            const phone = document.getElementById('contact-phone').value.trim();
+            const dog_name = document.getElementById('contact-dog').value.trim();
+            const notes = document.getElementById('contact-notes').value.trim();
+
+            if (!name) { showToast('Name is required', 'error'); return; }
+
+            try {
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `${API_BASE}/contacts/${id}` : `${API_BASE}/contacts`;
+                const res = await fetch(url, {
+                    method,
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, phone, dog_name, notes })
+                });
+                if (res.ok) {
+                    showToast(id ? 'Contact updated' : 'Contact added', 'success');
+                    document.getElementById('contact-modal').classList.add('hidden');
+                    loadContacts();
+                } else {
+                    const err = await res.json();
+                    showToast(err.error || 'Failed to save contact', 'error');
+                }
+            } catch (e) { showToast('Failed to save contact', 'error'); }
+        }
+
+        async function deleteContact(id) {
+            if (!confirm('Delete this contact?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/contacts/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+                if (res.ok) { showToast('Contact deleted'); loadContacts(); }
+                else showToast('Failed to delete', 'error');
+            } catch (e) { showToast('Failed to delete', 'error'); }
+        }
+
+        async function convertContactToClient(contactId) {
+            const c = allContacts.find(x => x.id === contactId);
+            if (!c) return;
+            if (!c.email) { showToast('Contact needs an email to convert to client', 'error'); return; }
+            if (!confirm(`Convert "${c.name}" to a full client? This will create a user account and send welcome credentials.`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/clients/create-with-email`, {
+                    method: 'POST',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        client_name: c.name,
+                        email: c.email,
+                        dog_name: c.dog_name || ''
+                    })
+                });
+                if (res.ok) {
+                    showToast('Contact converted to client! Credentials sent.', 'success');
+                    await deleteContact(contactId);
+                } else {
+                    const err = await res.json();
+                    showToast(err.error || 'Failed to convert contact', 'error');
+                }
+            } catch (e) { showToast('Failed to convert contact', 'error'); }
+        }
+
+        // --- Reports Dashboard ---
+        let reportCharts = {};
+        let reportData = null;
+
+        function showReports() {
+            showSection('reports-section');
+            loadReports();
+        }
+
+        async function loadReports() {
+            try {
+                const res = await fetch(`${API_BASE}/stats/extended`, { headers: getAuthHeaders() });
+                reportData = await res.json();
+                if (!reportData.success) { showToast('Failed to load reports', 'error'); return; }
+
+                // Summary cards
+                document.getElementById('report-outstanding').textContent = '$' + Number(reportData.outstandingBalance).toFixed(2);
+                const totalSold = (reportData.servicePopularity || []).reduce((s, r) => s + r.count, 0);
+                document.getElementById('report-total-services').textContent = totalSold;
+                const topService = reportData.servicePopularity?.[0];
+                document.getElementById('report-top-service').textContent = topService ? topService.service_name : '—';
+                const paidCount = (reportData.revenueByMonth || []).reduce((s, r) => s + r.count, 0);
+                document.getElementById('report-paid-count').textContent = paidCount;
+
+                renderReportCharts(reportData);
+            } catch (e) { console.error('Load reports error:', e); }
+        }
+
+        function renderReportCharts(data) {
+            // Destroy existing charts
+            Object.values(reportCharts).forEach(c => c.destroy());
+            reportCharts = {};
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#9CA3AF' : '#6B7280';
+            const gridColor = isDark ? '#1F2937' : '#E5E7EB';
+
+            const chartDefaults = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: textColor, font: { size: 11 } } } },
+                scales: {
+                    x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } },
+                    y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } }
+                }
+            };
+
+            // Revenue line chart
+            const revMonths = (data.revenueByMonth || []).map(r => r.month);
+            const revAmounts = (data.revenueByMonth || []).map(r => r.revenue);
+            reportCharts.revenue = new Chart(document.getElementById('revenue-chart'), {
+                type: 'line',
+                data: {
+                    labels: revMonths,
+                    datasets: [{ label: 'Revenue ($)', data: revAmounts, borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3 }]
+                },
+                options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: false } } }
+            });
+
+            // Invoice status doughnut
+            const statuses = (data.invoiceStatus || []);
+            const statusColors = { paid: '#22C55E', pending: '#F59E0B', overdue: '#EF4444', cancelled: '#6B7280' };
+            reportCharts.invoiceStatus = new Chart(document.getElementById('invoice-status-chart'), {
+                type: 'doughnut',
+                data: {
+                    labels: statuses.map(s => s.status),
+                    datasets: [{ data: statuses.map(s => s.count), backgroundColor: statuses.map(s => statusColors[s.status] || '#6B7280') }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 } } } } }
+            });
+
+            // Service popularity bar chart
+            const services = (data.servicePopularity || []).slice(0, 8);
+            reportCharts.services = new Chart(document.getElementById('service-chart'), {
+                type: 'bar',
+                data: {
+                    labels: services.map(s => s.service_name.length > 15 ? s.service_name.slice(0, 15) + '...' : s.service_name),
+                    datasets: [{ label: 'Times Sold', data: services.map(s => s.count), backgroundColor: '#8B5CF6' }]
+                },
+                options: { ...chartDefaults, indexAxis: 'y', plugins: { ...chartDefaults.plugins, legend: { display: false } } }
+            });
+
+            // Client growth line chart
+            const growthMonths = (data.clientGrowth || []).map(r => r.month);
+            const growthCounts = (data.clientGrowth || []).map(r => r.new_clients);
+            reportCharts.clientGrowth = new Chart(document.getElementById('client-growth-chart'), {
+                type: 'bar',
+                data: {
+                    labels: growthMonths,
+                    datasets: [{ label: 'New Clients', data: growthCounts, backgroundColor: '#10B981' }]
+                },
+                options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: false } } }
+            });
+        }
+
+        function exportReportsCSV() {
+            if (!reportData) { showToast('Load reports first', 'error'); return; }
+            let csv = 'Month,Revenue,Paid Invoices\n';
+            (reportData.revenueByMonth || []).forEach(r => {
+                csv += `${r.month},${r.revenue},${r.count}\n`;
+            });
+            csv += '\nService,Times Sold,Revenue\n';
+            (reportData.servicePopularity || []).forEach(s => {
+                csv += `"${s.service_name}",${s.count},${s.revenue}\n`;
+            });
+            csv += '\nInvoice Status,Count,Total\n';
+            (reportData.invoiceStatus || []).forEach(s => {
+                csv += `${s.status},${s.count},${s.total}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `K9Vision_Report_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
         }
 
         async function loadReviews(status) {

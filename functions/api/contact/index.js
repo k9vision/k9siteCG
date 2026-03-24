@@ -59,6 +59,27 @@ export async function onRequest(context) {
       throw new Error(`Resend API error: ${error}`);
     }
 
+    // Store as contact in DB for tracking
+    try {
+      const existingContact = email?.trim()
+        ? await env.DB.prepare('SELECT id FROM contacts WHERE email = ?').bind(email.trim()).first()
+        : null;
+      if (!existingContact) {
+        await env.DB.prepare(
+          'INSERT INTO contacts (name, email, phone, dog_name, source, notes) VALUES (?, ?, ?, ?, ?, ?)'
+        ).bind(
+          name.trim(),
+          email?.trim() || null,
+          phone?.trim() || null,
+          dogName?.trim() || null,
+          'contact_form',
+          message?.trim() || null
+        ).run();
+      }
+    } catch (dbErr) {
+      console.error('Failed to store contact (non-blocking):', dbErr);
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
     });

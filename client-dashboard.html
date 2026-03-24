@@ -74,7 +74,7 @@
             </div>
             <div class="mt-3 flex items-center gap-4 flex-wrap">
                 <span class="text-sm text-gray-400 dark:text-gray-600"><span class="material-icons text-sm align-middle mr-1">email</span><span id="profile-email-text">—</span></span>
-                <button onclick="requestPasswordReset()" class="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700 flex items-center gap-1">
+                <button onclick="document.getElementById('password-change-modal').classList.remove('hidden')" class="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700 flex items-center gap-1">
                     <span class="material-icons text-sm">lock_reset</span> Change Password
                 </button>
             </div>
@@ -232,7 +232,12 @@
                         </button>
                     </div>
                 </div>
-                <div class="flex justify-end mb-2">
+                <div class="flex justify-between items-center mb-2">
+                    <div id="media-select-controls" class="flex items-center gap-2">
+                        <button onclick="toggleMediaSelectMode()" id="media-select-toggle" class="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500">Select</button>
+                        <button onclick="selectAllMedia()" id="media-select-all-btn" class="hidden text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500">Select All</button>
+                        <button onclick="bulkDeleteMedia()" id="media-bulk-delete-btn" class="hidden text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete Selected (<span id="media-selected-count">0</span>)</button>
+                    </div>
                     <select id="media-sort" onchange="sortAndRenderMedia()" class="rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-xs px-2 py-1">
                         <option value="newest">Newest First</option>
                         <option value="oldest">Oldest First</option>
@@ -546,6 +551,32 @@
             <div id="lightbox-content" class="flex items-center justify-center p-4 bg-black min-h-[300px]"></div>
             <div id="lightbox-caption-area" class="hidden p-4 border-t border-border-dark dark:border-border-light">
                 <p id="lightbox-caption-text" class="text-sm text-gray-300 dark:text-gray-600"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Change Modal -->
+    <div id="password-change-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-card-dark dark:bg-card-light rounded-lg p-6 max-w-sm w-full border border-border-dark dark:border-border-light">
+            <h3 class="text-lg font-semibold mb-4">Change Password</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Current Password</label>
+                    <input type="password" id="pw-current" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" placeholder="Enter current password">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">New Password</label>
+                    <input type="password" id="pw-new" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" placeholder="Min 8 characters">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Confirm New Password</label>
+                    <input type="password" id="pw-confirm" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" placeholder="Re-enter new password">
+                </div>
+                <p id="pw-error" class="text-red-500 text-xs hidden"></p>
+            </div>
+            <div class="flex gap-3 mt-4">
+                <button onclick="submitPasswordChange()" class="flex-1 bg-primary text-white py-2 rounded hover:bg-blue-700 text-sm">Update Password</button>
+                <button onclick="closePasswordModal()" class="flex-1 bg-gray-500 text-white py-2 rounded hover:bg-gray-700 text-sm">Cancel</button>
             </div>
         </div>
     </div>
@@ -1030,6 +1061,73 @@
             return 'video/mp4';
         }
 
+        let mediaSelectMode = false;
+        let selectedMediaIds = new Set();
+
+        function toggleMediaSelectMode() {
+            mediaSelectMode = !mediaSelectMode;
+            selectedMediaIds.clear();
+            const toggleBtn = document.getElementById('media-select-toggle');
+            const selectAllBtn = document.getElementById('media-select-all-btn');
+            const bulkDeleteBtn = document.getElementById('media-bulk-delete-btn');
+            toggleBtn.textContent = mediaSelectMode ? 'Cancel' : 'Select';
+            toggleBtn.className = mediaSelectMode
+                ? 'text-xs bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700'
+                : 'text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500';
+            selectAllBtn.classList.toggle('hidden', !mediaSelectMode);
+            bulkDeleteBtn.classList.toggle('hidden', !mediaSelectMode);
+            updateSelectedCount();
+            renderMediaGallery();
+        }
+
+        function toggleMediaSelect(id) {
+            if (selectedMediaIds.has(id)) selectedMediaIds.delete(id);
+            else selectedMediaIds.add(id);
+            updateSelectedCount();
+            const cb = document.getElementById(`media-cb-${id}`);
+            if (cb) cb.checked = selectedMediaIds.has(id);
+        }
+
+        function selectAllMedia() {
+            if (selectedMediaIds.size === clientMediaItems.length) {
+                selectedMediaIds.clear();
+            } else {
+                clientMediaItems.forEach(m => selectedMediaIds.add(m.id));
+            }
+            updateSelectedCount();
+            renderMediaGallery();
+        }
+
+        function updateSelectedCount() {
+            const el = document.getElementById('media-selected-count');
+            if (el) el.textContent = selectedMediaIds.size;
+        }
+
+        async function bulkDeleteMedia() {
+            if (selectedMediaIds.size === 0) { showToast('No items selected', 'error'); return; }
+            if (!confirm(`Delete ${selectedMediaIds.size} selected item(s)? This cannot be undone.`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/media/bulk-delete`, {
+                    method: 'POST',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: [...selectedMediaIds] })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(`Deleted ${data.deleted} item(s)`, 'success');
+                    selectedMediaIds.clear();
+                    mediaSelectMode = false;
+                    document.getElementById('media-select-toggle').textContent = 'Select';
+                    document.getElementById('media-select-toggle').className = 'text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500';
+                    document.getElementById('media-select-all-btn').classList.add('hidden');
+                    document.getElementById('media-bulk-delete-btn').classList.add('hidden');
+                    if (currentClientId) loadMedia(currentClientId);
+                } else {
+                    showToast(data.error || 'Bulk delete failed', 'error');
+                }
+            } catch (e) { showToast('Bulk delete failed', 'error'); }
+        }
+
         function renderMediaGallery() {
             const mediaList = document.getElementById('media-list');
             if (clientMediaItems.length > 0) {
@@ -1044,14 +1142,16 @@
                     const dateHtml = dateStr ? `<p class="text-xs text-gray-500 mt-1">${new Date(dateStr).toLocaleDateString()}</p>` : '';
                     const displayName = getMediaDisplayName(item, i);
                     const preview = item.type === 'photo'
-                        ? `<img src="${item.url}" alt="${displayName}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="openMediaLightbox(${idx})">`
-                        : `<div class="bg-gray-700 dark:bg-gray-200 rounded flex flex-col items-center justify-center h-32 cursor-pointer" onclick="openMediaLightbox(${idx})">
+                        ? `<img src="${item.url}" alt="${displayName}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="${mediaSelectMode ? `toggleMediaSelect(${item.id})` : `openMediaLightbox(${idx})`}">`
+                        : `<div class="bg-gray-700 dark:bg-gray-200 rounded flex flex-col items-center justify-center h-32 cursor-pointer" onclick="${mediaSelectMode ? `toggleMediaSelect(${item.id})` : `openMediaLightbox(${idx})`}">
                             <span class="material-icons text-3xl text-primary">play_circle</span>
                             <span class="text-xs mt-1 px-1 truncate w-full text-center">${displayName}</span>
                           </div>`;
                     const captionHtml = item.caption ? `<p class="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate" title="${item.caption}">${item.caption}</p>` : '';
-                    const deleteBtn = `<button onclick="deleteMedia(${item.id})" class="absolute top-1 right-1 bg-black bg-opacity-60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600" title="Delete"><span class="material-icons text-sm">delete</span></button>`;
-                    return `<div class="relative group">${preview}${deleteBtn}${captionHtml}${dateHtml}</div>`;
+                    const deleteBtn = mediaSelectMode ? '' : `<button onclick="deleteMedia(${item.id})" class="absolute top-1 right-1 bg-black bg-opacity-60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600" title="Delete"><span class="material-icons text-sm">delete</span></button>`;
+                    const checkbox = mediaSelectMode ? `<label class="absolute top-1 left-1 z-10"><input type="checkbox" id="media-cb-${item.id}" ${selectedMediaIds.has(item.id) ? 'checked' : ''} onchange="toggleMediaSelect(${item.id})" class="rounded border-gray-400 text-primary focus:ring-primary"></label>` : '';
+                    const selectedBorder = mediaSelectMode && selectedMediaIds.has(item.id) ? 'ring-2 ring-primary rounded' : '';
+                    return `<div class="relative group ${selectedBorder}">${checkbox}${preview}${deleteBtn}${captionHtml}${dateHtml}</div>`;
                 }).join('')}</div>`;
             } else {
                 mediaList.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No media files yet</p>';
@@ -2180,36 +2280,60 @@
                 y -= 20;
 
                 // Items
+                let currentPage = page;
                 if (invoice.items) {
                     for (const item of invoice.items) {
-                        page.drawText(item.service_name || '', { x: 50, y, size: 10, font });
-                        page.drawText(String(item.quantity), { x: 355, y, size: 10, font });
-                        page.drawText('$' + Number(item.price).toFixed(2), { x: 410, y, size: 10, font });
-                        page.drawText('$' + Number(item.total).toFixed(2), { x: 490, y, size: 10, font });
+                        if (y < 80) {
+                            currentPage = pdfDoc.addPage([612, 792]);
+                            y = 792 - 50;
+                        }
+                        currentPage.drawText(item.service_name || '', { x: 50, y, size: 10, font });
+                        currentPage.drawText(String(item.quantity), { x: 355, y, size: 10, font });
+                        currentPage.drawText('$' + Number(item.price).toFixed(2), { x: 410, y, size: 10, font });
+                        currentPage.drawText('$' + Number(item.total).toFixed(2), { x: 490, y, size: 10, font });
                         y -= 18;
                     }
                 }
 
+                if (y < 80) { currentPage = pdfDoc.addPage([612, 792]); y = 792 - 50; }
                 y -= 10;
                 // Line
-                page.drawLine({ start: { x: 350, y: y + 5 }, end: { x: width - 50, y: y + 5 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+                currentPage.drawLine({ start: { x: 350, y: y + 5 }, end: { x: width - 50, y: y + 5 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
 
                 // Totals
-                page.drawText(`Subtotal: $${Number(invoice.subtotal).toFixed(2)}`, { x: 410, y, size: 10, font });
+                currentPage.drawText(`Subtotal: $${Number(invoice.subtotal).toFixed(2)}`, { x: 410, y, size: 10, font });
                 y -= 18;
-                page.drawText(`Tax (${invoice.tax_rate}%): $${Number(invoice.tax_amount).toFixed(2)}`, { x: 410, y, size: 10, font });
+                currentPage.drawText(`Tax (${invoice.tax_rate}%): $${Number(invoice.tax_amount).toFixed(2)}`, { x: 410, y, size: 10, font });
                 y -= 20;
-                page.drawText(`Total: $${Number(invoice.total).toFixed(2)}`, { x: 410, y, size: 14, font: boldFont, color: rgb(0.231, 0.510, 0.965) });
+                currentPage.drawText(`Total: $${Number(invoice.total).toFixed(2)}`, { x: 410, y, size: 14, font: boldFont, color: rgb(0.231, 0.510, 0.965) });
 
                 if (invoice.notes) {
                     y -= 40;
-                    page.drawText('Notes:', { x: 50, y, size: 10, font: boldFont });
+                    if (y < 80) { currentPage = pdfDoc.addPage([612, 792]); y = 792 - 50; }
+                    currentPage.drawText('Notes:', { x: 50, y, size: 10, font: boldFont });
                     y -= 15;
-                    page.drawText(invoice.notes, { x: 50, y, size: 10, font });
+                    // Word-wrap notes to fit page width
+                    const words = invoice.notes.split(' ');
+                    let line = '';
+                    for (const word of words) {
+                        const testLine = line ? line + ' ' + word : word;
+                        if (font.widthOfTextAtSize(testLine, 10) > width - 110) {
+                            if (y < 80) { currentPage = pdfDoc.addPage([612, 792]); y = 792 - 50; }
+                            currentPage.drawText(line, { x: 50, y, size: 10, font });
+                            y -= 14;
+                            line = word;
+                        } else {
+                            line = testLine;
+                        }
+                    }
+                    if (line) {
+                        if (y < 80) { currentPage = pdfDoc.addPage([612, 792]); y = 792 - 50; }
+                        currentPage.drawText(line, { x: 50, y, size: 10, font });
+                    }
                 }
 
-                // Footer
-                page.drawText('K9 Vision Dog Training | Houston, TX | trainercg@k9visiontx.com', { x: 50, y: 30, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
+                // Footer on last page
+                currentPage.drawText('K9 Vision Dog Training | Houston, TX | trainercg@k9visiontx.com', { x: 50, y: 30, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
 
                 const pdfBytes = await pdfDoc.save();
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
@@ -2226,26 +2350,55 @@
         }
 
         // PASSWORD RESET
-        async function requestPasswordReset() {
+        function closePasswordModal() {
+            document.getElementById('password-change-modal').classList.add('hidden');
+            document.getElementById('pw-current').value = '';
+            document.getElementById('pw-new').value = '';
+            document.getElementById('pw-confirm').value = '';
+            document.getElementById('pw-error').classList.add('hidden');
+        }
+
+        async function submitPasswordChange() {
+            const current = document.getElementById('pw-current').value;
+            const newPw = document.getElementById('pw-new').value;
+            const confirm = document.getElementById('pw-confirm').value;
+            const errEl = document.getElementById('pw-error');
+
+            errEl.classList.add('hidden');
+
+            if (!current || !newPw || !confirm) {
+                errEl.textContent = 'All fields are required';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            if (newPw.length < 8) {
+                errEl.textContent = 'New password must be at least 8 characters';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            if (newPw !== confirm) {
+                errEl.textContent = 'New passwords do not match';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
             try {
-                const emailEl = document.getElementById('profile-email-text');
-                const email = emailEl ? emailEl.textContent : null;
-                if (!email || email === '—') {
-                    showToast('No email address on file. Please add your email first.', 'error');
-                    return;
-                }
-                const res = await fetch('/api/auth/forgot-password', {
+                const res = await fetch(`${API_BASE}/auth/change-password`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ current_password: current, new_password: newPw })
                 });
+                const data = await res.json();
                 if (res.ok) {
-                    showToast('Password reset link sent to your email!', 'success');
+                    showToast('Password changed successfully!', 'success');
+                    closePasswordModal();
                 } else {
-                    showToast('Failed to send reset link', 'error');
+                    errEl.textContent = data.error || 'Failed to change password';
+                    errEl.classList.remove('hidden');
                 }
             } catch (err) {
-                showToast('Failed to send reset link', 'error');
+                errEl.textContent = 'Failed to change password';
+                errEl.classList.remove('hidden');
             }
         }
 

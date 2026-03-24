@@ -583,6 +583,26 @@ export function genericContentEmailHtml(contentType, title, body) {
   `);
 }
 
+export function appointmentReminderHtml(clientName, dogName, date, time, serviceName) {
+  return emailWrapper(`
+    <h2 style="color: #F59E0B; margin-bottom: 20px;">Appointment Reminder</h2>
+    <p>Hello ${clientName},</p>
+    <p>This is a friendly reminder that you have an appointment scheduled for <strong>${dogName}</strong> tomorrow!</p>
+    <div style="background: #fffbeb; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
+      <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+      <p style="margin: 5px 0;"><strong>Time:</strong> ${time}</p>
+      <p style="margin: 5px 0;"><strong>Service:</strong> ${serviceName || 'General Training'}</p>
+    </div>
+    <p>Please arrive 5 minutes early. If you need to reschedule or cancel, please let us know as soon as possible.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${SITE_URL}/client-dashboard.html" style="background: #F59E0B; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+        View My Appointments
+      </a>
+    </div>
+    <p style="margin-top: 20px;">See you tomorrow!<br/>Your Expert Trainer Charles<br/>K9 Vision Dog Training</p>
+  `);
+}
+
 export function reviewRequestHtml(clientName, reviewUrl) {
   return emailWrapper(`
     <h2 style="color: #F59E0B; margin-bottom: 20px;">We'd Love Your Feedback!</h2>
