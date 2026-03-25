@@ -58,7 +58,7 @@ export async function onRequest(context) {
     }
 
     if (request.method === 'PUT') {
-      const { status, notes, new_items, trainer_name, date, due_date, tax_rate } = await request.json();
+      const { status, notes, new_items, trainer_name, date, due_date, tax_rate, discount_type, discount_value } = await request.json();
 
       if (status) {
         // Invoice status state machine — validate transition
@@ -121,17 +121,27 @@ export async function onRequest(context) {
         ).bind(due_date, invoiceId).run();
       }
 
-      if (tax_rate !== undefined) {
-        // Update tax_rate and recalculate tax_amount and total from current subtotal
+      if (tax_rate !== undefined || discount_type !== undefined || discount_value !== undefined) {
+        // Recalculate totals with tax and discount
         const current = await env.DB.prepare(
-          'SELECT subtotal FROM invoices WHERE id = ?'
+          'SELECT subtotal, tax_rate, discount_type, discount_value FROM invoices WHERE id = ?'
         ).bind(invoiceId).first();
         const subtotal = current.subtotal || 0;
-        const taxAmount = subtotal * (tax_rate / 100);
-        const total = subtotal + taxAmount;
+        const newTaxRate = tax_rate !== undefined ? tax_rate : (current.tax_rate || 0);
+        const newDiscountType = discount_type !== undefined ? discount_type : current.discount_type;
+        const newDiscountValue = discount_value !== undefined ? discount_value : (current.discount_value || 0);
+        let discountAmount = 0;
+        if (newDiscountType === 'percentage' && newDiscountValue > 0) {
+          discountAmount = subtotal * (newDiscountValue / 100);
+        } else if (newDiscountType === 'fixed' && newDiscountValue > 0) {
+          discountAmount = Math.min(newDiscountValue, subtotal);
+        }
+        const taxable = subtotal - discountAmount;
+        const taxAmount = taxable * (newTaxRate / 100);
+        const total = taxable + taxAmount;
         await env.DB.prepare(
-          'UPDATE invoices SET tax_rate = ?, tax_amount = ?, total = ? WHERE id = ?'
-        ).bind(tax_rate, taxAmount, total, invoiceId).run();
+          'UPDATE invoices SET tax_rate = ?, tax_amount = ?, total = ?, discount_type = ?, discount_value = ?, discount_amount = ? WHERE id = ?'
+        ).bind(newTaxRate, taxAmount, total, newDiscountType || null, newDiscountValue, discountAmount, invoiceId).run();
       }
 
       // Add new line items and recalculate totals
@@ -149,16 +159,23 @@ export async function onRequest(context) {
         ).bind(invoiceId).first();
 
         const currentInvoice = await env.DB.prepare(
-          'SELECT tax_rate FROM invoices WHERE id = ?'
+          'SELECT tax_rate, discount_type, discount_value FROM invoices WHERE id = ?'
         ).bind(invoiceId).first();
 
         const subtotal = allItems.subtotal || 0;
-        const taxAmount = subtotal * (currentInvoice.tax_rate / 100);
-        const total = subtotal + taxAmount;
+        let discAmt = 0;
+        if (currentInvoice.discount_type === 'percentage' && currentInvoice.discount_value > 0) {
+          discAmt = subtotal * (currentInvoice.discount_value / 100);
+        } else if (currentInvoice.discount_type === 'fixed' && currentInvoice.discount_value > 0) {
+          discAmt = Math.min(currentInvoice.discount_value, subtotal);
+        }
+        const taxableAmt = subtotal - discAmt;
+        const taxAmount = taxableAmt * (currentInvoice.tax_rate / 100);
+        const total = taxableAmt + taxAmount;
 
         await env.DB.prepare(
-          'UPDATE invoices SET subtotal = ?, tax_amount = ?, total = ? WHERE id = ?'
-        ).bind(subtotal, taxAmount, total, invoiceId).run();
+          'UPDATE invoices SET subtotal = ?, tax_amount = ?, total = ?, discount_amount = ? WHERE id = ?'
+        ).bind(subtotal, taxAmount, total, discAmt, invoiceId).run();
       }
 
       // Get updated invoice with items

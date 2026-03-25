@@ -95,6 +95,8 @@ export async function onRequest(context) {
         date,
         due_date,
         tax_rate,
+        discount_type,
+        discount_value,
         items,
         notes
       } = await request.json();
@@ -125,19 +127,27 @@ export async function onRequest(context) {
       // Calculate totals
       let subtotal = 0;
       items.forEach(item => { subtotal += (Number(item.price) * Number(item.quantity)); });
-      const tax_amount = subtotal * ((tax_rate || 0) / 100);
-      const total = subtotal + tax_amount;
+      let discount_amount = 0;
+      if (discount_type === 'percentage' && discount_value > 0) {
+        discount_amount = subtotal * (discount_value / 100);
+      } else if (discount_type === 'fixed' && discount_value > 0) {
+        discount_amount = Math.min(discount_value, subtotal);
+      }
+      const taxable = subtotal - discount_amount;
+      const tax_amount = taxable * ((tax_rate || 0) / 100);
+      const total = taxable + tax_amount;
 
       // INSERT into DB — client_id is NULL for non-clients
       const invoiceResult = await env.DB.prepare(
-        `INSERT INTO invoices (invoice_number, client_id, trainer_name, date, due_date, subtotal, tax_rate, tax_amount, total, notes, recipient_email, recipient_name)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO invoices (invoice_number, client_id, trainer_name, date, due_date, subtotal, tax_rate, tax_amount, total, notes, recipient_email, recipient_name, discount_type, discount_value, discount_amount)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         invoice_number,
         isNonClient ? null : client_id,
         trainer_name, date, due_date || null,
         subtotal, tax_rate || 0, tax_amount, total,
-        notes || null, recipient_email || null, recipient_name || null
+        notes || null, recipient_email || null, recipient_name || null,
+        discount_type || null, discount_value || 0, discount_amount
       ).run();
 
       const invoice_id = invoiceResult.meta.last_row_id;

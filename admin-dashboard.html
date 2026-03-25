@@ -860,6 +860,20 @@
                             <input type="number" step="0.01" id="invoice-tax-rate" value="8.25" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                         </div>
                     </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Discount Type</label>
+                            <select id="invoice-discount-type" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="calculateInvoiceTotal()">
+                                <option value="">No Discount</option>
+                                <option value="percentage">Percentage (%)</option>
+                                <option value="fixed">Fixed Amount ($)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Discount Value</label>
+                            <input type="number" step="0.01" min="0" id="invoice-discount-value" value="0" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" oninput="calculateInvoiceTotal()">
+                        </div>
+                    </div>
 
                     <div class="border-t border-border-dark dark:border-border-light pt-4">
                         <div class="flex justify-between items-center mb-3">
@@ -877,6 +891,10 @@
                                 <div class="flex justify-between">
                                     <span>Subtotal:</span>
                                     <span id="invoice-subtotal">$0.00</span>
+                                </div>
+                                <div id="invoice-discount-row" class="flex justify-between text-green-400 hidden">
+                                    <span id="invoice-discount-label">Discount:</span>
+                                    <span id="invoice-discount-display">-$0.00</span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span>Tax:</span>
@@ -930,9 +948,16 @@
                         <input type="date" id="detail-due-date" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light mt-1">
                     </div>
                 </div>
-                <div class="flex items-center gap-3 mb-6">
+                <div class="flex flex-wrap items-center gap-3 mb-6">
                     <label class="text-sm text-gray-400">Tax Rate (%):</label>
                     <input type="number" step="0.01" id="detail-tax-rate-input" class="w-24 text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    <label class="text-sm text-gray-400 ml-2">Discount:</label>
+                    <select id="detail-discount-type" class="w-28 text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        <option value="">None</option>
+                        <option value="percentage">%</option>
+                        <option value="fixed">$</option>
+                    </select>
+                    <input type="number" step="0.01" min="0" id="detail-discount-value" class="w-24 text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="0">
                     <button onclick="saveInvoiceDetails()" class="bg-green-500 text-white px-4 py-1 rounded text-sm hover:bg-green-700">Save Changes</button>
                 </div>
 
@@ -993,6 +1018,10 @@
                         <div class="flex justify-between">
                             <span>Subtotal:</span>
                             <span id="detail-subtotal">$0.00</span>
+                        </div>
+                        <div id="detail-discount-row" class="flex justify-between text-green-400 hidden">
+                            <span id="detail-discount-label">Discount:</span>
+                            <span id="detail-discount-display">-$0.00</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Tax (<span id="detail-tax-rate">0</span>%):</span>
@@ -3001,6 +3030,8 @@
                 document.getElementById('detail-invoice-date').value = inv.date || '';
                 document.getElementById('detail-due-date').value = inv.due_date || '';
                 document.getElementById('detail-tax-rate-input').value = Number(inv.tax_rate || 0);
+                document.getElementById('detail-discount-type').value = inv.discount_type || '';
+                document.getElementById('detail-discount-value').value = Number(inv.discount_value || 0);
 
                 // Status
                 document.getElementById('detail-status').value = inv.status || 'pending';
@@ -3034,6 +3065,14 @@
 
                 // Totals
                 document.getElementById('detail-subtotal').textContent = `$${Number(inv.subtotal).toFixed(2)}`;
+                const detailDiscountRow = document.getElementById('detail-discount-row');
+                if (inv.discount_amount && inv.discount_amount > 0) {
+                    detailDiscountRow.classList.remove('hidden');
+                    document.getElementById('detail-discount-label').textContent = inv.discount_type === 'percentage' ? `Discount (${inv.discount_value}%):` : 'Discount:';
+                    document.getElementById('detail-discount-display').textContent = `-$${Number(inv.discount_amount).toFixed(2)}`;
+                } else {
+                    detailDiscountRow.classList.add('hidden');
+                }
                 document.getElementById('detail-tax-rate').textContent = Number(inv.tax_rate).toFixed(2);
                 document.getElementById('detail-tax').textContent = `$${Number(inv.tax_amount).toFixed(2)}`;
                 document.getElementById('detail-total').textContent = `$${Number(inv.total).toFixed(2)}`;
@@ -3114,11 +3153,13 @@
             const date = document.getElementById('detail-invoice-date').value;
             const due_date = document.getElementById('detail-due-date').value;
             const tax_rate = parseFloat(document.getElementById('detail-tax-rate-input').value) || 0;
+            const discount_type = document.getElementById('detail-discount-type').value || null;
+            const discount_value = parseFloat(document.getElementById('detail-discount-value').value) || 0;
             try {
                 const res = await fetch(`${API_BASE}/invoices/${currentDetailInvoiceId}`, {
                     method: 'PUT',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ trainer_name, date, due_date, tax_rate })
+                    body: JSON.stringify({ trainer_name, date, due_date, tax_rate, discount_type, discount_value })
                 });
                 if (res.ok) {
                     showToast('Invoice details saved!', 'success');
@@ -3315,9 +3356,28 @@
                 subtotal += quantity * price;
             });
 
+            const discountType = document.getElementById('invoice-discount-type').value;
+            const discountValue = parseFloat(document.getElementById('invoice-discount-value').value) || 0;
+            let discountAmount = 0;
+            if (discountType === 'percentage') {
+                discountAmount = subtotal * (discountValue / 100);
+            } else if (discountType === 'fixed') {
+                discountAmount = Math.min(discountValue, subtotal);
+            }
+
+            const discountRow = document.getElementById('invoice-discount-row');
+            if (discountAmount > 0) {
+                discountRow.classList.remove('hidden');
+                document.getElementById('invoice-discount-label').textContent = discountType === 'percentage' ? `Discount (${discountValue}%):` : 'Discount:';
+                document.getElementById('invoice-discount-display').textContent = `-$${discountAmount.toFixed(2)}`;
+            } else {
+                discountRow.classList.add('hidden');
+            }
+
+            const taxableAmount = subtotal - discountAmount;
             const taxRate = parseFloat(document.getElementById('invoice-tax-rate').value) || 0;
-            const taxAmount = subtotal * (taxRate / 100);
-            const total = subtotal + taxAmount;
+            const taxAmount = taxableAmount * (taxRate / 100);
+            const total = taxableAmount + taxAmount;
 
             document.getElementById('invoice-subtotal').textContent = `$${subtotal.toFixed(2)}`;
             document.getElementById('invoice-tax').textContent = `$${taxAmount.toFixed(2)}`;
@@ -3388,12 +3448,16 @@
             }
 
             try {
+                const discountType = document.getElementById('invoice-discount-type').value || null;
+                const discountValue = parseFloat(document.getElementById('invoice-discount-value').value) || 0;
                 const body = {
                     client_id: isNonClient ? 0 : parseInt(clientId),
                     trainer_name: trainerName,
                     date,
                     due_date: dueDate || null,
                     tax_rate: taxRate,
+                    discount_type: discountType,
+                    discount_value: discountValue,
                     items,
                     notes
                 };

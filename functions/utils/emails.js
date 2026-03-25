@@ -304,6 +304,7 @@ export function invoiceEmailHtml(invoice, items) {
 
     <div style="text-align: right; margin-bottom: 20px;">
       <p style="margin: 6px 0; font-size: 15px;"><strong>Subtotal:</strong> $${Number(invoice.subtotal).toFixed(2)}</p>
+      ${invoice.discount_amount > 0 ? `<p style="margin: 6px 0; font-size: 15px; color: #22c55e;"><strong>${invoice.discount_type === 'percentage' ? `Discount (${invoice.discount_value}%)` : 'Discount'}:</strong> -$${Number(invoice.discount_amount).toFixed(2)}</p>` : ''}
       <p style="margin: 6px 0; font-size: 15px;"><strong>Tax (${invoice.tax_rate}%):</strong> $${Number(invoice.tax_amount).toFixed(2)}</p>
       <p style="margin: 6px 0; font-size: 20px; color: #3B82F6;"><strong>Total: $${Number(invoice.total).toFixed(2)}</strong></p>
     </div>

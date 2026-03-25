@@ -131,8 +131,12 @@ export async function generateInvoicePDF(invoice, items) {
 
   const totalsData = [
     ['Subtotal:', `$${Number(invoice.subtotal || 0).toFixed(2)}`],
-    [`Tax (${invoice.tax_rate || 0}%):`, `$${Number(invoice.tax_amount || 0).toFixed(2)}`],
   ];
+  if (invoice.discount_amount > 0) {
+    const discLabel = invoice.discount_type === 'percentage' ? `Discount (${invoice.discount_value}%):` : 'Discount:';
+    totalsData.push([discLabel, `-$${Number(invoice.discount_amount).toFixed(2)}`]);
+  }
+  totalsData.push([`Tax (${invoice.tax_rate || 0}%):`, `$${Number(invoice.tax_amount || 0).toFixed(2)}`]);
 
   for (const [label, value] of totalsData) {
     page.drawText(label, { x: totalsX, y, size: 10, font, color: GRAY });
