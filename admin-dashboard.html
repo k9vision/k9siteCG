@@ -791,6 +791,11 @@
                         <input type="number" step="0.01" id="service-price" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                     </div>
                     <div>
+                        <label class="block text-sm font-medium mb-2">Sessions/Weeks</label>
+                        <input type="number" min="1" id="service-sessions" value="1" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        <p class="text-xs text-gray-400 mt-1">If > 1, invoice items auto-split into weekly sessions</p>
+                    </div>
+                    <div>
                         <label class="flex items-center space-x-2">
                             <input type="checkbox" id="service-active" class="rounded" checked>
                             <span class="text-sm font-medium">Active</span>
@@ -1050,6 +1055,14 @@
                             <span>Total:</span>
                             <span id="detail-total">$0.00</span>
                         </div>
+                        <div class="flex justify-between text-green-400 border-t border-border-dark dark:border-border-light pt-2 mt-2">
+                            <span>Total Paid:</span>
+                            <span id="detail-total-paid">$0.00</span>
+                        </div>
+                        <div class="flex justify-between font-bold text-lg">
+                            <span>Balance Due:</span>
+                            <span id="detail-balance-due">$0.00</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1063,6 +1076,31 @@
                 <div class="flex justify-between">
                     <button onclick="deleteInvoice()" class="bg-red-600 text-white py-2 px-6 rounded hover:bg-red-800">Delete Invoice</button>
                     <button onclick="closeInvoiceDetailModal()" class="bg-gray-500 text-white py-2 px-6 rounded hover:bg-gray-700">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transfer Credit Modal -->
+        <div id="transfer-credit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-6 max-w-md w-full border border-border-dark dark:border-border-light">
+                <h4 class="text-lg font-bold mb-4">Transfer Credit</h4>
+                <div class="space-y-3">
+                    <div>
+                        <p class="text-sm text-gray-400">From: <span id="transfer-from-name" class="text-white font-medium"></span></p>
+                        <p class="text-sm text-gray-400">Available: <span id="transfer-available" class="text-green-400 font-medium"></span></p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Transfer To</label>
+                        <select id="transfer-to-item" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Amount ($)</label>
+                        <input type="number" step="0.01" min="0.01" id="transfer-amount" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm" placeholder="0.00">
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="executeTransfer()" class="flex-1 bg-cyan-500 text-white py-2 px-4 rounded text-sm hover:bg-cyan-700">Transfer</button>
+                        <button onclick="closeTransferModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded text-sm hover:bg-gray-700">Cancel</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2849,6 +2887,7 @@
             document.getElementById('service-name').value = service.name;
             document.getElementById('service-description').value = service.description || '';
             document.getElementById('service-price').value = service.price;
+            document.getElementById('service-sessions').value = service.sessions || 1;
             document.getElementById('service-active').checked = service.active == 1;
             document.getElementById('service-modal').classList.remove('hidden');
         }
@@ -2885,6 +2924,7 @@
             const name = document.getElementById('service-name').value;
             const description = document.getElementById('service-description').value;
             const price = parseFloat(document.getElementById('service-price').value);
+            const sessions = parseInt(document.getElementById('service-sessions').value) || 1;
             const active = document.getElementById('service-active').checked ? 1 : 0;
 
             const url = serviceId ? `${API_BASE}/services/${serviceId}` : `${API_BASE}/services`;
@@ -2894,7 +2934,7 @@
                 const res = await fetch(url, {
                     method,
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ name, description, price, active })
+                    body: JSON.stringify({ name, description, price, sessions, active })
                 });
 
                 if (res.ok) {
@@ -3027,6 +3067,7 @@
         }
 
         let currentDetailInvoiceId = null;
+        let currentDetailItems = [];
 
         async function viewInvoiceDetails(invoiceId) {
             currentDetailInvoiceId = invoiceId;
@@ -3055,8 +3096,9 @@
                 // Status
                 document.getElementById('detail-status').value = inv.status || 'pending';
 
-                // Line items
+                // Line items with inline editing
                 const tbody = document.getElementById('detail-items-body');
+                currentDetailItems = inv.items || [];
                 tbody.innerHTML = (inv.items || []).map(item => {
                     const itemStatus = item.status || 'pending';
                     const statusColor = itemStatus === 'paid' ? 'bg-green-500' : 'bg-yellow-500';
@@ -3064,22 +3106,24 @@
                     const itemTotal = Number(item.total);
                     const amountPaid = Number(item.amount_paid || 0);
                     const balance = itemTotal - amountPaid;
-                    const dueDateDisplay = item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString() : '—';
                     const balanceColor = balance <= 0 ? 'text-green-400' : 'text-yellow-400';
+                    const dueDateVal = item.due_date || '';
                     return `
-                    <tr class="border-b border-border-dark dark:border-border-light">
-                        <td class="py-2">${item.service_name}</td>
-                        <td class="text-right py-2">${item.quantity}</td>
-                        <td class="text-right py-2">$${Number(item.price).toFixed(2)}</td>
-                        <td class="text-right py-2">$${itemTotal.toFixed(2)}</td>
-                        <td class="text-center py-2 text-xs">${dueDateDisplay}</td>
-                        <td class="text-right py-2">$${amountPaid.toFixed(2)}</td>
-                        <td class="text-right py-2 ${balanceColor}">$${balance.toFixed(2)}</td>
+                    <tr class="border-b border-border-dark dark:border-border-light" data-detail-item-id="${item.id}">
+                        <td class="py-2 text-xs">${item.service_name}</td>
+                        <td class="py-2"><input type="number" class="detail-item-qty w-14 text-xs text-right rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${item.quantity}" min="1"></td>
+                        <td class="py-2"><input type="number" step="0.01" class="detail-item-price w-20 text-xs text-right rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${Number(item.price).toFixed(2)}"></td>
+                        <td class="text-right py-2 text-xs">$${itemTotal.toFixed(2)}</td>
+                        <td class="py-2"><input type="date" class="detail-item-due-date w-28 text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${dueDateVal}"></td>
+                        <td class="py-2"><input type="number" step="0.01" min="0" class="detail-item-paid w-20 text-xs text-right rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${amountPaid.toFixed(2)}"></td>
+                        <td class="text-right py-2 text-xs ${balanceColor}">$${balance.toFixed(2)}</td>
                         <td class="text-center py-2">
                             <button onclick="toggleItemStatus(${item.id}, '${itemStatus}', ${inv.id})" class="text-xs px-2 py-0.5 rounded text-white ${statusColor} hover:opacity-80 cursor-pointer" title="Click to toggle">${statusLabel}</button>
                         </td>
-                        <td class="text-right py-2">
-                            <button onclick="deleteInvoiceItem(${item.id})" class="text-red-500 hover:text-red-700 text-xs">Delete</button>
+                        <td class="text-right py-2 space-x-1 whitespace-nowrap">
+                            <button onclick="saveItemEdits(${item.id}, ${inv.id})" class="text-green-400 hover:text-green-300 text-xs" title="Save">Save</button>
+                            ${amountPaid > 0 ? `<button onclick="transferCredit(${item.id}, ${inv.id})" class="text-cyan-400 hover:text-cyan-300 text-xs" title="Transfer credit">Xfer</button>` : ''}
+                            <button onclick="deleteInvoiceItem(${item.id})" class="text-red-500 hover:text-red-700 text-xs" title="Delete">Del</button>
                         </td>
                     </tr>`;
                 }).join('');
@@ -3104,6 +3148,14 @@
                 document.getElementById('detail-tax').textContent = `$${Number(inv.tax_amount).toFixed(2)}`;
                 document.getElementById('detail-total').textContent = `$${Number(inv.total).toFixed(2)}`;
 
+                // Payment totals
+                const totalPaid = (inv.items || []).reduce((sum, i) => sum + Number(i.amount_paid || 0), 0);
+                const balanceDue = Number(inv.total) - totalPaid;
+                document.getElementById('detail-total-paid').textContent = `$${totalPaid.toFixed(2)}`;
+                const balanceDueEl = document.getElementById('detail-balance-due');
+                balanceDueEl.textContent = `$${balanceDue.toFixed(2)}`;
+                balanceDueEl.className = balanceDue <= 0 ? 'text-green-400' : 'text-red-400';
+
                 // Notes
                 document.getElementById('detail-notes').value = inv.notes || '';
 
@@ -3111,7 +3163,7 @@
                 await loadServices();
                 const serviceSelect = document.getElementById('detail-new-service');
                 serviceSelect.innerHTML = '<option value="">Select service...</option>' +
-                    servicesData.map(s => `<option value="${s.id}" data-price="${s.price}" data-name="${s.name}">${s.name} ($${s.price})</option>`).join('');
+                    servicesData.map(s => `<option value="${s.id}" data-price="${s.price}" data-name="${s.name}" data-sessions="${s.sessions || 1}">${s.name} ($${s.price})${(s.sessions || 1) > 1 ? ' [' + s.sessions + ' wks]' : ''}</option>`).join('');
 
                 document.getElementById('invoice-detail-modal').classList.remove('hidden');
             } catch (error) {
@@ -3229,6 +3281,7 @@
             const opt = serviceSelect.options[serviceSelect.selectedIndex];
             const serviceId = serviceSelect.value;
             const serviceName = opt ? opt.dataset.name : '';
+            const sessions = parseInt(opt?.dataset?.sessions) || 1;
             const quantity = parseInt(document.getElementById('detail-new-qty').value) || 0;
             const price = parseFloat(document.getElementById('detail-new-price').value) || 0;
             const dueDate = document.getElementById('detail-new-due-date').value || null;
@@ -3239,25 +3292,46 @@
                 return;
             }
 
+            // Build items array — auto-split if multi-session
+            let newItems = [];
+            if (sessions > 1) {
+                const perSessionPrice = Math.round((price / sessions) * 100) / 100;
+                for (let i = 0; i < sessions; i++) {
+                    let weekDueDate = null;
+                    if (dueDate) {
+                        const d = new Date(dueDate + 'T00:00:00');
+                        d.setDate(d.getDate() + (i * 7));
+                        weekDueDate = d.toISOString().split('T')[0];
+                    }
+                    newItems.push({
+                        service_id: serviceId,
+                        service_name: `${serviceName} - Week ${i + 1}`,
+                        quantity: 1,
+                        price: perSessionPrice,
+                        due_date: weekDueDate,
+                        amount_paid: 0
+                    });
+                }
+            } else {
+                newItems.push({ service_id: serviceId, service_name: serviceName, quantity, price, due_date: dueDate, amount_paid: amountPaid });
+            }
+
             try {
                 const res = await fetch(`${API_BASE}/invoices/${currentDetailInvoiceId}`, {
                     method: 'PUT',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        new_items: [{ service_id: serviceId, service_name: serviceName, quantity, price, due_date: dueDate, amount_paid: amountPaid }]
-                    })
+                    body: JSON.stringify({ new_items: newItems })
                 });
 
                 if (res.ok) {
-                    // Reset add-item fields
                     serviceSelect.value = '';
                     document.getElementById('detail-new-qty').value = '1';
                     document.getElementById('detail-new-price').value = '';
                     document.getElementById('detail-new-due-date').value = '';
                     document.getElementById('detail-new-amount-paid').value = '0';
-                    // Refresh the modal and invoice list
                     await viewInvoiceDetails(currentDetailInvoiceId);
                     loadInvoices();
+                    if (sessions > 1) showToast(`Added ${sessions} weekly sessions`, 'success');
                 } else {
                     showToast('Failed to add item', 'error');
                 }
@@ -3312,6 +3386,111 @@
             }
         }
 
+        // Save inline edits for a line item
+        async function saveItemEdits(itemId, invoiceId) {
+            const row = document.querySelector(`[data-detail-item-id="${itemId}"]`);
+            if (!row) return;
+
+            const quantity = parseInt(row.querySelector('.detail-item-qty').value) || 1;
+            const price = parseFloat(row.querySelector('.detail-item-price').value) || 0;
+            const due_date = row.querySelector('.detail-item-due-date').value || null;
+            const amount_paid = parseFloat(row.querySelector('.detail-item-paid').value) || 0;
+
+            try {
+                const res = await fetch(`${API_BASE}/invoices/items/${itemId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ quantity, price, due_date, amount_paid })
+                });
+                if (res.ok) {
+                    showToast('Item updated', 'success');
+                    await viewInvoiceDetails(invoiceId);
+                    loadInvoices();
+                } else {
+                    showToast('Failed to save item', 'error');
+                }
+            } catch (error) {
+                console.error('Save item edits error:', error);
+                showToast('Failed to save item', 'error');
+            }
+        }
+
+        // Credit transfer
+        let transferFromItemId = null;
+        let transferInvoiceId = null;
+
+        function transferCredit(fromItemId, invoiceId) {
+            const fromItem = currentDetailItems.find(i => i.id === fromItemId);
+            if (!fromItem || Number(fromItem.amount_paid || 0) <= 0) {
+                showToast('No credit available to transfer', 'error');
+                return;
+            }
+
+            transferFromItemId = fromItemId;
+            transferInvoiceId = invoiceId;
+
+            document.getElementById('transfer-from-name').textContent = fromItem.service_name;
+            document.getElementById('transfer-available').textContent = `$${Number(fromItem.amount_paid).toFixed(2)}`;
+            document.getElementById('transfer-amount').value = '';
+            document.getElementById('transfer-amount').max = Number(fromItem.amount_paid);
+
+            const toSelect = document.getElementById('transfer-to-item');
+            toSelect.innerHTML = currentDetailItems
+                .filter(i => i.id !== fromItemId)
+                .map(i => `<option value="${i.id}">${i.service_name} (Balance: $${(Number(i.total) - Number(i.amount_paid || 0)).toFixed(2)})</option>`)
+                .join('');
+
+            document.getElementById('transfer-credit-modal').classList.remove('hidden');
+        }
+
+        function closeTransferModal() {
+            document.getElementById('transfer-credit-modal').classList.add('hidden');
+            transferFromItemId = null;
+            transferInvoiceId = null;
+        }
+
+        async function executeTransfer() {
+            if (!transferFromItemId || !transferInvoiceId) return;
+
+            const toItemId = document.getElementById('transfer-to-item').value;
+            const amount = parseFloat(document.getElementById('transfer-amount').value);
+            const fromItem = currentDetailItems.find(i => i.id === transferFromItemId);
+            const toItem = currentDetailItems.find(i => i.id === parseInt(toItemId));
+
+            if (!toItemId || !amount || amount <= 0) {
+                showToast('Please select a target and enter an amount', 'error');
+                return;
+            }
+            if (amount > Number(fromItem.amount_paid)) {
+                showToast('Amount exceeds available credit', 'error');
+                return;
+            }
+
+            try {
+                // Reduce source item's amount_paid
+                await fetch(`${API_BASE}/invoices/items/${transferFromItemId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ amount_paid: Number(fromItem.amount_paid) - amount })
+                });
+
+                // Increase target item's amount_paid
+                await fetch(`${API_BASE}/invoices/items/${toItemId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ amount_paid: Number(toItem.amount_paid || 0) + amount })
+                });
+
+                closeTransferModal();
+                showToast(`Transferred $${amount.toFixed(2)} from "${fromItem.service_name}" to "${toItem.service_name}"`, 'success');
+                await viewInvoiceDetails(transferInvoiceId);
+                loadInvoices();
+            } catch (error) {
+                console.error('Transfer credit error:', error);
+                showToast('Failed to transfer credit', 'error');
+            }
+        }
+
         async function showCreateInvoice() {
             await loadClientSelects();
             await loadServices();
@@ -3337,7 +3516,7 @@
                             <label class="block text-xs mb-1">Service</label>
                             <select class="item-service w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="updateItemPrice(${invoiceItemCounter})" required>
                                 <option value="">Select service...</option>
-                                ${servicesData.map(s => `<option value="${s.id}" data-price="${s.price}">${s.name} ($${s.price})</option>`).join('')}
+                                ${servicesData.map(s => `<option value="${s.id}" data-price="${s.price}" data-sessions="${s.sessions || 1}" data-name="${s.name}">${s.name} ($${s.price})${(s.sessions || 1) > 1 ? ' [' + s.sessions + ' wks]' : ''}</option>`).join('')}
                             </select>
                         </div>
                         <div>
@@ -3383,8 +3562,66 @@
             const selectedOption = select.options[select.selectedIndex];
 
             if (selectedOption && selectedOption.dataset.price) {
-                priceInput.value = selectedOption.dataset.price;
-                calculateInvoiceTotal();
+                const sessions = parseInt(selectedOption.dataset.sessions) || 1;
+                const totalPrice = parseFloat(selectedOption.dataset.price);
+
+                if (sessions > 1) {
+                    // Auto-split: remove this item and create N session items
+                    const serviceName = selectedOption.dataset.name;
+                    const serviceId = selectedOption.value;
+                    const perSessionPrice = Math.round((totalPrice / sessions) * 100) / 100;
+                    const dueDateVal = item.querySelector('.item-due-date').value;
+
+                    item.remove(); // Remove the original item
+
+                    for (let i = 0; i < sessions; i++) {
+                        invoiceItemCounter++;
+                        let weekDueDate = '';
+                        if (dueDateVal) {
+                            const d = new Date(dueDateVal + 'T00:00:00');
+                            d.setDate(d.getDate() + (i * 7));
+                            weekDueDate = d.toISOString().split('T')[0];
+                        }
+                        const weekHtml = `
+                            <div class="invoice-item border border-border-dark dark:border-border-light rounded p-3" data-item-id="${invoiceItemCounter}" data-split-service="${serviceId}" data-split-name="${serviceName}">
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                                    <div class="col-span-2">
+                                        <label class="block text-xs mb-1">Service</label>
+                                        <input type="text" class="item-service-name w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light bg-opacity-50" value="${serviceName} - Week ${i + 1}" readonly>
+                                        <input type="hidden" class="item-service-id" value="${serviceId}">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs mb-1">Qty</label>
+                                        <input type="number" class="item-quantity w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="1" min="1" onchange="calculateInvoiceTotal()" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs mb-1">Price</label>
+                                        <input type="number" step="0.01" class="item-price w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${perSessionPrice}" required>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <div>
+                                        <label class="block text-xs mb-1">Due Date</label>
+                                        <input type="date" class="item-due-date w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${weekDueDate}">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs mb-1">Amount Paid</label>
+                                        <input type="number" step="0.01" min="0" class="item-amount-paid w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="0">
+                                    </div>
+                                    <div></div>
+                                    <div class="flex items-end">
+                                        <button type="button" onclick="removeInvoiceItem(${invoiceItemCounter})" class="w-full bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-700">Remove</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        document.getElementById('invoice-items-container').insertAdjacentHTML('beforeend', weekHtml);
+                    }
+                    calculateInvoiceTotal();
+                } else {
+                    priceInput.value = totalPrice;
+                    calculateInvoiceTotal();
+                }
             }
         }
 
@@ -3470,12 +3707,22 @@
                 return;
             }
 
-            // Collect items
+            // Collect items (handles both regular and auto-split items)
             const items = [];
             document.querySelectorAll('.invoice-item').forEach(item => {
+                let serviceId, serviceName;
                 const serviceSelect = item.querySelector('.item-service');
-                const serviceId = serviceSelect.value;
-                const serviceName = serviceSelect.options[serviceSelect.selectedIndex].text.split('($')[0].trim();
+                const splitServiceId = item.dataset.splitService;
+
+                if (splitServiceId) {
+                    // Auto-split item
+                    serviceId = splitServiceId;
+                    serviceName = item.querySelector('.item-service-name').value;
+                } else if (serviceSelect) {
+                    serviceId = serviceSelect.value;
+                    serviceName = serviceSelect.options[serviceSelect.selectedIndex]?.dataset?.name || serviceSelect.options[serviceSelect.selectedIndex]?.text?.split('($')[0]?.trim() || 'Service';
+                }
+
                 const quantity = parseInt(item.querySelector('.item-quantity').value);
                 const price = parseFloat(item.querySelector('.item-price').value);
                 const dueDate = item.querySelector('.item-due-date').value || null;

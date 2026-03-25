@@ -34,7 +34,7 @@ export async function onRequest(context) {
         });
       }
 
-      const { name, description, price, active } = await request.json();
+      const { name, description, price, active, sessions } = await request.json();
 
       if (!name || price === undefined) {
         return new Response(JSON.stringify({
@@ -46,8 +46,8 @@ export async function onRequest(context) {
       }
 
       const result = await env.DB.prepare(
-        'INSERT INTO services (name, description, price, active) VALUES (?, ?, ?, ?)'
-      ).bind(name, description || null, price, active !== undefined ? active : 1).run();
+        'INSERT INTO services (name, description, price, active, sessions) VALUES (?, ?, ?, ?, ?)'
+      ).bind(name, description || null, price, active !== undefined ? active : 1, Number(sessions) || 1).run();
 
       const service = await env.DB.prepare(
         'SELECT * FROM services WHERE id = ?'

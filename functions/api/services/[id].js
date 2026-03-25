@@ -43,7 +43,7 @@ export async function onRequest(context) {
 
     if (request.method === 'PUT') {
       // Update service
-      const { name, description, price, active } = await request.json();
+      const { name, description, price, active, sessions } = await request.json();
 
       if (!name || price === undefined) {
         return new Response(JSON.stringify({
@@ -55,8 +55,8 @@ export async function onRequest(context) {
       }
 
       await env.DB.prepare(
-        'UPDATE services SET name = ?, description = ?, price = ?, active = ? WHERE id = ?'
-      ).bind(name, description || null, price, active !== undefined ? active : 1, serviceId).run();
+        'UPDATE services SET name = ?, description = ?, price = ?, active = ?, sessions = ? WHERE id = ?'
+      ).bind(name, description || null, price, active !== undefined ? active : 1, Number(sessions) || 1, serviceId).run();
 
       const service = await env.DB.prepare(
         'SELECT * FROM services WHERE id = ?'

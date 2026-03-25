@@ -67,7 +67,7 @@ export async function onRequest(context) {
     }
 
     if (request.method === 'PUT') {
-      const { status, notify_client, due_date, amount_paid } = await request.json();
+      const { status, notify_client, due_date, amount_paid, quantity, price } = await request.json();
 
       const item = await env.DB.prepare(
         'SELECT * FROM invoice_items WHERE id = ?'
@@ -77,6 +77,19 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ error: 'Invoice item not found' }), {
           status: 404, headers: { 'Content-Type': 'application/json' }
         });
+      }
+
+      let needsInvoiceRecalc = false;
+
+      // Update quantity and/or price if provided
+      if (quantity !== undefined || price !== undefined) {
+        const newQty = quantity !== undefined ? Number(quantity) : item.quantity;
+        const newPrice = price !== undefined ? Number(price) : item.price;
+        const newTotal = newQty * newPrice;
+        await env.DB.prepare(
+          'UPDATE invoice_items SET quantity = ?, price = ?, total = ? WHERE id = ?'
+        ).bind(newQty, newPrice, newTotal, itemId).run();
+        needsInvoiceRecalc = true;
       }
 
       // Update due_date and/or amount_paid if provided
@@ -99,8 +112,34 @@ export async function onRequest(context) {
         ).bind(status, itemId).run();
       }
 
+      // Recalculate invoice totals if quantity/price changed
+      if (needsInvoiceRecalc) {
+        const allItems = await env.DB.prepare(
+          'SELECT SUM(total) as subtotal FROM invoice_items WHERE invoice_id = ?'
+        ).bind(item.invoice_id).first();
+
+        const currentInvoice = await env.DB.prepare(
+          'SELECT tax_rate, discount_type, discount_value FROM invoices WHERE id = ?'
+        ).bind(item.invoice_id).first();
+
+        const subtotal = allItems.subtotal || 0;
+        let discountAmount = 0;
+        if (currentInvoice.discount_type === 'percentage' && currentInvoice.discount_value > 0) {
+          discountAmount = subtotal * (currentInvoice.discount_value / 100);
+        } else if (currentInvoice.discount_type === 'fixed' && currentInvoice.discount_value > 0) {
+          discountAmount = Math.min(currentInvoice.discount_value, subtotal);
+        }
+        const taxable = subtotal - discountAmount;
+        const taxAmount = taxable * ((currentInvoice.tax_rate || 0) / 100);
+        const total = taxable + taxAmount;
+
+        await env.DB.prepare(
+          'UPDATE invoices SET subtotal = ?, tax_amount = ?, total = ?, discount_amount = ? WHERE id = ?'
+        ).bind(subtotal, taxAmount, total, discountAmount, item.invoice_id).run();
+      }
+
       // Send email notification if requested
-      if (notify_client) {
+      if (notify_client && status) {
         try {
           const invoice = await env.DB.prepare(`
             SELECT invoices.*,
@@ -129,9 +168,14 @@ export async function onRequest(context) {
         }
       }
 
+      // Return updated item
+      const updatedItem = await env.DB.prepare(
+        'SELECT * FROM invoice_items WHERE id = ?'
+      ).bind(itemId).first();
+
       return new Response(JSON.stringify({
         success: true,
-        item: { ...item, status }
+        item: updatedItem
       }), {
         headers: { 'Content-Type': 'application/json' }
       });
