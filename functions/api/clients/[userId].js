@@ -13,9 +13,12 @@ export async function onRequestDelete(context) {
 
     const userId = parseInt(context.params.userId);
 
-    // Soft-delete user (set deleted_at timestamp instead of hard delete)
+    // Soft-delete user and their client record
     await context.env.DB.prepare(
       'UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(userId).run();
+    await context.env.DB.prepare(
+      'UPDATE clients SET deleted_at = CURRENT_TIMESTAMP WHERE user_id = ?'
     ).bind(userId).run();
 
     return new Response(

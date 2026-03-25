@@ -40,9 +40,13 @@ export async function onRequest(context) {
       });
     }
 
-    // Check if a client with this email already exists
+    // Check if an active client with this email already exists
     const existing = await db.prepare(
-      'SELECT id FROM clients WHERE email = ?'
+      `SELECT c.id FROM clients c
+       LEFT JOIN users u ON c.user_id = u.id
+       WHERE c.email = ?
+         AND c.deleted_at IS NULL
+         AND (u.id IS NULL OR u.deleted_at IS NULL)`
     ).bind(email).first();
 
     if (existing) {

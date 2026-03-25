@@ -78,9 +78,9 @@ export async function onRequest(context) {
       });
     }
 
-    // Check if username already exists
+    // Check if username already exists (exclude soft-deleted users)
     const existingUser = await env.DB.prepare(
-      'SELECT id FROM users WHERE username = ?'
+      'SELECT id FROM users WHERE username = ? AND deleted_at IS NULL'
     ).bind(finalUsername).first();
 
     if (existingUser) {
