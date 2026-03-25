@@ -57,7 +57,7 @@ export async function onRequest(context) {
             COALESCE(invoices.recipient_email, clients.email) as client_email,
             clients.dog_name, clients.dog_breed
           FROM invoices LEFT JOIN clients ON invoices.client_id = clients.id
-          WHERE invoices.client_id = ?
+          WHERE invoices.client_id = ? AND invoices.emailed_at IS NOT NULL
           ORDER BY invoices.created_at DESC
         `).bind(client.id).all();
         results = data.results;
@@ -175,34 +175,9 @@ export async function onRequest(context) {
       invoice.dog_name = invoice.dog_name || '';
       invoice.dog_breed = invoice.dog_breed || '';
 
-      // Auto-send email
-      let email_sent = false;
-      let email_error = null;
-      const emailTo = invoice.client_email;
-      if (emailTo && emailTo.includes('@')) {
-        try {
-          const { sendEmail, invoiceEmailHtml } = await import('../../utils/emails.js');
-          const { generateInvoicePDF } = await import('../../utils/invoice-pdf.js');
-          const html = invoiceEmailHtml(invoice, invoiceItems.results);
-          const pdfBytes = await generateInvoicePDF(invoice, invoiceItems.results);
-          let binary = '';
-          for (let i = 0; i < pdfBytes.length; i++) { binary += String.fromCharCode(pdfBytes[i]); }
-          await sendEmail(env, {
-            to: emailTo,
-            subject: `K9 Vision Invoice #${invoice.invoice_number}`,
-            html,
-            attachments: [{ filename: `K9Vision_Invoice_${invoice.invoice_number}.pdf`, content: btoa(binary) }]
-          });
-          email_sent = true;
-        } catch (emailErr) {
-          console.error('Auto-send invoice email failed:', emailErr);
-          email_error = emailErr.message;
-        }
-      }
-
       return new Response(JSON.stringify({
         success: true,
-        invoice: { ...invoice, items: invoiceItems.results, email_sent, email_error }
+        invoice: { ...invoice, items: invoiceItems.results }
       }), { status: 201, headers: { 'Content-Type': 'application/json' } });
     }
 

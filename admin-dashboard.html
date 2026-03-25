@@ -3474,13 +3474,7 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    if (data.invoice.email_sent) {
-                        showToast(`Invoice #${data.invoice.invoice_number} created and emailed!`, 'success');
-                    } else if (data.invoice.email_error) {
-                        showToast(`Invoice #${data.invoice.invoice_number} created but email failed`, 'warning');
-                    } else {
-                        showToast(`Invoice #${data.invoice.invoice_number} created (no email to send to)`, 'success');
-                    }
+                    showToast(`Invoice #${data.invoice.invoice_number} created`, 'success');
                     closeCreateInvoiceModal();
                     loadInvoices();
                 } else {

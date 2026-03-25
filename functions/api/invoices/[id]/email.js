@@ -76,7 +76,7 @@ export async function onRequest(context) {
     }
     const pdfBase64 = btoa(binary);
 
-    // Send email with PDF attachment
+    // Send email to client with PDF attachment
     const result = await sendEmail(env, {
       to: invoice.client_email,
       subject: `K9 Vision Invoice #${invoice.invoice_number}`,
@@ -86,6 +86,26 @@ export async function onRequest(context) {
         content: pdfBase64
       }]
     });
+
+    // Also send a copy to admin
+    try {
+      await sendEmail(env, {
+        to: 'trainercg@k9visiontx.com',
+        subject: `[Copy] Invoice #${invoice.invoice_number} sent to ${invoice.client_name}`,
+        html,
+        attachments: [{
+          filename: `K9Vision_Invoice_${invoice.invoice_number}.pdf`,
+          content: pdfBase64
+        }]
+      });
+    } catch (adminEmailErr) {
+      console.error('Admin copy email failed:', adminEmailErr);
+    }
+
+    // Mark invoice as emailed so it becomes visible on client dashboard
+    await env.DB.prepare(
+      'UPDATE invoices SET emailed_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(invoiceId).run();
 
     return new Response(JSON.stringify({
       success: true,
