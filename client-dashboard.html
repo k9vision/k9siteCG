@@ -1280,7 +1280,7 @@
                         // Multi-media support
                         if (note.media_items && note.media_items.length > 0) {
                             mediaHtml = '<div class="flex flex-wrap gap-2 mt-2">' + note.media_items.map(m => {
-                                const displayName = m.caption || m.original_name || 'Media';
+                                const displayName = m.caption || (m.type === 'video' ? 'Video' : m.original_name) || 'Media';
                                 const safeName = displayName.replace(/'/g, "\\'");
                                 if (m.type === 'photo') {
                                     return `<img src="${m.url}" alt="${displayName}" class="w-16 h-16 object-cover rounded cursor-pointer border border-gray-600 hover:opacity-80" onclick="openMediaLightboxByUrl('${m.url}', '${safeName}')">`;
@@ -1290,7 +1290,7 @@
                             }).join('') + '</div>';
                         } else if (note.media_url) {
                             // Backward compat: single media via media_id
-                            const singleName = note.media_original_name || note.media_filename || (note.media_type === 'photo' ? 'Photo' : 'Video');
+                            const singleName = note.media_type === 'video' ? 'Video' : (note.media_original_name || note.media_filename || 'Photo');
                             const safeSingleName = singleName.replace(/'/g, "\\'");
                             if (note.media_type === 'photo') {
                                 mediaHtml = `<img src="${note.media_url}" alt="${singleName}" class="w-24 h-24 object-cover rounded mt-2 cursor-pointer border border-gray-600 hover:opacity-80" onclick="openMediaLightboxByUrl('${note.media_url}', '${safeSingleName}')">`;

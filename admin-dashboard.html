@@ -1908,12 +1908,12 @@
                         if (n.media_items && n.media_items.length > 0) {
                             mediaTag = '<div class="flex flex-wrap gap-1 mt-1">' + n.media_items.map(m => {
                                 if (m.type === 'photo') return `<img src="${m.url}" alt="${m.caption || 'Photo'}" class="w-12 h-12 object-cover rounded cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${m.url}', '_blank')">`;
-                                return `<div class="inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${m.url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${m.caption || m.original_name || m.filename || 'Video'}</span></div>`;
+                                return `<div class="inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${m.url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${m.caption || 'Video'}</span></div>`;
                             }).join('') + '</div>';
                         } else if (n.media_url) {
                             mediaTag = n.media_type === 'photo'
                                 ? `<img src="${n.media_url}" alt="${n.media_filename || 'Photo'}" class="w-16 h-16 object-cover rounded mt-1 cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${n.media_url}', '_blank')">`
-                                : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_original_name || n.media_filename || 'Video'}</span></div>`;
+                                : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${'Video'}</span></div>`;
                         }
                         return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start ${borderColor}">
                             <div class="flex-1">
@@ -2098,12 +2098,12 @@
                         if (n.media_items && n.media_items.length > 0) {
                             mediaTag = '<div class="flex flex-wrap gap-1 mt-1">' + n.media_items.map(m => {
                                 if (m.type === 'photo') return `<img src="${m.url}" alt="${m.caption || 'Photo'}" class="w-12 h-12 object-cover rounded cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${m.url}', '_blank')">`;
-                                return `<div class="inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${m.url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${m.caption || m.original_name || m.filename || 'Video'}</span></div>`;
+                                return `<div class="inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${m.url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${m.caption || 'Video'}</span></div>`;
                             }).join('') + '</div>';
                         } else if (n.media_url) {
                             mediaTag = n.media_type === 'photo'
                                 ? `<img src="${n.media_url}" alt="${n.media_filename || 'Photo'}" class="w-16 h-16 object-cover rounded mt-1 cursor-pointer border border-gray-600 hover:opacity-80" onclick="window.open('${n.media_url}', '_blank')">`
-                                : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${n.media_original_name || n.media_filename || 'Video'}</span></div>`;
+                                : `<div class="mt-1 inline-flex items-center gap-1 bg-gray-700 rounded px-2 py-1 cursor-pointer hover:bg-gray-600" onclick="window.open('${n.media_url}', '_blank')"><span class="material-icons text-sm">play_circle</span><span class="text-xs text-purple-400">${'Video'}</span></div>`;
                         }
                         return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded flex justify-between items-start ${borderColor}">
                             <div class="flex-1">
