@@ -3128,7 +3128,7 @@
                         <td class="text-right py-2 text-xs">$${itemTotal.toFixed(2)}</td>
                         <td class="py-2"><input type="date" class="detail-item-due-date w-28 text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${dueDateVal}"></td>
                         <td class="py-2">
-                            <select class="detail-item-upfront w-16 text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="applyUpfrontPct(this, ${item.id})">
+                            <select class="detail-item-upfront w-20 text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="applyUpfrontPct(this, ${item.id})">
                                 <option value="0" ${upfrontPct === 0 ? 'selected' : ''}>0%</option>
                                 <option value="25" ${upfrontPct === 25 ? 'selected' : ''}>25%</option>
                                 <option value="50" ${upfrontPct === 50 ? 'selected' : ''}>50%</option>
@@ -3517,9 +3517,10 @@
                     body: JSON.stringify({ amount_paid: Number(toItem.amount_paid || 0) + amount })
                 });
 
+                const invoiceId = transferInvoiceId;
                 closeTransferModal();
                 showToast(`Transferred $${amount.toFixed(2)} from "${fromItem.service_name}" to "${toItem.service_name}"`, 'success');
-                await viewInvoiceDetails(transferInvoiceId);
+                await viewInvoiceDetails(invoiceId);
                 loadInvoices();
             } catch (error) {
                 console.error('Transfer credit error:', error);
