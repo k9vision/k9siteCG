@@ -13,9 +13,9 @@ export async function onRequestDelete(context) {
 
     const userId = parseInt(context.params.userId);
 
-    // Soft-delete user and their client record
+    // Soft-delete user: mangle username to free the UNIQUE constraint for re-registration
     await context.env.DB.prepare(
-      'UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?'
+      `UPDATE users SET deleted_at = CURRENT_TIMESTAMP, username = username || '_deleted_' || id WHERE id = ?`
     ).bind(userId).run();
     await context.env.DB.prepare(
       'UPDATE clients SET deleted_at = CURRENT_TIMESTAMP WHERE user_id = ?'
