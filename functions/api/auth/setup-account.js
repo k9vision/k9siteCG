@@ -43,7 +43,7 @@ export async function onRequestPost(context) {
 
     // Check username uniqueness
     const existingUser = await db.prepare(
-      'SELECT id FROM users WHERE username = ?'
+      'SELECT id FROM users WHERE username = ? AND deleted_at IS NULL'
     ).bind(username).first();
 
     if (existingUser) {

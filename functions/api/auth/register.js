@@ -50,7 +50,7 @@ export async function onRequestPost(context) {
 
     // Check if user exists
     const existing = await context.env.DB.prepare(
-      'SELECT id FROM users WHERE username = ?'
+      'SELECT id FROM users WHERE username = ? AND deleted_at IS NULL'
     ).bind(username).first();
 
     if (existing) {

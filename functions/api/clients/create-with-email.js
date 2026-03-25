@@ -78,6 +78,24 @@ export async function onRequest(context) {
       });
     }
 
+    // Check if email already in use by an active client
+    const existingEmail = await env.DB.prepare(
+      `SELECT c.id FROM clients c
+       LEFT JOIN users u ON c.user_id = u.id
+       WHERE c.email = ?
+         AND c.deleted_at IS NULL
+         AND (u.id IS NULL OR u.deleted_at IS NULL)`
+    ).bind(email).first();
+
+    if (existingEmail) {
+      return new Response(JSON.stringify({
+        error: 'A client with this email already exists'
+      }), {
+        status: 409,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Check if username already exists (exclude soft-deleted users)
     const existingUser = await env.DB.prepare(
       'SELECT id FROM users WHERE username = ? AND deleted_at IS NULL'

@@ -35,7 +35,7 @@ export async function onRequestPost(context) {
 
     // Check if email is already in use by a fully active (verified) user
     const activeUser = await db.prepare(
-      `SELECT u.id, u.status FROM users u WHERE u.email = ? AND u.status = 'active'`
+      `SELECT u.id, u.status FROM users u WHERE u.email = ? AND u.status = 'active' AND u.deleted_at IS NULL`
     ).bind(email).first();
 
     if (activeUser) {
@@ -47,7 +47,7 @@ export async function onRequestPost(context) {
 
     // Also check clients table for email linked to an active user
     const activeClient = await db.prepare(
-      `SELECT c.user_id FROM clients c JOIN users u ON c.user_id = u.id WHERE c.email = ? AND u.status = 'active'`
+      `SELECT c.user_id FROM clients c JOIN users u ON c.user_id = u.id WHERE c.email = ? AND u.status = 'active' AND u.deleted_at IS NULL AND c.deleted_at IS NULL`
     ).bind(email).first();
 
     if (activeClient) {
@@ -69,7 +69,7 @@ export async function onRequestPost(context) {
     if (pendingUser) {
       // Check if the new username conflicts with a different user
       const usernameConflict = await db.prepare(
-        'SELECT id FROM users WHERE username = ? AND id != ?'
+        'SELECT id FROM users WHERE username = ? AND id != ? AND deleted_at IS NULL'
       ).bind(username, pendingUser.id).first();
 
       if (usernameConflict) {
@@ -107,7 +107,7 @@ export async function onRequestPost(context) {
     } else {
       // New registration — check username uniqueness
       const existingUser = await db.prepare(
-        'SELECT id FROM users WHERE username = ?'
+        'SELECT id FROM users WHERE username = ? AND deleted_at IS NULL'
       ).bind(username).first();
 
       if (existingUser) {
