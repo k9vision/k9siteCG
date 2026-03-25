@@ -137,17 +137,26 @@ export async function onRequestPost(context) {
       email
     });
 
-    // Send verification email
-    const verifyUrl = `https://k9visiontx.com/verify-email?token=${token}`;
-    await sendEmail(env, {
-      to: email,
-      subject: 'A warm welcome from K9VISION (Action Required)',
-      html: verificationEmailHtml(client_name, verifyUrl)
-    });
+    // Send verification email (non-fatal if it fails)
+    let emailSent = false;
+    try {
+      const verifyUrl = `https://k9visiontx.com/verify-email?token=${token}`;
+      await sendEmail(env, {
+        to: email,
+        subject: 'A warm welcome from K9VISION (Action Required)',
+        html: verificationEmailHtml(client_name, verifyUrl)
+      });
+      emailSent = true;
+    } catch (emailErr) {
+      console.error('Verification email failed:', emailErr);
+    }
 
     return new Response(JSON.stringify({
       success: true,
-      message: 'Registration successful. Please check your email to verify your account.'
+      message: emailSent
+        ? 'Registration successful. Please check your email to verify your account.'
+        : 'Account created. Verification email could not be sent — please contact support.',
+      email_sent: emailSent
     }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
@@ -155,7 +164,7 @@ export async function onRequestPost(context) {
 
   } catch (error) {
     console.error('Self-register error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to register account' }), {
+    return new Response(JSON.stringify({ error: 'Failed to register account', detail: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
