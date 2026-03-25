@@ -3503,14 +3503,7 @@
             }
 
             try {
-                // Reduce source item's amount_paid
-                await fetch(`${API_BASE}/invoices/items/${transferFromItemId}`, {
-                    method: 'PUT',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({ amount_paid: Number(fromItem.amount_paid) - amount })
-                });
-
-                // Increase target item's amount_paid
+                // Apply credit to target item (source keeps its payment)
                 await fetch(`${API_BASE}/invoices/items/${toItemId}`, {
                     method: 'PUT',
                     headers: getAuthHeaders(),
@@ -3519,7 +3512,7 @@
 
                 const invoiceId = transferInvoiceId;
                 closeTransferModal();
-                showToast(`Transferred $${amount.toFixed(2)} from "${fromItem.service_name}" to "${toItem.service_name}"`, 'success');
+                showToast(`Applied $${amount.toFixed(2)} credit from "${fromItem.service_name}" to "${toItem.service_name}"`, 'success');
                 await viewInvoiceDetails(invoiceId);
                 loadInvoices();
             } catch (error) {
