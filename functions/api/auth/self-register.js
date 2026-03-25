@@ -93,11 +93,11 @@ export async function onRequestPost(context) {
 
       if (existingClient) {
         await db.prepare(
-          `UPDATE clients SET client_name = ?, dog_name = ?, breed = ?, age = ? WHERE user_id = ?`
+          `UPDATE clients SET client_name = ?, dog_name = ?, dog_breed = ?, dog_age = ? WHERE user_id = ?`
         ).bind(client_name, dog_name, breed || null, age || null, userId).run();
       } else {
         await db.prepare(
-          'INSERT INTO clients (user_id, client_name, email, dog_name, breed, age) VALUES (?, ?, ?, ?, ?, ?)'
+          'INSERT INTO clients (user_id, client_name, email, dog_name, dog_breed, dog_age) VALUES (?, ?, ?, ?, ?, ?)'
         ).bind(userId, client_name, email, dog_name, breed || null, age || null).run();
       }
 
@@ -126,7 +126,7 @@ export async function onRequestPost(context) {
 
       // Create client profile
       await db.prepare(
-        'INSERT INTO clients (user_id, client_name, email, dog_name, breed, age) VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO clients (user_id, client_name, email, dog_name, dog_breed, dog_age) VALUES (?, ?, ?, ?, ?, ?)'
       ).bind(userId, client_name, email, dog_name, breed || null, age || null).run();
     }
 
