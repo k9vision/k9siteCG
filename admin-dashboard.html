@@ -990,6 +990,7 @@
                                 <th class="text-right py-2">Price</th>
                                 <th class="text-right py-2">Total</th>
                                 <th class="text-center py-2">Due Date</th>
+                                <th class="text-center py-2">Upfront</th>
                                 <th class="text-right py-2">Paid</th>
                                 <th class="text-right py-2">Balance</th>
                                 <th class="text-center py-2">Status</th>
@@ -1020,10 +1021,20 @@
                             <input type="number" step="0.01" id="detail-new-price" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" placeholder="Price">
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
                         <div>
                             <label class="block text-xs mb-1">Due Date</label>
                             <input type="date" id="detail-new-due-date" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        </div>
+                        <div>
+                            <label class="block text-xs mb-1">Upfront %</label>
+                            <select id="detail-new-upfront-pct" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="document.getElementById('detail-new-amount-paid').value = ((parseInt(document.getElementById('detail-new-qty').value||1) * parseFloat(document.getElementById('detail-new-price').value||0) * parseInt(this.value||0)) / 100).toFixed(2)">
+                                <option value="0">0%</option>
+                                <option value="25">25%</option>
+                                <option value="50">50%</option>
+                                <option value="75">75%</option>
+                                <option value="100">100%</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-xs mb-1">Amount Paid</label>
@@ -3108,6 +3119,7 @@
                     const balance = itemTotal - amountPaid;
                     const balanceColor = balance <= 0 ? 'text-green-400' : 'text-yellow-400';
                     const dueDateVal = item.due_date || '';
+                    const upfrontPct = Number(item.upfront_pct || 0);
                     return `
                     <tr class="border-b border-border-dark dark:border-border-light" data-detail-item-id="${item.id}">
                         <td class="py-2 text-xs">${item.service_name}</td>
@@ -3115,6 +3127,15 @@
                         <td class="py-2"><input type="number" step="0.01" class="detail-item-price w-20 text-xs text-right rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${Number(item.price).toFixed(2)}"></td>
                         <td class="text-right py-2 text-xs">$${itemTotal.toFixed(2)}</td>
                         <td class="py-2"><input type="date" class="detail-item-due-date w-28 text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${dueDateVal}"></td>
+                        <td class="py-2">
+                            <select class="detail-item-upfront w-16 text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="applyUpfrontPct(this, ${item.id})">
+                                <option value="0" ${upfrontPct === 0 ? 'selected' : ''}>0%</option>
+                                <option value="25" ${upfrontPct === 25 ? 'selected' : ''}>25%</option>
+                                <option value="50" ${upfrontPct === 50 ? 'selected' : ''}>50%</option>
+                                <option value="75" ${upfrontPct === 75 ? 'selected' : ''}>75%</option>
+                                <option value="100" ${upfrontPct === 100 ? 'selected' : ''}>100%</option>
+                            </select>
+                        </td>
                         <td class="py-2"><input type="number" step="0.01" min="0" class="detail-item-paid w-20 text-xs text-right rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${amountPaid.toFixed(2)}"></td>
                         <td class="text-right py-2 text-xs ${balanceColor}">$${balance.toFixed(2)}</td>
                         <td class="text-center py-2">
@@ -3286,6 +3307,7 @@
             const price = parseFloat(document.getElementById('detail-new-price').value) || 0;
             const dueDate = document.getElementById('detail-new-due-date').value || null;
             const amountPaid = parseFloat(document.getElementById('detail-new-amount-paid').value) || 0;
+            const upfrontPct = parseInt(document.getElementById('detail-new-upfront-pct').value) || 0;
 
             if (!serviceId || !quantity || !price) {
                 showToast('Please select a service and enter quantity/price', 'error');
@@ -3303,17 +3325,19 @@
                         d.setDate(d.getDate() + (i * 7));
                         weekDueDate = d.toISOString().split('T')[0];
                     }
+                    const weekPaid = upfrontPct > 0 ? Math.round((perSessionPrice * upfrontPct / 100) * 100) / 100 : 0;
                     newItems.push({
                         service_id: serviceId,
                         service_name: `${serviceName} - Week ${i + 1}`,
                         quantity: 1,
                         price: perSessionPrice,
                         due_date: weekDueDate,
-                        amount_paid: 0
+                        amount_paid: weekPaid,
+                        upfront_pct: upfrontPct
                     });
                 }
             } else {
-                newItems.push({ service_id: serviceId, service_name: serviceName, quantity, price, due_date: dueDate, amount_paid: amountPaid });
+                newItems.push({ service_id: serviceId, service_name: serviceName, quantity, price, due_date: dueDate, amount_paid: amountPaid, upfront_pct: upfrontPct });
             }
 
             try {
@@ -3329,6 +3353,7 @@
                     document.getElementById('detail-new-price').value = '';
                     document.getElementById('detail-new-due-date').value = '';
                     document.getElementById('detail-new-amount-paid').value = '0';
+                    document.getElementById('detail-new-upfront-pct').value = '0';
                     await viewInvoiceDetails(currentDetailInvoiceId);
                     loadInvoices();
                     if (sessions > 1) showToast(`Added ${sessions} weekly sessions`, 'success');
@@ -3386,6 +3411,16 @@
             }
         }
 
+        // Auto-calculate amount_paid when upfront % changes
+        function applyUpfrontPct(selectEl, itemId) {
+            const row = selectEl.closest('tr');
+            const qty = parseInt(row.querySelector('.detail-item-qty').value) || 1;
+            const price = parseFloat(row.querySelector('.detail-item-price').value) || 0;
+            const pct = parseInt(selectEl.value) || 0;
+            const paidInput = row.querySelector('.detail-item-paid');
+            paidInput.value = ((qty * price * pct) / 100).toFixed(2);
+        }
+
         // Save inline edits for a line item
         async function saveItemEdits(itemId, invoiceId) {
             const row = document.querySelector(`[data-detail-item-id="${itemId}"]`);
@@ -3395,12 +3430,13 @@
             const price = parseFloat(row.querySelector('.detail-item-price').value) || 0;
             const due_date = row.querySelector('.detail-item-due-date').value || null;
             const amount_paid = parseFloat(row.querySelector('.detail-item-paid').value) || 0;
+            const upfront_pct = parseInt(row.querySelector('.detail-item-upfront').value) || 0;
 
             try {
                 const res = await fetch(`${API_BASE}/invoices/items/${itemId}`, {
                     method: 'PUT',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ quantity, price, due_date, amount_paid })
+                    body: JSON.stringify({ quantity, price, due_date, amount_paid, upfront_pct })
                 });
                 if (res.ok) {
                     showToast('Item updated', 'success');
@@ -3528,10 +3564,20 @@
                             <input type="number" step="0.01" class="item-price w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
                         <div>
                             <label class="block text-xs mb-1">Due Date</label>
                             <input type="date" class="item-due-date w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        </div>
+                        <div>
+                            <label class="block text-xs mb-1">Upfront %</label>
+                            <select class="item-upfront-pct w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="applyCreateUpfrontPct(this)">
+                                <option value="0">0%</option>
+                                <option value="25">25%</option>
+                                <option value="50">50%</option>
+                                <option value="75">75%</option>
+                                <option value="100">100%</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-xs mb-1">Amount Paid</label>
@@ -3545,6 +3591,15 @@
                 </div>
             `;
             container.insertAdjacentHTML('beforeend', itemHtml);
+        }
+
+        function applyCreateUpfrontPct(selectEl) {
+            const itemDiv = selectEl.closest('.invoice-item');
+            const qty = parseInt(itemDiv.querySelector('.item-quantity').value) || 1;
+            const price = parseFloat(itemDiv.querySelector('.item-price').value) || 0;
+            const pct = parseInt(selectEl.value) || 0;
+            itemDiv.querySelector('.item-amount-paid').value = ((qty * price * pct) / 100).toFixed(2);
+            calculateInvoiceTotal();
         }
 
         function removeInvoiceItem(itemId) {
@@ -3599,10 +3654,20 @@
                                         <input type="number" step="0.01" class="item-price w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${perSessionPrice}" required>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
                                     <div>
                                         <label class="block text-xs mb-1">Due Date</label>
                                         <input type="date" class="item-due-date w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${weekDueDate}">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs mb-1">Upfront %</label>
+                                        <select class="item-upfront-pct w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="applyCreateUpfrontPct(this)">
+                                            <option value="0">0%</option>
+                                            <option value="25">25%</option>
+                                            <option value="50">50%</option>
+                                            <option value="75">75%</option>
+                                            <option value="100">100%</option>
+                                        </select>
                                     </div>
                                     <div>
                                         <label class="block text-xs mb-1">Amount Paid</label>
@@ -3727,9 +3792,10 @@
                 const price = parseFloat(item.querySelector('.item-price').value);
                 const dueDate = item.querySelector('.item-due-date').value || null;
                 const amountPaid = parseFloat(item.querySelector('.item-amount-paid').value) || 0;
+                const upfrontPct = parseInt(item.querySelector('.item-upfront-pct')?.value) || 0;
 
                 if (serviceId && quantity && price) {
-                    items.push({ service_id: serviceId, service_name: serviceName, quantity, price, due_date: dueDate, amount_paid: amountPaid });
+                    items.push({ service_id: serviceId, service_name: serviceName, quantity, price, due_date: dueDate, amount_paid: amountPaid, upfront_pct: upfrontPct });
                 }
             });
 

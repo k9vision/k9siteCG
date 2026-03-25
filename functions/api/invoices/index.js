@@ -154,8 +154,8 @@ export async function onRequest(context) {
 
       for (const item of items) {
         await env.DB.prepare(
-          'INSERT INTO invoice_items (invoice_id, service_id, service_name, quantity, price, total, due_date, amount_paid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        ).bind(invoice_id, item.service_id || null, item.service_name || 'Service', Number(item.quantity), Number(item.price), Number(item.price) * Number(item.quantity), item.due_date || null, Number(item.amount_paid) || 0).run();
+          'INSERT INTO invoice_items (invoice_id, service_id, service_name, quantity, price, total, due_date, amount_paid, upfront_pct) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(invoice_id, item.service_id || null, item.service_name || 'Service', Number(item.quantity), Number(item.price), Number(item.price) * Number(item.quantity), item.due_date || null, Number(item.amount_paid) || 0, Number(item.upfront_pct) || 0).run();
       }
 
       // Fetch complete invoice

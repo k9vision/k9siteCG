@@ -25,12 +25,12 @@ export async function onRequest(context) {
       const invoice = await env.DB.prepare(`
         SELECT
           invoices.*,
-          clients.client_name,
-          clients.email as client_email,
+          COALESCE(invoices.recipient_name, clients.client_name) as client_name,
+          COALESCE(invoices.recipient_email, clients.email) as client_email,
           clients.dog_name,
           clients.dog_breed
         FROM invoices
-        JOIN clients ON invoices.client_id = clients.id
+        LEFT JOIN clients ON invoices.client_id = clients.id
         WHERE invoices.id = ?
       `).bind(invoiceId).first();
 
@@ -149,8 +149,8 @@ export async function onRequest(context) {
         for (const item of new_items) {
           const itemTotal = item.quantity * item.price;
           await env.DB.prepare(
-            'INSERT INTO invoice_items (invoice_id, service_id, service_name, quantity, price, total, due_date, amount_paid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-          ).bind(invoiceId, item.service_id || null, item.service_name, item.quantity, item.price, itemTotal, item.due_date || null, Number(item.amount_paid) || 0).run();
+            'INSERT INTO invoice_items (invoice_id, service_id, service_name, quantity, price, total, due_date, amount_paid, upfront_pct) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+          ).bind(invoiceId, item.service_id || null, item.service_name, item.quantity, item.price, itemTotal, item.due_date || null, Number(item.amount_paid) || 0, Number(item.upfront_pct) || 0).run();
         }
 
         // Recalculate invoice totals
@@ -182,12 +182,12 @@ export async function onRequest(context) {
       const invoice = await env.DB.prepare(`
         SELECT
           invoices.*,
-          clients.client_name,
-          clients.email as client_email,
+          COALESCE(invoices.recipient_name, clients.client_name) as client_name,
+          COALESCE(invoices.recipient_email, clients.email) as client_email,
           clients.dog_name,
           clients.dog_breed
         FROM invoices
-        JOIN clients ON invoices.client_id = clients.id
+        LEFT JOIN clients ON invoices.client_id = clients.id
         WHERE invoices.id = ?
       `).bind(invoiceId).first();
 
