@@ -261,14 +261,28 @@ export function newDogNotificationHtml(clientName, dogName, breed, age) {
 
 // Invoice email: professional invoice sent to client
 export function invoiceEmailHtml(invoice, items) {
-  const itemsHTML = items.map(item => `
+  const totalPaid = items.reduce((sum, i) => sum + Number(i.amount_paid || 0), 0);
+  const balanceDue = Number(invoice.total) - totalPaid;
+
+  const itemsHTML = items.map(item => {
+    const iPaid = Number(item.amount_paid || 0);
+    const iTotal = Number(item.total);
+    const iBal = iTotal - iPaid;
+    const iDue = item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString() : '—';
+    const iUp = Number(item.upfront_pct || 0);
+    const balColor = iBal <= 0 ? '#22c55e' : '#eab308';
+    return `
     <tr>
-      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb;">${item.service_name}</td>
-      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${Number(item.price).toFixed(2)}</td>
-      <td style="padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">$${Number(item.total).toFixed(2)}</td>
-    </tr>
-  `).join('');
+      <td style="padding: 8px 6px; border-bottom: 1px solid #e5e7eb; font-size: 13px;">${item.service_name}</td>
+      <td style="padding: 8px 6px; border-bottom: 1px solid #e5e7eb; text-align: center; font-size: 13px;">${item.quantity}</td>
+      <td style="padding: 8px 6px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 13px;">$${Number(item.price).toFixed(2)}</td>
+      <td style="padding: 8px 6px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 13px;">$${iTotal.toFixed(2)}</td>
+      <td style="padding: 8px 6px; border-bottom: 1px solid #e5e7eb; text-align: center; font-size: 12px;">${iDue}</td>
+      <td style="padding: 8px 6px; border-bottom: 1px solid #e5e7eb; text-align: center; font-size: 13px;">${iUp}%</td>
+      <td style="padding: 8px 6px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 13px;">$${iPaid.toFixed(2)}</td>
+      <td style="padding: 8px 6px; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 13px; color: ${balColor};">$${iBal.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
 
   return emailWrapper(`
     <h2 style="color: #3B82F6; margin-bottom: 20px;">Invoice #${invoice.invoice_number}</h2>
@@ -291,10 +305,14 @@ export function invoiceEmailHtml(invoice, items) {
     <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
       <thead>
         <tr style="background: #f3f4f6;">
-          <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Service</th>
-          <th style="padding: 10px 12px; text-align: center; border-bottom: 2px solid #e5e7eb;">Qty</th>
-          <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Price</th>
-          <th style="padding: 10px 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">Total</th>
+          <th style="padding: 8px 6px; text-align: left; border-bottom: 2px solid #e5e7eb; font-size: 13px;">Service</th>
+          <th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #e5e7eb; font-size: 13px;">Qty</th>
+          <th style="padding: 8px 6px; text-align: right; border-bottom: 2px solid #e5e7eb; font-size: 13px;">Price</th>
+          <th style="padding: 8px 6px; text-align: right; border-bottom: 2px solid #e5e7eb; font-size: 13px;">Total</th>
+          <th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #e5e7eb; font-size: 13px;">Due Date</th>
+          <th style="padding: 8px 6px; text-align: center; border-bottom: 2px solid #e5e7eb; font-size: 13px;">Upfront</th>
+          <th style="padding: 8px 6px; text-align: right; border-bottom: 2px solid #e5e7eb; font-size: 13px;">Paid</th>
+          <th style="padding: 8px 6px; text-align: right; border-bottom: 2px solid #e5e7eb; font-size: 13px;">Balance</th>
         </tr>
       </thead>
       <tbody>
@@ -307,6 +325,8 @@ export function invoiceEmailHtml(invoice, items) {
       ${invoice.discount_amount > 0 ? `<p style="margin: 6px 0; font-size: 15px; color: #22c55e;"><strong>${invoice.discount_type === 'percentage' ? `Discount (${invoice.discount_value}%)` : 'Discount'}:</strong> -$${Number(invoice.discount_amount).toFixed(2)}</p>` : ''}
       <p style="margin: 6px 0; font-size: 15px;"><strong>Tax (${invoice.tax_rate}%):</strong> $${Number(invoice.tax_amount).toFixed(2)}</p>
       <p style="margin: 6px 0; font-size: 20px; color: #3B82F6;"><strong>Total: $${Number(invoice.total).toFixed(2)}</strong></p>
+      <p style="margin: 6px 0; font-size: 15px; color: #22c55e;"><strong>Total Paid:</strong> $${totalPaid.toFixed(2)}</p>
+      <p style="margin: 6px 0; font-size: 18px; color: ${balanceDue <= 0 ? '#22c55e' : '#ef4444'};"><strong>Balance Due: $${balanceDue.toFixed(2)}</strong></p>
     </div>
 
     ${invoice.notes ? `

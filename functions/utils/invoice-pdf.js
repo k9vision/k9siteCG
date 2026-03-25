@@ -80,9 +80,9 @@ export async function generateInvoicePDF(invoice, items) {
 
   // --- Line items table ---
   y -= 15;
-  const colX = [margin, margin + 180, margin + 220, margin + 280, margin + 340, margin + 400, margin + 460];
-  const colLabels = ['Service', 'Qty', 'Price', 'Total', 'Due Date', 'Paid', 'Balance'];
-  const colAligns = ['left', 'center', 'right', 'right', 'center', 'right', 'right'];
+  const colX = [margin, margin + 150, margin + 185, margin + 235, margin + 290, margin + 350, margin + 400, margin + 450];
+  const colLabels = ['Service', 'Qty', 'Price', 'Total', 'Due Date', 'Upfront', 'Paid', 'Balance'];
+  const colAligns = ['left', 'center', 'right', 'right', 'center', 'center', 'right', 'right'];
 
   // Table header background
   page.drawRectangle({ x: margin - 5, y: y - 4, width: pageWidth + 10, height: 20, color: LIGHT_BG });
@@ -105,12 +105,14 @@ export async function generateInvoicePDF(invoice, items) {
     const amountPaid = Number(item.amount_paid || 0);
     const balance = itemTotal - amountPaid;
     const dueDateStr = item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString() : '—';
+    const upfrontPct = Number(item.upfront_pct || 0);
     const rowValues = [
       item.service_name || 'Service',
       String(item.quantity || 0),
       `$${Number(item.price || 0).toFixed(2)}`,
       `$${itemTotal.toFixed(2)}`,
       dueDateStr,
+      `${upfrontPct}%`,
       `$${amountPaid.toFixed(2)}`,
       `$${balance.toFixed(2)}`
     ];
@@ -159,7 +161,28 @@ export async function generateInvoicePDF(invoice, items) {
   page.drawText(totalLabel, { x: totalsX, y, size: 14, font: fontBold, color: BLUE });
   const totalValWidth = fontBold.widthOfTextAtSize(totalValue, 14);
   page.drawText(totalValue, { x: valuesX + 70 - totalValWidth, y, size: 14, font: fontBold, color: BLUE });
-  y -= 30;
+  y -= 22;
+
+  // Total Paid & Balance Due
+  const totalPaid = items.reduce((sum, i) => sum + Number(i.amount_paid || 0), 0);
+  const balanceDue = Number(invoice.total || 0) - totalPaid;
+  const GREEN = rgb(0.294, 0.871, 0.498);
+  const RED = rgb(0.973, 0.443, 0.443);
+
+  const tpLabel = 'Total Paid:';
+  const tpValue = `$${totalPaid.toFixed(2)}`;
+  page.drawText(tpLabel, { x: totalsX, y, size: 10, font, color: GREEN });
+  const tpWidth = font.widthOfTextAtSize(tpValue, 10);
+  page.drawText(tpValue, { x: valuesX + 70 - tpWidth, y, size: 10, font: fontBold, color: GREEN });
+  y -= 18;
+
+  const bdLabel = 'Balance Due:';
+  const bdValue = `$${balanceDue.toFixed(2)}`;
+  const bdColor = balanceDue <= 0 ? GREEN : RED;
+  page.drawText(bdLabel, { x: totalsX, y, size: 12, font: fontBold, color: bdColor });
+  const bdWidth = fontBold.widthOfTextAtSize(bdValue, 12);
+  page.drawText(bdValue, { x: valuesX + 70 - bdWidth, y, size: 12, font: fontBold, color: bdColor });
+  y -= 25;
 
   // --- Notes ---
   if (invoice.notes) {
