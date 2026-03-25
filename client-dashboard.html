@@ -1856,12 +1856,20 @@
                     const itemsHtml = (inv.items || []).map(item => {
                         const itemStatus = item.status || 'pending';
                         const itemStatusColor = itemStatus === 'paid' ? 'bg-green-500' : 'bg-yellow-500';
+                        const amountPaid = Number(item.amount_paid || 0);
+                        const itemTotal = Number(item.total);
+                        const balance = itemTotal - amountPaid;
+                        const dueDateDisplay = item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString() : '—';
+                        const balanceColor = balance <= 0 ? 'text-green-400' : 'text-yellow-400';
                         return `
                         <tr class="text-sm">
                             <td class="py-1">${item.service_name}</td>
                             <td class="py-1 text-center">${item.quantity}</td>
                             <td class="py-1 text-right">$${Number(item.price).toFixed(2)}</td>
-                            <td class="py-1 text-right">$${Number(item.total).toFixed(2)}</td>
+                            <td class="py-1 text-right">$${itemTotal.toFixed(2)}</td>
+                            <td class="py-1 text-center text-xs">${dueDateDisplay}</td>
+                            <td class="py-1 text-right">$${amountPaid.toFixed(2)}</td>
+                            <td class="py-1 text-right ${balanceColor}">$${balance.toFixed(2)}</td>
                             <td class="py-1 text-right"><span class="text-xs px-2 py-0.5 rounded text-white ${itemStatusColor}">${itemStatus}</span></td>
                         </tr>`;
                     }).join('');
@@ -1884,7 +1892,7 @@
                             <div class="mt-2 border-t border-border-dark dark:border-border-light pt-2">
                                 <table class="w-full">
                                     <thead><tr class="text-xs text-gray-500 border-b border-border-dark dark:border-border-light">
-                                        <th class="text-left py-1">Service</th><th class="text-center py-1">Qty</th><th class="text-right py-1">Price</th><th class="text-right py-1">Total</th><th class="text-right py-1">Status</th>
+                                        <th class="text-left py-1">Service</th><th class="text-center py-1">Qty</th><th class="text-right py-1">Price</th><th class="text-right py-1">Total</th><th class="text-center py-1">Due</th><th class="text-right py-1">Paid</th><th class="text-right py-1">Balance</th><th class="text-right py-1">Status</th>
                                     </tr></thead>
                                     <tbody>${itemsHtml}</tbody>
                                 </table>
@@ -2273,10 +2281,13 @@
 
                 // Table header
                 page.drawRectangle({ x: 45, y: y - 5, width: width - 90, height: 20, color: rgb(0.95, 0.95, 0.95) });
-                page.drawText('Service', { x: 50, y, size: 10, font: boldFont });
-                page.drawText('Qty', { x: 350, y, size: 10, font: boldFont });
-                page.drawText('Price', { x: 410, y, size: 10, font: boldFont });
-                page.drawText('Total', { x: 490, y, size: 10, font: boldFont });
+                page.drawText('Service', { x: 50, y, size: 9, font: boldFont });
+                page.drawText('Qty', { x: 200, y, size: 9, font: boldFont });
+                page.drawText('Price', { x: 240, y, size: 9, font: boldFont });
+                page.drawText('Total', { x: 300, y, size: 9, font: boldFont });
+                page.drawText('Due Date', { x: 360, y, size: 9, font: boldFont });
+                page.drawText('Paid', { x: 430, y, size: 9, font: boldFont });
+                page.drawText('Balance', { x: 490, y, size: 9, font: boldFont });
                 y -= 20;
 
                 // Items
@@ -2287,10 +2298,18 @@
                             currentPage = pdfDoc.addPage([612, 792]);
                             y = 792 - 50;
                         }
-                        currentPage.drawText(item.service_name || '', { x: 50, y, size: 10, font });
-                        currentPage.drawText(String(item.quantity), { x: 355, y, size: 10, font });
-                        currentPage.drawText('$' + Number(item.price).toFixed(2), { x: 410, y, size: 10, font });
-                        currentPage.drawText('$' + Number(item.total).toFixed(2), { x: 490, y, size: 10, font });
+                        const svcName = (item.service_name || '').length > 22 ? (item.service_name || '').substring(0, 19) + '...' : (item.service_name || '');
+                        const amtPaid = Number(item.amount_paid || 0);
+                        const itemTotal = Number(item.total || 0);
+                        const balance = itemTotal - amtPaid;
+                        const dueDateStr = item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString() : '';
+                        currentPage.drawText(svcName, { x: 50, y, size: 9, font });
+                        currentPage.drawText(String(item.quantity), { x: 205, y, size: 9, font });
+                        currentPage.drawText('$' + Number(item.price).toFixed(2), { x: 240, y, size: 9, font });
+                        currentPage.drawText('$' + itemTotal.toFixed(2), { x: 300, y, size: 9, font });
+                        currentPage.drawText(dueDateStr, { x: 360, y, size: 9, font });
+                        currentPage.drawText('$' + amtPaid.toFixed(2), { x: 430, y, size: 9, font });
+                        currentPage.drawText('$' + balance.toFixed(2), { x: 490, y, size: 9, font });
                         y -= 18;
                     }
                 }

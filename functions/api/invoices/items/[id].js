@@ -67,13 +67,7 @@ export async function onRequest(context) {
     }
 
     if (request.method === 'PUT') {
-      const { status, notify_client } = await request.json();
-
-      if (!status || !['pending', 'paid'].includes(status)) {
-        return new Response(JSON.stringify({ error: 'Status must be "pending" or "paid"' }), {
-          status: 400, headers: { 'Content-Type': 'application/json' }
-        });
-      }
+      const { status, notify_client, due_date, amount_paid } = await request.json();
 
       const item = await env.DB.prepare(
         'SELECT * FROM invoice_items WHERE id = ?'
@@ -85,9 +79,25 @@ export async function onRequest(context) {
         });
       }
 
-      await env.DB.prepare(
-        'UPDATE invoice_items SET status = ? WHERE id = ?'
-      ).bind(status, itemId).run();
+      // Update due_date and/or amount_paid if provided
+      if (due_date !== undefined) {
+        await env.DB.prepare('UPDATE invoice_items SET due_date = ? WHERE id = ?').bind(due_date || null, itemId).run();
+      }
+      if (amount_paid !== undefined) {
+        await env.DB.prepare('UPDATE invoice_items SET amount_paid = ? WHERE id = ?').bind(Number(amount_paid) || 0, itemId).run();
+      }
+
+      // Update status if provided
+      if (status) {
+        if (!['pending', 'paid'].includes(status)) {
+          return new Response(JSON.stringify({ error: 'Status must be "pending" or "paid"' }), {
+            status: 400, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        await env.DB.prepare(
+          'UPDATE invoice_items SET status = ? WHERE id = ?'
+        ).bind(status, itemId).run();
+      }
 
       // Send email notification if requested
       if (notify_client) {

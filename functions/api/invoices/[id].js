@@ -149,8 +149,8 @@ export async function onRequest(context) {
         for (const item of new_items) {
           const itemTotal = item.quantity * item.price;
           await env.DB.prepare(
-            'INSERT INTO invoice_items (invoice_id, service_id, service_name, quantity, price, total) VALUES (?, ?, ?, ?, ?, ?)'
-          ).bind(invoiceId, item.service_id || null, item.service_name, item.quantity, item.price, itemTotal).run();
+            'INSERT INTO invoice_items (invoice_id, service_id, service_name, quantity, price, total, due_date, amount_paid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+          ).bind(invoiceId, item.service_id || null, item.service_name, item.quantity, item.price, itemTotal, item.due_date || null, Number(item.amount_paid) || 0).run();
         }
 
         // Recalculate invoice totals

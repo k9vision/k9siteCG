@@ -856,8 +856,8 @@
                             <input type="date" id="invoice-due-date" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-2">Tax Rate (%) *</label>
-                            <input type="number" step="0.01" id="invoice-tax-rate" value="8.25" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                            <label class="block text-sm font-medium mb-2">Tax Rate (%)</label>
+                            <input type="number" step="0.01" id="invoice-tax-rate" value="8.25" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
@@ -976,6 +976,7 @@
                 <!-- Line Items Table -->
                 <div class="border-t border-border-dark dark:border-border-light pt-4 mb-4">
                     <h4 class="text-lg font-semibold mb-3">Line Items</h4>
+                    <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b border-border-dark dark:border-border-light">
@@ -983,29 +984,47 @@
                                 <th class="text-right py-2">Qty</th>
                                 <th class="text-right py-2">Price</th>
                                 <th class="text-right py-2">Total</th>
+                                <th class="text-center py-2">Due Date</th>
+                                <th class="text-right py-2">Paid</th>
+                                <th class="text-right py-2">Balance</th>
                                 <th class="text-center py-2">Status</th>
                                 <th class="text-right py-2">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="detail-items-body"></tbody>
                     </table>
+                    </div>
                 </div>
 
                 <!-- Add Item Row -->
                 <div class="border border-dashed border-border-dark dark:border-border-light rounded p-3 mb-4">
                     <h5 class="text-sm font-medium mb-2">Add New Item</h5>
-                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end mb-2">
                         <div class="col-span-2">
+                            <label class="block text-xs mb-1">Service</label>
                             <select id="detail-new-service" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="updateDetailNewItemPrice()">
                                 <option value="">Select service...</option>
                             </select>
                         </div>
                         <div>
+                            <label class="block text-xs mb-1">Qty</label>
                             <input type="number" id="detail-new-qty" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="1" min="1" placeholder="Qty">
                         </div>
                         <div>
+                            <label class="block text-xs mb-1">Price</label>
                             <input type="number" step="0.01" id="detail-new-price" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" placeholder="Price">
                         </div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
+                        <div>
+                            <label class="block text-xs mb-1">Due Date</label>
+                            <input type="date" id="detail-new-due-date" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        </div>
+                        <div>
+                            <label class="block text-xs mb-1">Amount Paid</label>
+                            <input type="number" step="0.01" min="0" id="detail-new-amount-paid" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="0" placeholder="0.00">
+                        </div>
+                        <div></div>
                         <div>
                             <button onclick="addDetailInvoiceItem()" class="w-full bg-green-500 text-white px-2 py-1.5 rounded text-sm hover:bg-green-700">+ Add</button>
                         </div>
@@ -3042,12 +3061,20 @@
                     const itemStatus = item.status || 'pending';
                     const statusColor = itemStatus === 'paid' ? 'bg-green-500' : 'bg-yellow-500';
                     const statusLabel = itemStatus === 'paid' ? 'Paid' : 'Pending';
+                    const itemTotal = Number(item.total);
+                    const amountPaid = Number(item.amount_paid || 0);
+                    const balance = itemTotal - amountPaid;
+                    const dueDateDisplay = item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString() : '—';
+                    const balanceColor = balance <= 0 ? 'text-green-400' : 'text-yellow-400';
                     return `
                     <tr class="border-b border-border-dark dark:border-border-light">
                         <td class="py-2">${item.service_name}</td>
                         <td class="text-right py-2">${item.quantity}</td>
                         <td class="text-right py-2">$${Number(item.price).toFixed(2)}</td>
-                        <td class="text-right py-2">$${Number(item.total).toFixed(2)}</td>
+                        <td class="text-right py-2">$${itemTotal.toFixed(2)}</td>
+                        <td class="text-center py-2 text-xs">${dueDateDisplay}</td>
+                        <td class="text-right py-2">$${amountPaid.toFixed(2)}</td>
+                        <td class="text-right py-2 ${balanceColor}">$${balance.toFixed(2)}</td>
                         <td class="text-center py-2">
                             <button onclick="toggleItemStatus(${item.id}, '${itemStatus}', ${inv.id})" class="text-xs px-2 py-0.5 rounded text-white ${statusColor} hover:opacity-80 cursor-pointer" title="Click to toggle">${statusLabel}</button>
                         </td>
@@ -3204,6 +3231,8 @@
             const serviceName = opt ? opt.dataset.name : '';
             const quantity = parseInt(document.getElementById('detail-new-qty').value) || 0;
             const price = parseFloat(document.getElementById('detail-new-price').value) || 0;
+            const dueDate = document.getElementById('detail-new-due-date').value || null;
+            const amountPaid = parseFloat(document.getElementById('detail-new-amount-paid').value) || 0;
 
             if (!serviceId || !quantity || !price) {
                 showToast('Please select a service and enter quantity/price', 'error');
@@ -3215,7 +3244,7 @@
                     method: 'PUT',
                     headers: getAuthHeaders(),
                     body: JSON.stringify({
-                        new_items: [{ service_id: serviceId, service_name: serviceName, quantity, price }]
+                        new_items: [{ service_id: serviceId, service_name: serviceName, quantity, price, due_date: dueDate, amount_paid: amountPaid }]
                     })
                 });
 
@@ -3224,6 +3253,8 @@
                     serviceSelect.value = '';
                     document.getElementById('detail-new-qty').value = '1';
                     document.getElementById('detail-new-price').value = '';
+                    document.getElementById('detail-new-due-date').value = '';
+                    document.getElementById('detail-new-amount-paid').value = '0';
                     // Refresh the modal and invoice list
                     await viewInvoiceDetails(currentDetailInvoiceId);
                     loadInvoices();
@@ -3301,7 +3332,7 @@
             const container = document.getElementById('invoice-items-container');
             const itemHtml = `
                 <div class="invoice-item border border-border-dark dark:border-border-light rounded p-3" data-item-id="${invoiceItemCounter}">
-                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                         <div class="col-span-2">
                             <label class="block text-xs mb-1">Service</label>
                             <select class="item-service w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="updateItemPrice(${invoiceItemCounter})" required>
@@ -3317,6 +3348,17 @@
                             <label class="block text-xs mb-1">Price</label>
                             <input type="number" step="0.01" class="item-price w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
                         </div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div>
+                            <label class="block text-xs mb-1">Due Date</label>
+                            <input type="date" class="item-due-date w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        </div>
+                        <div>
+                            <label class="block text-xs mb-1">Amount Paid</label>
+                            <input type="number" step="0.01" min="0" class="item-amount-paid w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="0">
+                        </div>
+                        <div></div>
                         <div class="flex items-end">
                             <button type="button" onclick="removeInvoiceItem(${invoiceItemCounter})" class="w-full bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-700">Remove</button>
                         </div>
@@ -3436,9 +3478,11 @@
                 const serviceName = serviceSelect.options[serviceSelect.selectedIndex].text.split('($')[0].trim();
                 const quantity = parseInt(item.querySelector('.item-quantity').value);
                 const price = parseFloat(item.querySelector('.item-price').value);
+                const dueDate = item.querySelector('.item-due-date').value || null;
+                const amountPaid = parseFloat(item.querySelector('.item-amount-paid').value) || 0;
 
                 if (serviceId && quantity && price) {
-                    items.push({ service_id: serviceId, service_name: serviceName, quantity, price });
+                    items.push({ service_id: serviceId, service_name: serviceName, quantity, price, due_date: dueDate, amount_paid: amountPaid });
                 }
             });
 

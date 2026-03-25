@@ -80,19 +80,19 @@ export async function generateInvoicePDF(invoice, items) {
 
   // --- Line items table ---
   y -= 15;
-  const colX = [margin, margin + 280, margin + 340, margin + 420];
-  const colLabels = ['Service', 'Qty', 'Price', 'Total'];
-  const colAligns = ['left', 'center', 'right', 'right'];
+  const colX = [margin, margin + 180, margin + 220, margin + 280, margin + 340, margin + 400, margin + 460];
+  const colLabels = ['Service', 'Qty', 'Price', 'Total', 'Due Date', 'Paid', 'Balance'];
+  const colAligns = ['left', 'center', 'right', 'right', 'center', 'right', 'right'];
 
   // Table header background
   page.drawRectangle({ x: margin - 5, y: y - 4, width: pageWidth + 10, height: 20, color: LIGHT_BG });
 
   for (let i = 0; i < colLabels.length; i++) {
-    const textWidth = fontBold.widthOfTextAtSize(colLabels[i], 10);
+    const textWidth = fontBold.widthOfTextAtSize(colLabels[i], 9);
     let xPos = colX[i];
-    if (colAligns[i] === 'right') xPos = colX[i] + 70 - textWidth;
-    else if (colAligns[i] === 'center') xPos = colX[i] + 20 - textWidth / 2;
-    page.drawText(colLabels[i], { x: xPos, y, size: 10, font: fontBold, color: DARK });
+    if (colAligns[i] === 'right') xPos = colX[i] + 50 - textWidth;
+    else if (colAligns[i] === 'center') xPos = colX[i] + 25 - textWidth / 2;
+    page.drawText(colLabels[i], { x: xPos, y, size: 9, font: fontBold, color: DARK });
   }
 
   y -= 6;
@@ -101,22 +101,29 @@ export async function generateInvoicePDF(invoice, items) {
 
   // Table rows
   for (const item of items) {
+    const itemTotal = Number(item.total || 0);
+    const amountPaid = Number(item.amount_paid || 0);
+    const balance = itemTotal - amountPaid;
+    const dueDateStr = item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString() : '—';
     const rowValues = [
       item.service_name || 'Service',
       String(item.quantity || 0),
       `$${Number(item.price || 0).toFixed(2)}`,
-      `$${Number(item.total || 0).toFixed(2)}`
+      `$${itemTotal.toFixed(2)}`,
+      dueDateStr,
+      `$${amountPaid.toFixed(2)}`,
+      `$${balance.toFixed(2)}`
     ];
 
     for (let i = 0; i < rowValues.length; i++) {
       const text = rowValues[i];
       // Truncate long service names
-      const displayText = i === 0 && text.length > 40 ? text.substring(0, 37) + '...' : text;
-      const textWidth = font.widthOfTextAtSize(displayText, 10);
+      const displayText = i === 0 && text.length > 25 ? text.substring(0, 22) + '...' : text;
+      const textWidth = font.widthOfTextAtSize(displayText, 9);
       let xPos = colX[i];
-      if (colAligns[i] === 'right') xPos = colX[i] + 70 - textWidth;
-      else if (colAligns[i] === 'center') xPos = colX[i] + 20 - textWidth / 2;
-      page.drawText(displayText, { x: xPos, y, size: 10, font, color: DARK });
+      if (colAligns[i] === 'right') xPos = colX[i] + 50 - textWidth;
+      else if (colAligns[i] === 'center') xPos = colX[i] + 25 - textWidth / 2;
+      page.drawText(displayText, { x: xPos, y, size: 9, font, color: DARK });
     }
 
     y -= 6;
