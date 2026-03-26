@@ -79,6 +79,11 @@ export async function onRequestPost(context) {
     }
 
     // Generate JWT token
+    const jwtSecret = context.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('JWT_SECRET environment variable is not set');
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
     const token = await generateToken(
       {
         id: result.id,
@@ -86,7 +91,7 @@ export async function onRequestPost(context) {
         role: result.role,
         exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
       },
-      context.env.JWT_SECRET
+      jwtSecret
     );
 
     return new Response(
