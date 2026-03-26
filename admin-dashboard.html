@@ -941,11 +941,14 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-2">Date *</label>
-                            <input type="date" id="invoice-date" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                            <input type="date" id="invoice-date" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light min-h-[44px]" required>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-2">Due Date</label>
-                            <input type="date" id="invoice-due-date" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                            <div class="flex items-center gap-1">
+                                <input type="date" id="invoice-due-date" class="flex-1 rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light min-h-[44px]">
+                                <button type="button" onclick="document.getElementById('invoice-due-date').value=''" class="text-gray-400 hover:text-red-400 p-1 flex-shrink-0" title="Clear date"><span class="material-icons text-sm">close</span></button>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-2">Tax Rate (%)</label>
@@ -1033,11 +1036,17 @@
                     </div>
                     <div>
                         <label class="text-sm text-gray-400 block">Date</label>
-                        <input type="date" id="detail-invoice-date" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light mt-1">
+                        <div class="flex items-center gap-1 mt-1">
+                            <input type="date" id="detail-invoice-date" class="flex-1 text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light min-h-[44px]">
+                            <button type="button" onclick="document.getElementById('detail-invoice-date').value=''" class="text-gray-400 hover:text-red-400 p-1 flex-shrink-0" title="Clear date"><span class="material-icons text-sm">close</span></button>
+                        </div>
                     </div>
                     <div>
                         <label class="text-sm text-gray-400 block">Due Date</label>
-                        <input type="date" id="detail-due-date" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light mt-1">
+                        <div class="flex items-center gap-1 mt-1">
+                            <input type="date" id="detail-due-date" class="flex-1 text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light min-h-[44px]">
+                            <button type="button" onclick="document.getElementById('detail-due-date').value=''" class="text-gray-400 hover:text-red-400 p-1 flex-shrink-0" title="Clear date"><span class="material-icons text-sm">close</span></button>
+                        </div>
                     </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-3 mb-6">
@@ -1111,7 +1120,10 @@
                     <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end">
                         <div>
                             <label class="block text-xs mb-1">Due Date</label>
-                            <input type="date" id="detail-new-due-date" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                            <div class="flex items-center gap-1">
+                                <input type="date" id="detail-new-due-date" class="flex-1 text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light min-h-[44px]">
+                                <button type="button" onclick="document.getElementById('detail-new-due-date').value=''" class="text-gray-400 hover:text-red-400 p-1 flex-shrink-0" title="Clear date"><span class="material-icons text-sm">close</span></button>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-xs mb-1">Upfront %</label>

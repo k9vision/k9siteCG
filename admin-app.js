@@ -1800,7 +1800,7 @@
                         <td class="py-2"><input type="number" class="detail-item-qty w-14 text-xs text-right rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${item.quantity}" min="1"></td>
                         <td class="py-2"><input type="number" step="0.01" class="detail-item-price w-20 text-xs text-right rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${Number(item.price).toFixed(2)}"></td>
                         <td class="text-right py-2 text-xs">$${itemTotal.toFixed(2)}</td>
-                        <td class="py-2"><input type="date" class="detail-item-due-date w-28 text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${dueDateVal}"></td>
+                        <td class="py-2"><div class="flex items-center gap-1"><input type="date" class="detail-item-due-date w-28 sm:w-32 text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light min-h-[44px]" value="${dueDateVal}"><button type="button" onclick="this.previousElementSibling.value=''" class="text-gray-400 hover:text-red-400 p-0.5 flex-shrink-0" title="Clear"><span class="material-icons text-xs">close</span></button></div></td>
                         <td class="py-2">
                             <select class="detail-item-upfront w-20 text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" onchange="applyUpfrontPct(this, ${item.id})">
                                 <option value="0" ${upfrontPct === 0 ? 'selected' : ''}>0%</option>
@@ -2235,7 +2235,10 @@
                     <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
                         <div>
                             <label class="block text-xs mb-1">Due Date</label>
-                            <input type="date" class="item-due-date w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                            <div class="flex items-center gap-1">
+                                <input type="date" class="item-due-date flex-1 text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light min-h-[44px]">
+                                <button type="button" onclick="this.closest('div').querySelector('input').value=''" class="text-gray-400 hover:text-red-400 p-0.5 flex-shrink-0" title="Clear"><span class="material-icons text-xs">close</span></button>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-xs mb-1">Upfront %</label>
@@ -2325,7 +2328,10 @@
                                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
                                     <div>
                                         <label class="block text-xs mb-1">Due Date</label>
-                                        <input type="date" class="item-due-date w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" value="${weekDueDate}">
+                                        <div class="flex items-center gap-1">
+                                            <input type="date" class="item-due-date flex-1 text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light min-h-[44px]" value="${weekDueDate}">
+                                            <button type="button" onclick="this.closest('div').querySelector('input').value=''" class="text-gray-400 hover:text-red-400 p-0.5 flex-shrink-0" title="Clear"><span class="material-icons text-xs">close</span></button>
+                                        </div>
                                     </div>
                                     <div>
                                         <label class="block text-xs mb-1">Upfront %</label>
