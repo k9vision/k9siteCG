@@ -1806,97 +1806,196 @@
             } catch (e) { console.error('Failed to load milestones:', e); }
         }
 
-        // INVOICE PDF DOWNLOAD
+        // INVOICE PDF DOWNLOAD — matches server-side email PDF layout exactly
         async function downloadInvoicePDF(invoice) {
             try {
                 const { PDFDocument, rgb, StandardFonts } = PDFLib;
                 const pdfDoc = await PDFDocument.create();
-                const page = pdfDoc.addPage([612, 792]);
+                let currentPage = pdfDoc.addPage([612, 792]);
                 const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
                 const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-                const { width, height } = page.getSize();
 
-                let y = height - 50;
+                const BLUE = rgb(0.231, 0.510, 0.965);
+                const DARK = rgb(0.122, 0.161, 0.216);
+                const GRAY = rgb(0.42, 0.45, 0.49);
+                const LIGHT_BG = rgb(0.976, 0.980, 0.984);
+                const LINE_COLOR = rgb(0.9, 0.91, 0.92);
+                const GREEN = rgb(0.294, 0.871, 0.498);
+                const RED = rgb(0.973, 0.443, 0.443);
 
-                // Header
-                page.drawText('K9 Vision Dog Training', { x: 50, y, size: 20, font: boldFont, color: rgb(0.231, 0.510, 0.965) });
-                y -= 30;
-                page.drawText(`Invoice #${invoice.invoice_number}`, { x: 50, y, size: 16, font: boldFont });
-                y -= 25;
-                page.drawText(`Date: ${invoice.date}`, { x: 50, y, size: 10, font });
-                if (invoice.due_date) {
-                    page.drawText(`Due: ${invoice.due_date}`, { x: 200, y, size: 10, font });
-                }
-                y -= 20;
-                page.drawText(`Trainer: ${invoice.trainer_name}`, { x: 50, y, size: 10, font });
-                y -= 30;
+                const margin = 50;
+                const pageWidth = 612 - margin * 2;
+                let y = 742;
 
-                // Client info
-                page.drawText(`Bill To: ${invoice.client_name || ''}`, { x: 50, y, size: 11, font: boldFont });
-                y -= 15;
-                page.drawText(`Dog: ${invoice.dog_name || ''}${invoice.dog_breed ? ' (' + invoice.dog_breed + ')' : ''}`, { x: 50, y, size: 10, font });
-                y -= 30;
-
-                // Table header
-                page.drawRectangle({ x: 45, y: y - 5, width: width - 90, height: 20, color: rgb(0.95, 0.95, 0.95) });
-                page.drawText('Service', { x: 50, y, size: 9, font: boldFont });
-                page.drawText('Qty', { x: 200, y, size: 9, font: boldFont });
-                page.drawText('Price', { x: 240, y, size: 9, font: boldFont });
-                page.drawText('Total', { x: 300, y, size: 9, font: boldFont });
-                page.drawText('Due Date', { x: 360, y, size: 9, font: boldFont });
-                page.drawText('Paid', { x: 430, y, size: 9, font: boldFont });
-                page.drawText('Balance', { x: 490, y, size: 9, font: boldFont });
-                y -= 20;
-
-                // Items
-                let currentPage = page;
-                if (invoice.items) {
-                    for (const item of invoice.items) {
-                        if (y < 80) {
-                            currentPage = pdfDoc.addPage([612, 792]);
-                            y = 792 - 50;
-                        }
-                        const svcName = (item.service_name || '').length > 22 ? (item.service_name || '').substring(0, 19) + '...' : (item.service_name || '');
-                        const amtPaid = Number(item.amount_paid || 0);
-                        const itemTotal = Number(item.total || 0);
-                        const balance = itemTotal - amtPaid;
-                        const dueDateStr = item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString() : '';
-                        currentPage.drawText(svcName, { x: 50, y, size: 9, font });
-                        currentPage.drawText(String(item.quantity), { x: 205, y, size: 9, font });
-                        currentPage.drawText('$' + Number(item.price).toFixed(2), { x: 240, y, size: 9, font });
-                        currentPage.drawText('$' + itemTotal.toFixed(2), { x: 300, y, size: 9, font });
-                        currentPage.drawText(dueDateStr, { x: 360, y, size: 9, font });
-                        currentPage.drawText('$' + amtPaid.toFixed(2), { x: 430, y, size: 9, font });
-                        currentPage.drawText('$' + balance.toFixed(2), { x: 490, y, size: 9, font });
-                        y -= 18;
+                function checkPageBreak(needed) {
+                    if (y < needed) {
+                        currentPage = pdfDoc.addPage([612, 792]);
+                        y = 742;
                     }
                 }
 
-                if (y < 80) { currentPage = pdfDoc.addPage([612, 792]); y = 792 - 50; }
+                // --- Logo + Header ---
+                try {
+                    const logoRes = await fetch('/k9visionlogo.jpeg');
+                    if (logoRes.ok) {
+                        const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
+                        const logoImage = await pdfDoc.embedJpg(logoBytes);
+                        const logoDims = logoImage.scaleToFit(80, 80);
+                        currentPage.drawImage(logoImage, { x: margin, y: y - logoDims.height, width: logoDims.width, height: logoDims.height });
+                        currentPage.drawText('K9 Vision', { x: margin + 90, y: y - 25, size: 24, font: boldFont, color: BLUE });
+                        currentPage.drawText('Dog Training Services', { x: margin + 90, y: y - 45, size: 12, font, color: GRAY });
+                        y -= 90;
+                    } else { throw new Error('no logo'); }
+                } catch {
+                    currentPage.drawText('K9 Vision', { x: margin, y, size: 28, font: boldFont, color: BLUE });
+                    y -= 20;
+                    currentPage.drawText('Dog Training Services', { x: margin, y, size: 12, font, color: GRAY });
+                    y -= 30;
+                }
+
+                // --- Invoice number ---
                 y -= 10;
-                // Line
-                currentPage.drawLine({ start: { x: 350, y: y + 5 }, end: { x: width - 50, y: y + 5 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+                currentPage.drawText(`Invoice #${invoice.invoice_number}`, { x: margin, y, size: 18, font: boldFont, color: DARK });
+                y -= 25;
 
-                // Totals
-                currentPage.drawText(`Subtotal: $${Number(invoice.subtotal).toFixed(2)}`, { x: 410, y, size: 10, font });
+                // --- Info fields ---
+                const infoFields = [
+                    ['Date', invoice.date ? new Date(invoice.date + 'T00:00:00').toLocaleDateString() : ''],
+                    ['Due Date', invoice.due_date ? new Date(invoice.due_date + 'T00:00:00').toLocaleDateString() : null],
+                    ['Trainer', invoice.trainer_name],
+                ];
+                for (const [label, value] of infoFields) {
+                    if (!value) continue;
+                    const labelText = `${label}: `;
+                    const labelWidth = boldFont.widthOfTextAtSize(labelText, 10);
+                    currentPage.drawText(labelText, { x: margin, y, size: 10, font: boldFont, color: DARK });
+                    currentPage.drawText(value, { x: margin + labelWidth, y, size: 10, font, color: GRAY });
+                    y -= 16;
+                }
+
+                // --- Bill To ---
+                y -= 10;
+                currentPage.drawText('Bill To:', { x: margin, y, size: 12, font: boldFont, color: DARK });
+                y -= 16;
+                currentPage.drawText(invoice.client_name || '', { x: margin, y, size: 10, font: boldFont, color: DARK });
+                y -= 16;
+                const dogInfo = `${invoice.dog_name || ''}${invoice.dog_breed ? ` (${invoice.dog_breed})` : ''}`;
+                if (dogInfo.trim()) {
+                    currentPage.drawText(`Dog: ${dogInfo}`, { x: margin, y, size: 10, font, color: GRAY });
+                    y -= 16;
+                }
+
+                // --- Line items table ---
+                y -= 15;
+                const colX = [margin, margin + 150, margin + 185, margin + 235, margin + 290, margin + 350, margin + 400, margin + 450];
+                const colLabels = ['Service', 'Qty', 'Price', 'Total', 'Due Date', 'Upfront', 'Paid', 'Balance'];
+                const colAligns = ['left', 'center', 'right', 'right', 'center', 'center', 'right', 'right'];
+
+                // Table header background
+                currentPage.drawRectangle({ x: margin - 5, y: y - 4, width: pageWidth + 10, height: 20, color: LIGHT_BG });
+                for (let i = 0; i < colLabels.length; i++) {
+                    const textWidth = boldFont.widthOfTextAtSize(colLabels[i], 9);
+                    let xPos = colX[i];
+                    if (colAligns[i] === 'right') xPos = colX[i] + 50 - textWidth;
+                    else if (colAligns[i] === 'center') xPos = colX[i] + 25 - textWidth / 2;
+                    currentPage.drawText(colLabels[i], { x: xPos, y, size: 9, font: boldFont, color: DARK });
+                }
+                y -= 6;
+                currentPage.drawLine({ start: { x: margin - 5, y }, end: { x: margin + pageWidth + 5, y }, thickness: 1, color: LINE_COLOR });
+                y -= 16;
+
+                // Table rows
+                const items = invoice.items || [];
+                for (const item of items) {
+                    checkPageBreak(80);
+                    const itemTotal = Number(item.total || 0);
+                    const amountPaid = Number(item.amount_paid || 0);
+                    const balance = itemTotal - amountPaid;
+                    const dueDateStr = item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString() : '\u2014';
+                    const upfrontPct = Number(item.upfront_pct || 0);
+                    const rowValues = [
+                        item.service_name || 'Service',
+                        String(item.quantity || 0),
+                        `$${Number(item.price || 0).toFixed(2)}`,
+                        `$${itemTotal.toFixed(2)}`,
+                        dueDateStr,
+                        `${upfrontPct}%`,
+                        `$${amountPaid.toFixed(2)}`,
+                        `$${balance.toFixed(2)}`
+                    ];
+                    for (let i = 0; i < rowValues.length; i++) {
+                        const text = rowValues[i];
+                        const displayText = i === 0 && text.length > 25 ? text.substring(0, 22) + '...' : text;
+                        const textWidth = font.widthOfTextAtSize(displayText, 9);
+                        let xPos = colX[i];
+                        if (colAligns[i] === 'right') xPos = colX[i] + 50 - textWidth;
+                        else if (colAligns[i] === 'center') xPos = colX[i] + 25 - textWidth / 2;
+                        currentPage.drawText(displayText, { x: xPos, y, size: 9, font, color: DARK });
+                    }
+                    y -= 6;
+                    currentPage.drawLine({ start: { x: margin - 5, y }, end: { x: margin + pageWidth + 5, y }, thickness: 0.5, color: LINE_COLOR });
+                    y -= 16;
+                }
+
+                // --- Totals section ---
+                checkPageBreak(120);
+                y -= 5;
+                const totalsX = margin + 320;
+                const valuesX = margin + 420;
+
+                const totalsData = [
+                    ['Subtotal:', `$${Number(invoice.subtotal || 0).toFixed(2)}`],
+                ];
+                if (Number(invoice.discount_amount || 0) > 0) {
+                    const discLabel = invoice.discount_type === 'percentage' ? `Discount (${invoice.discount_value}%):` : 'Discount:';
+                    totalsData.push([discLabel, `-$${Number(invoice.discount_amount).toFixed(2)}`]);
+                }
+                totalsData.push([`Tax (${invoice.tax_rate || 0}%):`, `$${Number(invoice.tax_amount || 0).toFixed(2)}`]);
+
+                for (const [label, value] of totalsData) {
+                    currentPage.drawText(label, { x: totalsX, y, size: 10, font, color: GRAY });
+                    const valWidth = font.widthOfTextAtSize(value, 10);
+                    currentPage.drawText(value, { x: valuesX + 70 - valWidth, y, size: 10, font, color: DARK });
+                    y -= 18;
+                }
+
+                // Blue total line
+                currentPage.drawLine({ start: { x: totalsX, y: y + 12 }, end: { x: valuesX + 70, y: y + 12 }, thickness: 1, color: BLUE });
+                const totalValue = `$${Number(invoice.total || 0).toFixed(2)}`;
+                currentPage.drawText('Total:', { x: totalsX, y, size: 14, font: boldFont, color: BLUE });
+                const totalValWidth = boldFont.widthOfTextAtSize(totalValue, 14);
+                currentPage.drawText(totalValue, { x: valuesX + 70 - totalValWidth, y, size: 14, font: boldFont, color: BLUE });
+                y -= 22;
+
+                // Total Paid & Balance Due
+                const totalPaid = items.reduce((sum, i) => sum + Number(i.amount_paid || 0), 0);
+                const balanceDue = Number(invoice.total || 0) - totalPaid;
+
+                const tpValue = `$${totalPaid.toFixed(2)}`;
+                currentPage.drawText('Total Paid:', { x: totalsX, y, size: 10, font, color: GREEN });
+                const tpWidth = font.widthOfTextAtSize(tpValue, 10);
+                currentPage.drawText(tpValue, { x: valuesX + 70 - tpWidth, y, size: 10, font: boldFont, color: GREEN });
                 y -= 18;
-                currentPage.drawText(`Tax (${invoice.tax_rate}%): $${Number(invoice.tax_amount).toFixed(2)}`, { x: 410, y, size: 10, font });
-                y -= 20;
-                currentPage.drawText(`Total: $${Number(invoice.total).toFixed(2)}`, { x: 410, y, size: 14, font: boldFont, color: rgb(0.231, 0.510, 0.965) });
 
+                const bdValue = `$${balanceDue.toFixed(2)}`;
+                const bdColor = balanceDue <= 0 ? GREEN : RED;
+                currentPage.drawText('Balance Due:', { x: totalsX, y, size: 12, font: boldFont, color: bdColor });
+                const bdWidth = boldFont.widthOfTextAtSize(bdValue, 12);
+                currentPage.drawText(bdValue, { x: valuesX + 70 - bdWidth, y, size: 12, font: boldFont, color: bdColor });
+                y -= 25;
+
+                // --- Notes ---
                 if (invoice.notes) {
-                    y -= 40;
-                    if (y < 80) { currentPage = pdfDoc.addPage([612, 792]); y = 792 - 50; }
-                    currentPage.drawText('Notes:', { x: 50, y, size: 10, font: boldFont });
-                    y -= 15;
-                    // Word-wrap notes to fit page width
+                    checkPageBreak(80);
+                    currentPage.drawText('Notes:', { x: margin, y, size: 10, font: boldFont, color: DARK });
+                    y -= 16;
                     const words = invoice.notes.split(' ');
                     let line = '';
                     for (const word of words) {
-                        const testLine = line ? line + ' ' + word : word;
-                        if (font.widthOfTextAtSize(testLine, 10) > width - 110) {
-                            if (y < 80) { currentPage = pdfDoc.addPage([612, 792]); y = 792 - 50; }
-                            currentPage.drawText(line, { x: 50, y, size: 10, font });
+                        const testLine = line ? `${line} ${word}` : word;
+                        if (font.widthOfTextAtSize(testLine, 10) > pageWidth) {
+                            checkPageBreak(60);
+                            currentPage.drawText(line, { x: margin, y, size: 10, font, color: GRAY });
                             y -= 14;
                             line = word;
                         } else {
@@ -1904,14 +2003,18 @@
                         }
                     }
                     if (line) {
-                        if (y < 80) { currentPage = pdfDoc.addPage([612, 792]); y = 792 - 50; }
-                        currentPage.drawText(line, { x: 50, y, size: 10, font });
+                        checkPageBreak(60);
+                        currentPage.drawText(line, { x: margin, y, size: 10, font, color: GRAY });
+                        y -= 20;
                     }
                 }
 
-                // Footer on last page
-                currentPage.drawText('K9 Vision Dog Training | Houston, TX | trainercg@k9visiontx.com', { x: 50, y: 30, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
+                // --- Footer ---
+                const footerText = 'Thank you for choosing K9 Vision!';
+                const footerWidth = font.widthOfTextAtSize(footerText, 10);
+                currentPage.drawText(footerText, { x: (612 - footerWidth) / 2, y: 30, size: 10, font, color: GRAY });
 
+                // Download
                 const pdfBytes = await pdfDoc.save();
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                 const url = URL.createObjectURL(blob);
