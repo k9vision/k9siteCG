@@ -1650,8 +1650,9 @@
                                     <h4 class="font-bold text-lg">Invoice #${inv.invoice_number}</h4>
                                     <p class="text-gray-400 dark:text-gray-600">Client: ${inv.client_name} (${inv.dog_name})</p>
                                     <p class="text-gray-400 dark:text-gray-600">Date: ${new Date(inv.date).toLocaleDateString()}</p>
-                                    <p class="text-primary font-bold mt-2">Total: $${inv.total.toFixed(2)}</p>
-                                    <span class="text-xs px-2 py-1 rounded ${inv.status === 'paid' ? 'bg-green-500' : 'bg-yellow-500'} text-white">${inv.status.toUpperCase()}</span>
+                                    <p class="text-primary font-bold mt-2">Total: $${Number(inv.total).toFixed(2)}</p>
+                                    <p class="text-sm mt-1 ${(Number(inv.total) - Number(inv.total_paid || 0)) <= 0 ? 'text-green-400' : 'text-red-400'} font-semibold">Balance Due: $${(Number(inv.total) - Number(inv.total_paid || 0)).toFixed(2)}</p>
+                                    <span class="mt-1 inline-block text-xs px-2 py-1 rounded ${inv.status === 'paid' ? 'bg-green-500' : 'bg-yellow-500'} text-white">${inv.status.toUpperCase()}</span>
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick="emailInvoice(${inv.id})" class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">📧 Email</button>

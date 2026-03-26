@@ -39,7 +39,8 @@ export async function onRequest(context) {
             COALESCE(invoices.recipient_name, clients.client_name) as client_name,
             COALESCE(invoices.recipient_email, clients.email) as client_email,
             clients.dog_name, clients.dog_breed,
-            contacts.name as contact_name
+            contacts.name as contact_name,
+            COALESCE((SELECT SUM(amount_paid) FROM invoice_items WHERE invoice_id = invoices.id), 0) as total_paid
           FROM invoices LEFT JOIN clients ON invoices.client_id = clients.id
           LEFT JOIN contacts ON invoices.contact_id = contacts.id
           ORDER BY invoices.created_at DESC
