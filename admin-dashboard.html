@@ -3026,11 +3026,11 @@
                             </div>
                             <div>
                                 <p class="text-sm text-gray-400">Date</p>
-                                <p>${inv.date ? new Date(inv.date).toLocaleDateString() : 'N/A'}</p>
+                                <p>${inv.date ? new Date(inv.date + 'T00:00:00').toLocaleDateString() : 'N/A'}</p>
                             </div>
                             <div>
                                 <p class="text-sm text-gray-400">Due Date</p>
-                                <p>${inv.due_date ? new Date(inv.due_date).toLocaleDateString() : 'N/A'}</p>
+                                <p>${inv.due_date ? new Date(inv.due_date + 'T00:00:00').toLocaleDateString() : 'N/A'}</p>
                             </div>
                         </div>
                         <div class="overflow-x-auto">

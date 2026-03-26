@@ -53,8 +53,8 @@ export async function generateInvoicePDF(invoice, items) {
 
   // Simpler field drawing
   const infoFields = [
-    ['Date', new Date(invoice.date).toLocaleDateString()],
-    ['Due Date', invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : null],
+    ['Date', new Date(invoice.date + 'T00:00:00').toLocaleDateString()],
+    ['Due Date', invoice.due_date ? new Date(invoice.due_date + 'T00:00:00').toLocaleDateString() : null],
     ['Trainer', invoice.trainer_name],
   ];
   for (const [label, value] of infoFields) {

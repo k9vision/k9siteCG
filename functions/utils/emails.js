@@ -292,8 +292,8 @@ export function invoiceEmailHtml(invoice, items) {
 
     <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 20px 0;">
       <p style="margin: 5px 0;"><strong>Invoice #:</strong> ${invoice.invoice_number}</p>
-      <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(invoice.date).toLocaleDateString()}</p>
-      ${invoice.due_date ? `<p style="margin: 5px 0;"><strong>Due Date:</strong> ${new Date(invoice.due_date).toLocaleDateString()}</p>` : ''}
+      <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(invoice.date + 'T00:00:00').toLocaleDateString()}</p>
+      ${invoice.due_date ? `<p style="margin: 5px 0;"><strong>Due Date:</strong> ${new Date(invoice.due_date + 'T00:00:00').toLocaleDateString()}</p>` : ''}
       <p style="margin: 5px 0;"><strong>Trainer:</strong> ${invoice.trainer_name}</p>
     </div>
 
