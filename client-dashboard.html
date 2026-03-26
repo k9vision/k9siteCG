@@ -6,6 +6,7 @@
     <title>K9 Vision - My Portal</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
     <script>
@@ -113,6 +114,32 @@
                     <div class="flex gap-4">
                         <button type="submit" class="flex-1 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-700">Add Dog</button>
                         <button type="button" onclick="closeAddDogModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Dog Modal -->
+        <div id="edit-dog-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-8 max-w-md w-full border border-border-dark dark:border-border-light">
+                <h3 class="text-2xl font-bold mb-4">Edit Dog</h3>
+                <form id="edit-dog-form" class="space-y-4">
+                    <input type="hidden" id="edit-dog-id">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Dog Name *</label>
+                        <input type="text" id="edit-dog-name" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Breed</label>
+                        <input type="text" id="edit-dog-breed" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Age (years)</label>
+                        <input type="number" id="edit-dog-age" min="0" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                    </div>
+                    <div class="flex gap-4">
+                        <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded hover:bg-blue-700">Update</button>
+                        <button type="button" onclick="closeEditDogModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -233,15 +260,21 @@
                     </div>
                 </div>
                 <div class="flex justify-between items-center mb-2">
-                    <div id="media-select-controls" class="flex items-center gap-2">
+                    <div id="media-select-controls" class="flex items-center gap-2 flex-wrap">
                         <button onclick="toggleMediaSelectMode()" id="media-select-toggle" class="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500">Select</button>
                         <button onclick="selectAllMedia()" id="media-select-all-btn" class="hidden text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500">Select All</button>
                         <button onclick="bulkDeleteMedia()" id="media-bulk-delete-btn" class="hidden text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete Selected (<span id="media-selected-count">0</span>)</button>
+                        <button onclick="setAlbumForSelected()" id="media-set-album-btn" class="hidden text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700">Set Album</button>
                     </div>
-                    <select id="media-sort" onchange="sortAndRenderMedia()" class="rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-xs px-2 py-1">
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                    </select>
+                    <div class="flex items-center gap-2">
+                        <select id="media-album-filter" onchange="sortAndRenderMedia()" class="rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-xs px-2 py-1">
+                            <option value="">All Albums</option>
+                        </select>
+                        <select id="media-sort" onchange="sortAndRenderMedia()" class="rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-xs px-2 py-1">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                        </select>
+                    </div>
                 </div>
                 <div id="media-list">
                     <p class="text-gray-400 dark:text-gray-600">No media files yet</p>
@@ -791,11 +824,14 @@
             }
         }
 
+        let clientDogs = []; // Store dogs for edit lookup
+
         async function loadDogs(clientId) {
             try {
                 const res = await fetch(`${API_BASE}/dogs?client_id=${clientId}`, { headers: getAuthHeaders() });
                 const data = await res.json();
                 const dogs = data.dogs || [];
+                clientDogs = dogs;
                 const dogsList = document.getElementById('dogs-list');
 
                 if (dogs.length > 0) {
@@ -814,6 +850,7 @@
                             <p class="text-sm text-gray-400 dark:text-gray-600">${d.breed || 'Breed unknown'}</p>
                             <p class="text-sm text-gray-400 dark:text-gray-600">${d.age ? d.age + ' years old' : ''}</p>
                             ${d.is_primary ? '<span class="inline-block mt-1 text-xs bg-primary text-white px-2 py-0.5 rounded">Primary</span>' : ''}
+                            <button onclick="openEditDogModal(${d.id})" class="mt-2 text-sm text-primary hover:underline flex items-center justify-center gap-1"><span class="material-icons text-sm">edit</span>Edit</button>
                         </div>
                     `).join('');
 
@@ -839,6 +876,49 @@
             document.getElementById('add-dog-modal').classList.add('hidden');
             document.getElementById('add-dog-form').reset();
         }
+
+        // Edit Dog functions (F8: Client Self-Service)
+        function openEditDogModal(dogId) {
+            const dog = clientDogs.find(d => d.id === dogId);
+            if (!dog) return showToast('Dog not found', 'error');
+            document.getElementById('edit-dog-id').value = dogId;
+            document.getElementById('edit-dog-name').value = dog.dog_name || '';
+            document.getElementById('edit-dog-breed').value = dog.breed || '';
+            document.getElementById('edit-dog-age').value = dog.age || '';
+            document.getElementById('edit-dog-modal').classList.remove('hidden');
+        }
+
+        function closeEditDogModal() {
+            document.getElementById('edit-dog-modal').classList.add('hidden');
+            document.getElementById('edit-dog-form').reset();
+        }
+
+        document.getElementById('edit-dog-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const dogId = document.getElementById('edit-dog-id').value;
+            const dog_name = document.getElementById('edit-dog-name').value.trim();
+            const breed = document.getElementById('edit-dog-breed').value.trim();
+            const age = document.getElementById('edit-dog-age').value;
+            if (!dog_name) return showToast('Dog name is required', 'error');
+            try {
+                const res = await fetch(`${API_BASE}/dogs/${dogId}`, {
+                    method: 'PUT',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ dog_name, breed, age: age ? parseInt(age) : null })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('Dog updated!', 'success');
+                    closeEditDogModal();
+                    loadDogs(currentClientId);
+                } else {
+                    showToast(data.error || 'Failed to update', 'error');
+                }
+            } catch (err) {
+                console.error('Edit dog error:', err);
+                showToast('Failed to update dog', 'error');
+            }
+        });
 
         async function uploadDogPhoto(dogId, input) {
             const file = input.files[0];
@@ -1070,12 +1150,14 @@
             const toggleBtn = document.getElementById('media-select-toggle');
             const selectAllBtn = document.getElementById('media-select-all-btn');
             const bulkDeleteBtn = document.getElementById('media-bulk-delete-btn');
+            const setAlbumBtn = document.getElementById('media-set-album-btn');
             toggleBtn.textContent = mediaSelectMode ? 'Cancel' : 'Select';
             toggleBtn.className = mediaSelectMode
                 ? 'text-xs bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700'
                 : 'text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500';
             selectAllBtn.classList.toggle('hidden', !mediaSelectMode);
             bulkDeleteBtn.classList.toggle('hidden', !mediaSelectMode);
+            if (setAlbumBtn) setAlbumBtn.classList.toggle('hidden', !mediaSelectMode);
             updateSelectedCount();
             renderMediaGallery();
         }
@@ -1128,19 +1210,64 @@
             } catch (e) { showToast('Bulk delete failed', 'error'); }
         }
 
+        function populateAlbumFilter() {
+            const filter = document.getElementById('media-album-filter');
+            if (!filter) return;
+            const albums = [...new Set(clientMediaItems.map(m => m.album || '').filter(a => a))];
+            const current = filter.value;
+            filter.innerHTML = '<option value="">All Albums</option>' + albums.map(a => `<option value="${a}" ${a === current ? 'selected' : ''}>${a}</option>`).join('');
+        }
+
+        async function setAlbumForSelected() {
+            if (selectedMediaIds.size === 0) return showToast('No items selected', 'error');
+            const albumName = prompt('Enter album name (leave empty to remove from album):');
+            if (albumName === null) return;
+            try {
+                const promises = [...selectedMediaIds].map(id =>
+                    fetch(`${API_BASE}/media/${id}`, {
+                        method: 'PUT',
+                        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ album: albumName.trim() })
+                    })
+                );
+                await Promise.all(promises);
+                showToast(`Updated album for ${selectedMediaIds.size} item(s)`, 'success');
+                if (currentClientId) loadMedia(currentClientId);
+            } catch (e) { showToast('Failed to set album', 'error'); }
+        }
+
+        async function saveMediaOrder(items) {
+            try {
+                await fetch(`${API_BASE}/media/reorder`, {
+                    method: 'PUT',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items })
+                });
+            } catch (e) { console.error('Failed to save media order:', e); }
+        }
+
         function renderMediaGallery() {
             const mediaList = document.getElementById('media-list');
+            populateAlbumFilter();
+            const albumFilter = (document.getElementById('media-album-filter') || {}).value || '';
+
             if (clientMediaItems.length > 0) {
-                const sorted = [...clientMediaItems].sort((a, b) => {
+                let filtered = albumFilter
+                    ? clientMediaItems.filter(m => (m.album || '') === albumFilter)
+                    : clientMediaItems;
+
+                const sorted = [...filtered].sort((a, b) => {
+                    if (a.sort_order !== b.sort_order) return (a.sort_order || 0) - (b.sort_order || 0);
                     const da = new Date(a.uploaded_at || a.created_at || 0);
                     const db = new Date(b.uploaded_at || b.created_at || 0);
                     return mediaSortOrder === 'newest' ? db - da : da - db;
                 });
-                mediaList.innerHTML = `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">${sorted.map((item, i) => {
+                mediaList.innerHTML = `<div id="media-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3">${sorted.map((item, i) => {
                     const idx = clientMediaItems.indexOf(item);
                     const dateStr = item.uploaded_at || item.created_at;
                     const dateHtml = dateStr ? `<p class="text-xs text-gray-500 mt-1">${new Date(dateStr).toLocaleDateString()}</p>` : '';
                     const displayName = getMediaDisplayName(item, i);
+                    const albumBadge = item.album ? `<span class="text-xs bg-purple-600 text-white px-1 rounded">${item.album}</span>` : '';
                     const preview = item.type === 'photo'
                         ? `<img src="${item.url}" alt="${displayName}" class="rounded w-full h-32 object-cover cursor-pointer" onclick="${mediaSelectMode ? `toggleMediaSelect(${item.id})` : `openMediaLightbox(${idx})`}">`
                         : `<div class="bg-gray-700 dark:bg-gray-200 rounded flex flex-col items-center justify-center h-32 cursor-pointer" onclick="${mediaSelectMode ? `toggleMediaSelect(${item.id})` : `openMediaLightbox(${idx})`}">
@@ -1151,8 +1278,31 @@
                     const deleteBtn = mediaSelectMode ? '' : `<button onclick="deleteMedia(${item.id})" class="absolute top-1 right-1 bg-black bg-opacity-60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600" title="Delete"><span class="material-icons text-sm">delete</span></button>`;
                     const checkbox = mediaSelectMode ? `<label class="absolute top-1 left-1 z-10"><input type="checkbox" id="media-cb-${item.id}" ${selectedMediaIds.has(item.id) ? 'checked' : ''} onchange="toggleMediaSelect(${item.id})" class="rounded border-gray-400 text-primary focus:ring-primary"></label>` : '';
                     const selectedBorder = mediaSelectMode && selectedMediaIds.has(item.id) ? 'ring-2 ring-primary rounded' : '';
-                    return `<div class="relative group ${selectedBorder}">${checkbox}${preview}${deleteBtn}${captionHtml}${dateHtml}</div>`;
+                    return `<div class="relative group ${selectedBorder}" data-media-id="${item.id}">${checkbox}${preview}${deleteBtn}${captionHtml}${albumBadge}${dateHtml}</div>`;
                 }).join('')}</div>`;
+
+                // Initialize drag-and-drop if not in select mode
+                if (!mediaSelectMode && typeof Sortable !== 'undefined') {
+                    const grid = document.getElementById('media-grid');
+                    if (grid) {
+                        Sortable.create(grid, {
+                            animation: 150,
+                            ghostClass: 'opacity-50',
+                            onEnd: function() {
+                                const items = [];
+                                grid.querySelectorAll('[data-media-id]').forEach((el, i) => {
+                                    items.push({ id: parseInt(el.dataset.mediaId), sort_order: i });
+                                });
+                                saveMediaOrder(items);
+                                // Update local data
+                                items.forEach(item => {
+                                    const m = clientMediaItems.find(mi => mi.id === item.id);
+                                    if (m) m.sort_order = item.sort_order;
+                                });
+                            }
+                        });
+                    }
+                }
             } else {
                 mediaList.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No media files yet</p>';
             }
@@ -2235,16 +2385,41 @@
                 const statusColors = { completed: 'text-green-500', in_progress: 'text-yellow-500', not_started: 'text-gray-500' };
                 const statusLabels = { completed: 'Completed', in_progress: 'In Progress', not_started: 'Not Started' };
 
-                container.innerHTML = milestones.map(m => `
-                    <div class="flex items-start gap-3 p-3 rounded-lg bg-background-dark dark:bg-gray-50">
-                        <span class="material-icons ${statusColors[m.status]} mt-0.5">${statusIcons[m.status]}</span>
-                        <div class="flex-1">
-                            <p class="font-semibold">${m.title}</p>
-                            ${m.description ? `<p class="text-sm text-gray-400 dark:text-gray-600">${m.description}</p>` : ''}
-                            <p class="text-xs text-gray-500 mt-1">${statusLabels[m.status]}${m.completed_at ? ` - ${new Date(m.completed_at).toLocaleDateString()}` : ''}</p>
+                // Group milestones by dog (F15: Multi-Dog Milestone Tracking)
+                const groups = {};
+                milestones.forEach(m => {
+                    const key = m.dog_name || 'General Training';
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(m);
+                });
+
+                let html = '';
+                for (const [dogName, dogMilestones] of Object.entries(groups)) {
+                    const dogCompleted = dogMilestones.filter(m => m.status === 'completed').length;
+                    const dogTotal = dogMilestones.length;
+                    const dogPercent = dogTotal > 0 ? Math.round((dogCompleted / dogTotal) * 100) : 0;
+                    html += `<div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="material-icons text-primary text-sm">pets</span>
+                            <h4 class="font-bold text-sm">${dogName}</h4>
+                            <span class="text-xs text-gray-500">${dogCompleted}/${dogTotal} (${dogPercent}%)</span>
                         </div>
-                    </div>
-                `).join('');
+                        <div class="w-full bg-gray-700 dark:bg-gray-200 rounded-full h-2 mb-3">
+                            <div class="bg-green-500 h-2 rounded-full transition-all duration-500" style="width: ${dogPercent}%"></div>
+                        </div>`;
+                    html += dogMilestones.map(m => `
+                        <div class="flex items-start gap-3 p-3 rounded-lg bg-background-dark dark:bg-gray-50 mb-2">
+                            <span class="material-icons ${statusColors[m.status]} mt-0.5">${statusIcons[m.status]}</span>
+                            <div class="flex-1">
+                                <p class="font-semibold">${m.title}</p>
+                                ${m.description ? `<p class="text-sm text-gray-400 dark:text-gray-600">${m.description}</p>` : ''}
+                                <p class="text-xs text-gray-500 mt-1">${statusLabels[m.status]}${m.completed_at ? ` - ${new Date(m.completed_at).toLocaleDateString()}` : ''}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                    html += '</div>';
+                }
+                container.innerHTML = html;
             } catch (e) { console.error('Failed to load milestones:', e); }
         }
 

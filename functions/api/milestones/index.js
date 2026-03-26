@@ -20,7 +20,11 @@ export async function onRequestGet(context) {
     }
 
     const { results } = await context.env.DB.prepare(
-      'SELECT * FROM training_milestones WHERE client_id = ? ORDER BY created_at ASC'
+      `SELECT tm.*, d.dog_name, d.photo_url as dog_photo
+       FROM training_milestones tm
+       LEFT JOIN dogs d ON tm.dog_id = d.id
+       WHERE tm.client_id = ?
+       ORDER BY CASE WHEN tm.dog_id IS NULL THEN 0 ELSE 1 END, d.dog_name ASC, tm.created_at ASC`
     ).bind(parseInt(clientId)).all();
 
     return new Response(JSON.stringify({ success: true, milestones: results }), { headers: { 'Content-Type': 'application/json' } });

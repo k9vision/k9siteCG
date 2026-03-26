@@ -12,7 +12,9 @@ export async function onRequestPut(context) {
     }
 
     const id = parseInt(context.params.id);
-    const { caption } = await context.request.json();
+    const body = await context.request.json();
+    const caption = body.caption;
+    const album = body.album;
 
     // If not admin, verify ownership
     if (auth.user.role !== 'admin') {
@@ -27,9 +29,18 @@ export async function onRequestPut(context) {
       }
     }
 
+    // Build dynamic update
+    const updates = [];
+    const values = [];
+    if (caption !== undefined) { updates.push('caption = ?'); values.push(caption || ''); }
+    if (album !== undefined) { updates.push('album = ?'); values.push(album || ''); }
+    if (updates.length === 0) {
+      return new Response(JSON.stringify({ error: 'No fields to update' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    values.push(id);
     const result = await context.env.DB.prepare(
-      'UPDATE media SET caption = ? WHERE id = ? RETURNING *'
-    ).bind(caption || '', id).first();
+      `UPDATE media SET ${updates.join(', ')} WHERE id = ? RETURNING *`
+    ).bind(...values).first();
 
     if (!result) {
       return new Response(

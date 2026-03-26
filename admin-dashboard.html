@@ -6,6 +6,7 @@
     <title>K9 Vision - Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
     <script>
@@ -275,6 +276,7 @@
                 <div class="flex items-center gap-2">
                     <input type="text" id="contacts-search" placeholder="Search contacts..." class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light px-3 py-1" oninput="searchContacts()">
                     <button onclick="showAddContactModal()" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700">+ Add Contact</button>
+                    <button onclick="showCSVImportModal()" class="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 flex items-center"><span class="material-icons text-sm mr-1">upload_file</span>Import CSV</button>
                     <button onclick="hideSection('contacts-section')" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none px-2" title="Close">&times;</button>
                 </div>
             </div>
@@ -318,6 +320,34 @@
             </div>
         </div>
 
+        <!-- CSV Import Modal -->
+        <div id="csv-import-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-card-dark dark:bg-card-light rounded-lg p-6 max-w-3xl w-full mx-2 max-h-[90vh] overflow-y-auto border border-border-dark dark:border-border-light">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Import Contacts from CSV</h3>
+                    <button onclick="closeCSVImportModal()" class="text-2xl">&times;</button>
+                </div>
+                <div class="mb-4">
+                    <p class="text-sm text-gray-400 dark:text-gray-600 mb-2">Upload a CSV file with columns: Name, Email, Phone, Dog Name, Notes</p>
+                    <input type="file" id="csv-file-input" accept=".csv" onchange="handleCSVFile(event)" class="w-full text-sm">
+                </div>
+                <div id="csv-preview" class="hidden">
+                    <h4 class="font-semibold mb-2">Preview (<span id="csv-row-count">0</span> rows)</h4>
+                    <div class="overflow-x-auto mb-4">
+                        <table id="csv-preview-table" class="w-full text-sm border-collapse">
+                            <thead id="csv-preview-header"></thead>
+                            <tbody id="csv-preview-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="importCSVContacts()" id="csv-import-btn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700">Import</button>
+                        <button onclick="closeCSVImportModal()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-700">Cancel</button>
+                    </div>
+                </div>
+                <div id="csv-import-results" class="hidden mt-4"></div>
+            </div>
+        </div>
+
         <!-- Reports Dashboard -->
         <div id="reports-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
             <div class="flex justify-between items-center mb-4">
@@ -326,6 +356,15 @@
                     <button onclick="exportReportsCSV()" class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Export CSV</button>
                     <button onclick="hideSection('reports-section')" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none px-2" title="Close">&times;</button>
                 </div>
+            </div>
+            <!-- Date Range Filter -->
+            <div class="flex flex-wrap items-center gap-3 mb-4">
+                <label class="text-sm">Date Range:</label>
+                <input type="date" id="report-start-date" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light px-2 py-1">
+                <span class="text-sm">to</span>
+                <input type="date" id="report-end-date" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light px-2 py-1">
+                <button onclick="loadReports()" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Apply</button>
+                <button onclick="resetReportDates()" class="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">Reset</button>
             </div>
             <!-- Summary Cards -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="reports-summary-cards">
@@ -363,6 +402,32 @@
                 <div class="bg-background-dark dark:bg-gray-50 rounded-lg p-4">
                     <h4 class="text-sm font-semibold mb-3">Client Growth (12 months)</h4>
                     <canvas id="client-growth-chart" height="200"></canvas>
+                </div>
+            </div>
+            <!-- Appointment Analytics -->
+            <h4 class="text-lg font-bold mt-8 mb-4 flex items-center"><span class="material-icons mr-2 text-primary">analytics</span>Appointment Analytics</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="bg-background-dark dark:bg-gray-50 p-4 rounded-lg text-center">
+                    <p class="text-2xl font-bold text-green-500" id="stat-completion-rate">0%</p>
+                    <p class="text-sm text-gray-400 dark:text-gray-600">Completion Rate</p>
+                </div>
+                <div class="bg-background-dark dark:bg-gray-50 p-4 rounded-lg text-center">
+                    <p class="text-2xl font-bold text-red-500" id="stat-cancellation-rate">0%</p>
+                    <p class="text-sm text-gray-400 dark:text-gray-600">Cancellation Rate</p>
+                </div>
+                <div class="bg-background-dark dark:bg-gray-50 p-4 rounded-lg text-center">
+                    <p class="text-2xl font-bold text-yellow-500" id="stat-noshow-rate">0%</p>
+                    <p class="text-sm text-gray-400 dark:text-gray-600">No-Show Rate</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-background-dark dark:bg-gray-50 p-4 rounded-lg">
+                    <h5 class="text-sm font-semibold mb-2">Appointment Status</h5>
+                    <canvas id="appt-status-chart" height="200"></canvas>
+                </div>
+                <div class="bg-background-dark dark:bg-gray-50 p-4 rounded-lg">
+                    <h5 class="text-sm font-semibold mb-2">Monthly Volume</h5>
+                    <canvas id="appt-volume-chart" height="200"></canvas>
                 </div>
             </div>
         </div>
@@ -693,6 +758,17 @@
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="font-semibold text-lg">Media</h4>
                         <div class="flex items-center gap-2">
+                            <select id="admin-media-album-filter" onchange="filterAdminMediaByAlbum()" class="text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light py-1 px-2">
+                                <option value="all">All Media</option>
+                                <option value="photo">Photos Only</option>
+                                <option value="video">Videos Only</option>
+                            </select>
+                            <select id="admin-media-sort" onchange="sortAdminMedia()" class="text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light py-1 px-2">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="name">By Name</option>
+                            </select>
+                            <button onclick="toggleAdminMediaReorder()" id="admin-media-reorder-toggle" class="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-500" title="Drag to reorder">Reorder</button>
                             <button onclick="toggleAdminMediaSelect()" id="admin-media-select-toggle" class="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500">Select</button>
                             <button onclick="selectAllAdminMedia()" id="admin-media-select-all" class="hidden text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500">Select All</button>
                             <button onclick="bulkDeleteAdminMedia()" id="admin-media-bulk-delete" class="hidden text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete (<span id="admin-media-sel-count">0</span>)</button>
@@ -721,6 +797,9 @@
                     </div>
                     <!-- Add Milestone Form (hidden) -->
                     <div id="milestone-form" class="hidden border border-dashed border-border-dark dark:border-border-light rounded p-3 mb-3">
+                        <select id="new-milestone-dog" class="w-full text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light mb-2">
+                            <option value="">General (no specific dog)</option>
+                        </select>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                             <input type="text" id="new-milestone-title" placeholder="Milestone title *" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
                             <select id="new-milestone-status" class="text-sm rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
@@ -838,14 +917,22 @@
                                 <option value="">Choose a client...</option>
                             </select>
                         </div>
-                        <div id="invoice-recipient-fields" class="hidden col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Recipient Name *</label>
-                                <input type="text" id="invoice-recipient-name" placeholder="e.g. John Doe" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                        <div id="invoice-recipient-fields" class="hidden col-span-2 grid grid-cols-1 gap-4">
+                            <div id="invoice-contact-select-wrapper" class="mb-1">
+                                <label class="block text-sm font-medium mb-1">Select from Contacts</label>
+                                <select id="invoice-contact-select" onchange="fillInvoiceFromContact()" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light text-sm">
+                                    <option value="">-- Enter manually --</option>
+                                </select>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Recipient Email *</label>
-                                <input type="email" id="invoice-recipient-email" placeholder="e.g. john@example.com" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Recipient Name *</label>
+                                    <input type="text" id="invoice-recipient-name" placeholder="e.g. John Doe" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Recipient Email *</label>
+                                    <input type="email" id="invoice-recipient-email" placeholder="e.g. john@example.com" class="w-full rounded-md border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light">
+                                </div>
                             </div>
                         </div>
                         <div>
@@ -1985,6 +2072,15 @@
                     dogsEl.innerHTML = '<p class="text-gray-400 dark:text-gray-600">No dogs yet</p>';
                 }
 
+                // Populate milestone dog dropdown with this client's dogs
+                const milestoneDogSelect = document.getElementById('new-milestone-dog');
+                if (milestoneDogSelect) {
+                    milestoneDogSelect.innerHTML = '<option value="">General (no specific dog)</option>';
+                    dogs.forEach(d => {
+                        milestoneDogSelect.innerHTML += `<option value="${d.id}">${d.dog_name}</option>`;
+                    });
+                }
+
                 // Media (with delete buttons and lightbox)
                 const mediaData = await mediaRes.json();
                 const media = mediaData.media || mediaData || [];
@@ -2061,6 +2157,8 @@
                 document.getElementById('new-milestone-title').value = '';
                 document.getElementById('new-milestone-desc').value = '';
                 document.getElementById('new-milestone-status').value = 'not_started';
+                const dogSel = document.getElementById('new-milestone-dog');
+                if (dogSel) dogSel.value = '';
             }
         }
 
@@ -2075,10 +2173,19 @@
                 in_progress: { label: 'In Progress', bg: 'bg-yellow-500', icon: 'pending' },
                 completed: { label: 'Completed', bg: 'bg-green-500', icon: 'check_circle' }
             };
-            // Progress bar
+            // Overall progress bar
             const completed = milestones.filter(m => m.status === 'completed').length;
             const pct = Math.round((completed / milestones.length) * 100);
-            el.innerHTML = `
+
+            // Group milestones by dog
+            const groups = {};
+            milestones.forEach(m => {
+                const key = m.dog_name || 'General Training';
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(m);
+            });
+
+            let html = `
                 <div class="mb-3">
                     <div class="flex justify-between text-xs mb-1">
                         <span>${completed}/${milestones.length} completed</span>
@@ -2088,35 +2195,57 @@
                         <div class="bg-green-500 h-2 rounded-full transition-all" style="width:${pct}%"></div>
                     </div>
                 </div>
-            ` + milestones.map(m => {
-                const cfg = statusConfig[m.status] || statusConfig.not_started;
-                return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded text-sm flex items-start gap-3">
-                    <span class="material-icons ${cfg.bg} text-white rounded-full text-base mt-0.5" style="font-size:18px">${cfg.icon}</span>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-semibold">${m.title}</div>
-                        ${m.description ? `<p class="text-gray-400 dark:text-gray-600 text-xs mt-0.5">${m.description}</p>` : ''}
-                        ${m.completed_at ? `<p class="text-green-400 text-xs mt-0.5">Completed ${new Date(m.completed_at).toLocaleDateString()}</p>` : ''}
-                    </div>
-                    <select onchange="updateMilestoneStatus(${m.id}, this.value)" class="text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light py-1 px-2">
-                        <option value="not_started" ${m.status === 'not_started' ? 'selected' : ''}>Not Started</option>
-                        <option value="in_progress" ${m.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
-                        <option value="completed" ${m.status === 'completed' ? 'selected' : ''}>Completed</option>
-                    </select>
-                    <button onclick="deleteMilestone(${m.id})" class="text-red-500 hover:text-red-300 text-xs flex-shrink-0">Delete</button>
-                </div>`;
-            }).join('');
+            `;
+
+            const groupKeys = Object.keys(groups);
+            // Only show group headers if there are multiple groups or a non-General group
+            const showHeaders = groupKeys.length > 1 || (groupKeys.length === 1 && groupKeys[0] !== 'General Training');
+
+            groupKeys.forEach(groupName => {
+                if (showHeaders) {
+                    const groupCompleted = groups[groupName].filter(m => m.status === 'completed').length;
+                    const groupPct = Math.round((groupCompleted / groups[groupName].length) * 100);
+                    html += `<div class="mt-3 mb-1">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                            <span class="material-icons text-sm">pets</span>
+                            <span>${groupName}</span>
+                            <span class="text-gray-500 dark:text-gray-400 normal-case">(${groupCompleted}/${groups[groupName].length} - ${groupPct}%)</span>
+                        </div>
+                    </div>`;
+                }
+                html += groups[groupName].map(m => {
+                    const cfg = statusConfig[m.status] || statusConfig.not_started;
+                    return `<div class="p-3 bg-background-dark dark:bg-gray-50 rounded text-sm flex items-start gap-3">
+                        <span class="material-icons ${cfg.bg} text-white rounded-full text-base mt-0.5" style="font-size:18px">${cfg.icon}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold">${m.title}</div>
+                            ${m.description ? `<p class="text-gray-400 dark:text-gray-600 text-xs mt-0.5">${m.description}</p>` : ''}
+                            ${m.completed_at ? `<p class="text-green-400 text-xs mt-0.5">Completed ${new Date(m.completed_at).toLocaleDateString()}</p>` : ''}
+                        </div>
+                        <select onchange="updateMilestoneStatus(${m.id}, this.value)" class="text-xs rounded border-gray-600 dark:border-gray-300 bg-background-dark dark:bg-white text-text-dark dark:text-text-light py-1 px-2">
+                            <option value="not_started" ${m.status === 'not_started' ? 'selected' : ''}>Not Started</option>
+                            <option value="in_progress" ${m.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="completed" ${m.status === 'completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                        <button onclick="deleteMilestone(${m.id})" class="text-red-500 hover:text-red-300 text-xs flex-shrink-0">Delete</button>
+                    </div>`;
+                }).join('');
+            });
+
+            el.innerHTML = html;
         }
 
         async function createMilestone() {
             const title = document.getElementById('new-milestone-title').value.trim();
             const description = document.getElementById('new-milestone-desc').value.trim();
             const status = document.getElementById('new-milestone-status').value;
+            const dog_id = document.getElementById('new-milestone-dog')?.value || null;
             if (!title) { showToast('Title is required', 'error'); return; }
             try {
                 const res = await fetch(`${API_BASE}/milestones`, {
                     method: 'POST',
                     headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ client_id: currentDetailClientId, title, description, status })
+                    body: JSON.stringify({ client_id: currentDetailClientId, title, description, status, dog_id: dog_id ? parseInt(dog_id) : null })
                 });
                 if (res.ok) {
                     showToast('Milestone added');
@@ -2992,6 +3121,7 @@
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick="emailInvoice(${inv.id})" class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">📧 Email</button>
+                                    <button onclick="previewInvoiceEmail()" class="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500">Preview</button>
                                     <button onclick="viewInvoiceDetails(${inv.id})" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700">View</button>
                                 </div>
                             </div>
@@ -3747,6 +3877,16 @@
                 clientSelect.value = '';
                 document.getElementById('invoice-recipient-name').setAttribute('required', '');
                 document.getElementById('invoice-recipient-email').setAttribute('required', '');
+                // Fetch contacts for the dropdown (Contact-to-Invoice linking)
+                fetch(`${API_BASE}/contacts`, { headers: getAuthHeaders() })
+                    .then(r => r.json())
+                    .then(data => {
+                        const sel = document.getElementById('invoice-contact-select');
+                        sel.innerHTML = '<option value="">-- Enter manually --</option>';
+                        (data.contacts || []).forEach(c => {
+                            sel.innerHTML += `<option value="${c.id}" data-name="${c.name || ''}" data-email="${c.email || ''}">${c.name}${c.email ? ' (' + c.email + ')' : ''}</option>`;
+                        });
+                    }).catch(() => {});
             } else {
                 clientField.classList.remove('hidden');
                 recipientFields.classList.add('hidden');
@@ -3755,6 +3895,18 @@
                 document.getElementById('invoice-recipient-email').removeAttribute('required');
                 document.getElementById('invoice-recipient-name').value = '';
                 document.getElementById('invoice-recipient-email').value = '';
+                // Reset contact select
+                const sel = document.getElementById('invoice-contact-select');
+                if (sel) { sel.value = ''; sel.innerHTML = '<option value="">-- Enter manually --</option>'; }
+            }
+        }
+
+        function fillInvoiceFromContact() {
+            const sel = document.getElementById('invoice-contact-select');
+            const opt = sel.options[sel.selectedIndex];
+            if (sel.value) {
+                document.getElementById('invoice-recipient-name').value = opt.dataset.name || '';
+                document.getElementById('invoice-recipient-email').value = opt.dataset.email || '';
             }
         }
 
@@ -3825,6 +3977,10 @@
                 if (isNonClient) {
                     body.recipient_name = recipientName;
                     body.recipient_email = recipientEmail;
+                    // Link invoice to contact if selected from dropdown
+                    const contactSelect = document.getElementById('invoice-contact-select');
+                    const contact_id = contactSelect ? parseInt(contactSelect.value) || null : null;
+                    if (contact_id) body.contact_id = contact_id;
                 }
                 const res = await fetch(`${API_BASE}/invoices`, {
                     method: 'POST',
@@ -4507,7 +4663,7 @@
                 container.innerHTML = '<p class="text-gray-400 dark:text-gray-600 text-sm">No upcoming appointments</p>';
             } else {
                 container.innerHTML = upcoming.map(a => {
-                    const statusColors = { pending: 'bg-yellow-500', confirmed: 'bg-green-500', cancelled: 'bg-red-500', completed: 'bg-gray-500' };
+                    const statusColors = { pending: 'bg-yellow-500', confirmed: 'bg-green-500', cancelled: 'bg-red-500', completed: 'bg-gray-500', no_show: 'bg-orange-500' };
                     return `
                     <div class="flex justify-between items-center p-3 border border-border-dark dark:border-border-light rounded text-sm">
                         <div>
@@ -4521,6 +4677,7 @@
                             ${a.status === 'pending' ? `<button onclick="updateAppointment(${a.id}, 'confirmed')" class="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-700">Confirm</button>` : ''}
                             ${a.status !== 'cancelled' && a.status !== 'completed' ? `<button onclick="updateAppointment(${a.id}, 'cancelled')" class="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-700">Cancel</button>` : ''}
                             ${a.status === 'confirmed' ? `<button onclick="updateAppointment(${a.id}, 'completed')" class="bg-gray-500 text-white px-2 py-1 rounded text-xs hover:bg-gray-700">Complete</button>` : ''}
+                            ${a.status === 'confirmed' || a.status === 'pending' ? `<button onclick="markNoShow(${a.id})" class="bg-orange-500 text-white px-2 py-1 rounded text-xs hover:bg-orange-700" title="Mark as No Show"><span class="material-icons text-xs">person_off</span></button>` : ''}
                         </div>
                     </div>`;
                 }).join('');
@@ -5045,9 +5202,22 @@
             loadReports();
         }
 
+        function resetReportDates() {
+            document.getElementById('report-start-date').value = '';
+            document.getElementById('report-end-date').value = '';
+            loadReports();
+        }
+
         async function loadReports() {
+            const startDate = document.getElementById('report-start-date').value;
+            const endDate = document.getElementById('report-end-date').value;
             try {
-                const res = await fetch(`${API_BASE}/stats/extended`, { headers: getAuthHeaders() });
+                let statsUrl = `${API_BASE}/stats/extended`;
+                const params = [];
+                if (startDate) params.push(`startDate=${startDate}`);
+                if (endDate) params.push(`endDate=${endDate}`);
+                if (params.length) statsUrl += '?' + params.join('&');
+                const res = await fetch(statsUrl, { headers: getAuthHeaders() });
                 reportData = await res.json();
                 if (!reportData.success) { showToast('Failed to load reports', 'error'); return; }
 
@@ -5062,6 +5232,18 @@
 
                 renderReportCharts(reportData);
             } catch (e) { console.error('Load reports error:', e); }
+
+            // Appointment analytics
+            const apptParams = [];
+            if (startDate) apptParams.push(`startDate=${startDate}`);
+            if (endDate) apptParams.push(`endDate=${endDate}`);
+            let apptUrl = `${API_BASE}/stats/appointments`;
+            if (apptParams.length) apptUrl += '?' + apptParams.join('&');
+            try {
+                const apptRes = await fetch(apptUrl, { headers: getAuthHeaders() });
+                const apptData = await apptRes.json();
+                if (apptData.success) renderAppointmentCharts(apptData);
+            } catch (e) { console.error('Appointment stats error:', e); }
         }
 
         function renderReportCharts(data) {
@@ -5129,6 +5311,49 @@
                 },
                 options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: false } } }
             });
+        }
+
+        let apptStatusChart, apptVolumeChart;
+        function renderAppointmentCharts(data) {
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#374151' : '#d1d5db';
+            const gridColor = isDark ? '#e5e7eb' : '#374151';
+
+            // Rates
+            document.getElementById('stat-completion-rate').textContent = data.rates.completionRate + '%';
+            document.getElementById('stat-cancellation-rate').textContent = data.rates.cancellationRate + '%';
+            document.getElementById('stat-noshow-rate').textContent = data.rates.noShowRate + '%';
+
+            // Status doughnut
+            const statusData = data.statusBreakdown || [];
+            const statusColors = { pending: '#EAB308', confirmed: '#3B82F6', completed: '#22C55E', cancelled: '#EF4444', no_show: '#F97316' };
+            if (apptStatusChart) apptStatusChart.destroy();
+            const ctx1 = document.getElementById('appt-status-chart');
+            if (ctx1) {
+                apptStatusChart = new Chart(ctx1, {
+                    type: 'doughnut',
+                    data: {
+                        labels: statusData.map(s => s.status.charAt(0).toUpperCase() + s.status.slice(1).replace('_', ' ')),
+                        datasets: [{ data: statusData.map(s => s.count), backgroundColor: statusData.map(s => statusColors[s.status] || '#6B7280') }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: textColor } } } }
+                });
+            }
+
+            // Monthly volume bar
+            const volume = data.monthlyVolume || [];
+            if (apptVolumeChart) apptVolumeChart.destroy();
+            const ctx2 = document.getElementById('appt-volume-chart');
+            if (ctx2) {
+                apptVolumeChart = new Chart(ctx2, {
+                    type: 'bar',
+                    data: {
+                        labels: volume.map(v => v.month),
+                        datasets: [{ label: 'Appointments', data: volume.map(v => v.count), backgroundColor: '#8B5CF6' }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: textColor }, grid: { color: gridColor } }, y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true } }, plugins: { legend: { labels: { color: textColor } } } }
+                });
+            }
         }
 
         function exportReportsCSV() {
@@ -5215,8 +5440,245 @@
             }
         }
 
+        function previewEmail(template, params) {
+            const iframe = document.getElementById('email-preview-iframe');
+            const paramsStr = encodeURIComponent(JSON.stringify(params || {}));
+            iframe.src = `${API_BASE}/email/preview?template=${template}&params=${paramsStr}`;
+            document.getElementById('email-preview-modal').classList.remove('hidden');
+        }
+        function closeEmailPreview() {
+            document.getElementById('email-preview-modal').classList.add('hidden');
+            document.getElementById('email-preview-iframe').src = '';
+        }
+
+        async function previewInvoiceEmail() {
+            const invNumEl = document.querySelector('#invoice-preview-content .font-bold');
+            if (!invNumEl) { showToast('Open an invoice first to preview its email', 'error'); return; }
+            previewEmail('invoice', {});
+        }
+
+        async function markNoShow(id) {
+            if (!confirm('Mark this appointment as no-show?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/appointments/${id}`, {
+                    method: 'PUT',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'no_show' })
+                });
+                if (res.ok) {
+                    showToast('Marked as no-show', 'success');
+                    await loadCalendarData();
+                    fetchUnreadCount();
+                } else {
+                    showToast('Failed to update', 'error');
+                }
+            } catch (e) { showToast('Failed to update', 'error'); }
+        }
+
+        // --- CSV Import Functions (Bulk Contact Import) ---
+        let csvParsedData = [];
+
+        function showCSVImportModal() {
+            csvParsedData = [];
+            document.getElementById('csv-file-input').value = '';
+            document.getElementById('csv-preview').classList.add('hidden');
+            document.getElementById('csv-import-results').classList.add('hidden');
+            document.getElementById('csv-import-modal').classList.remove('hidden');
+        }
+        function closeCSVImportModal() {
+            document.getElementById('csv-import-modal').classList.add('hidden');
+        }
+
+        function parseCSV(text) {
+            const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            const result = [];
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                const row = [];
+                let current = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const ch = line[i];
+                    if (inQuotes) {
+                        if (ch === '"' && line[i+1] === '"') { current += '"'; i++; }
+                        else if (ch === '"') inQuotes = false;
+                        else current += ch;
+                    } else {
+                        if (ch === '"') inQuotes = true;
+                        else if (ch === ',') { row.push(current.trim()); current = ''; }
+                        else current += ch;
+                    }
+                }
+                row.push(current.trim());
+                result.push(row);
+            }
+            return result;
+        }
+
+        function handleCSVFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let text = e.target.result;
+                // Remove BOM if present
+                if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+                const rows = parseCSV(text);
+                if (rows.length < 2) { showToast('CSV must have a header row and at least one data row', 'error'); return; }
+                const headers = rows[0];
+                const dataRows = rows.slice(1).filter(r => r.some(cell => cell));
+
+                // Auto-map columns by header name
+                const colMap = { name: -1, email: -1, phone: -1, dog_name: -1, notes: -1 };
+                headers.forEach((h, i) => {
+                    const lh = h.toLowerCase().replace(/[^a-z]/g, '');
+                    if (lh.includes('name') && !lh.includes('dog') && colMap.name === -1) colMap.name = i;
+                    else if (lh.includes('email')) colMap.email = i;
+                    else if (lh.includes('phone') || lh.includes('tel')) colMap.phone = i;
+                    else if (lh.includes('dog')) colMap.dog_name = i;
+                    else if (lh.includes('note') || lh.includes('comment')) colMap.notes = i;
+                });
+
+                csvParsedData = dataRows.map(row => ({
+                    name: colMap.name >= 0 ? row[colMap.name] || '' : '',
+                    email: colMap.email >= 0 ? row[colMap.email] || '' : '',
+                    phone: colMap.phone >= 0 ? row[colMap.phone] || '' : '',
+                    dog_name: colMap.dog_name >= 0 ? row[colMap.dog_name] || '' : '',
+                    notes: colMap.notes >= 0 ? row[colMap.notes] || '' : ''
+                }));
+
+                document.getElementById('csv-row-count').textContent = csvParsedData.length;
+                const headerHtml = '<tr>' + ['Name', 'Email', 'Phone', 'Dog Name', 'Notes'].map(h =>
+                    `<th class="border border-gray-600 dark:border-gray-300 px-2 py-1 text-left">${h}</th>`
+                ).join('') + '</tr>';
+                document.getElementById('csv-preview-header').innerHTML = headerHtml;
+                const bodyHtml = csvParsedData.slice(0, 10).map(c =>
+                    '<tr>' + [c.name, c.email, c.phone, c.dog_name, c.notes].map(v =>
+                        `<td class="border border-gray-700 dark:border-gray-300 px-2 py-1 text-sm">${v || ''}</td>`
+                    ).join('') + '</tr>'
+                ).join('') + (csvParsedData.length > 10 ? `<tr><td colspan="5" class="text-center text-sm text-gray-500 py-2">...and ${csvParsedData.length - 10} more rows</td></tr>` : '');
+                document.getElementById('csv-preview-body').innerHTML = bodyHtml;
+                document.getElementById('csv-preview').classList.remove('hidden');
+            };
+            reader.readAsText(file);
+        }
+
+        async function importCSVContacts() {
+            if (csvParsedData.length === 0) return showToast('No data to import', 'error');
+            const btn = document.getElementById('csv-import-btn');
+            btn.disabled = true; btn.textContent = 'Importing...';
+            try {
+                const res = await fetch(`${API_BASE}/contacts/bulk`, {
+                    method: 'POST',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contacts: csvParsedData })
+                });
+                const data = await res.json();
+                const resultsEl = document.getElementById('csv-import-results');
+                if (data.success) {
+                    resultsEl.innerHTML = `<div class="bg-green-900 dark:bg-green-100 text-green-300 dark:text-green-800 p-3 rounded">
+                        <p class="font-semibold">Imported ${data.imported} contact(s)!</p>
+                        ${data.errors && data.errors.length > 0 ? `<p class="text-sm mt-1">${data.errors.length} row(s) skipped (missing name)</p>` : ''}
+                    </div>`;
+                    resultsEl.classList.remove('hidden');
+                    showToast(`Imported ${data.imported} contacts`, 'success');
+                    if (typeof loadContacts === 'function') loadContacts();
+                } else {
+                    resultsEl.innerHTML = `<div class="bg-red-900 dark:bg-red-100 text-red-300 dark:text-red-800 p-3 rounded"><p>${data.error || 'Import failed'}</p></div>`;
+                    resultsEl.classList.remove('hidden');
+                }
+            } catch (e) { showToast('Import failed', 'error'); }
+            btn.disabled = false; btn.textContent = 'Import';
+        }
+
+        // --- Admin Media Album Filter / Sort / Reorder ---
+        let adminMediaReorderMode = false;
+        let adminSortableInstance = null;
+
+        function filterAdminMediaByAlbum() {
+            const filter = document.getElementById('admin-media-album-filter').value;
+            const allMedia = window.currentDetailMedia || [];
+            if (filter === 'all') {
+                renderAdminMedia(allMedia);
+            } else {
+                renderAdminMedia(allMedia.filter(m => m.type === filter));
+            }
+        }
+
+        function sortAdminMedia() {
+            const sortBy = document.getElementById('admin-media-sort').value;
+            const allMedia = [...(window.currentDetailMedia || [])];
+            if (sortBy === 'newest') {
+                allMedia.sort((a, b) => new Date(b.uploaded_at || 0) - new Date(a.uploaded_at || 0));
+            } else if (sortBy === 'oldest') {
+                allMedia.sort((a, b) => new Date(a.uploaded_at || 0) - new Date(b.uploaded_at || 0));
+            } else if (sortBy === 'name') {
+                allMedia.sort((a, b) => (a.filename || '').localeCompare(b.filename || ''));
+            }
+            window.currentDetailMedia = allMedia;
+            filterAdminMediaByAlbum();
+        }
+
+        function toggleAdminMediaReorder() {
+            adminMediaReorderMode = !adminMediaReorderMode;
+            const btn = document.getElementById('admin-media-reorder-toggle');
+            const mediaEl = document.getElementById('detail-media');
+
+            if (adminMediaReorderMode) {
+                btn.textContent = 'Done';
+                btn.classList.remove('bg-indigo-600');
+                btn.classList.add('bg-green-600');
+                if (typeof Sortable !== 'undefined') {
+                    adminSortableInstance = Sortable.create(mediaEl, {
+                        animation: 150,
+                        ghostClass: 'opacity-50',
+                        onEnd: function(evt) {
+                            const media = window.currentDetailMedia || [];
+                            if (media.length > 0) {
+                                const movedItem = media.splice(evt.oldIndex, 1)[0];
+                                media.splice(evt.newIndex, 0, movedItem);
+                                window.currentDetailMedia = media;
+                            }
+                        }
+                    });
+                }
+                showToast('Drag items to reorder');
+            } else {
+                btn.textContent = 'Reorder';
+                btn.classList.remove('bg-green-600');
+                btn.classList.add('bg-indigo-600');
+                if (adminSortableInstance) {
+                    adminSortableInstance.destroy();
+                    adminSortableInstance = null;
+                }
+                // Persist reorder to server
+                const media = window.currentDetailMedia || [];
+                const orderedIds = media.map(m => m.id);
+                if (orderedIds.length > 0 && currentDetailClientId) {
+                    fetch(`${API_BASE}/media/reorder`, {
+                        method: 'POST',
+                        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ client_id: currentDetailClientId, media_ids: orderedIds })
+                    }).catch(() => {});
+                }
+                renderAdminMedia(media);
+            }
+        }
+
         loadDashboard();
         fetchUnreadCount();
     </script>
+
+    <!-- Email Preview Modal -->
+    <div id="email-preview-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full mx-2" style="height: 80vh; display: flex; flex-direction: column;">
+            <div class="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="font-semibold text-gray-900 dark:text-white">Email Preview</h3>
+                <button onclick="closeEmailPreview()" class="text-2xl text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">&times;</button>
+            </div>
+            <iframe id="email-preview-iframe" class="flex-1 w-full bg-white" style="border: none;"></iframe>
+        </div>
+    </div>
+
 </body>
 </html>

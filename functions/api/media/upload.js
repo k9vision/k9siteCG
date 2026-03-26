@@ -15,6 +15,7 @@ export async function onRequestPost(context) {
     const formData = await context.request.formData();
     const file = formData.get('file');
     const caption = formData.get('caption') || '';
+    const album = formData.get('album') || '';
     const additionalEmail = formData.get('additional_email') || '';
 
     // Validate file MIME type (use startsWith to handle codec suffixes like video/webm;codecs=vp9,opus)
@@ -76,8 +77,8 @@ export async function onRequestPost(context) {
 
     // Save to database
     const media = await context.env.DB.prepare(`
-      INSERT INTO media (client_id, type, filename, original_name, url, caption)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO media (client_id, type, filename, original_name, url, caption, album)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       RETURNING *
     `).bind(
       parseInt(clientId),
@@ -85,7 +86,8 @@ export async function onRequestPost(context) {
       filename,
       file.name,
       `/media/${filename}`,
-      caption
+      caption,
+      album
     ).first();
 
     // Notify admin when client uploads media

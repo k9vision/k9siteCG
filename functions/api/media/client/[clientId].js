@@ -28,7 +28,7 @@ export async function onRequestGet(context) {
     }
 
     const media = await context.env.DB.prepare(
-      'SELECT * FROM media WHERE client_id = ? ORDER BY created_at DESC'
+      'SELECT * FROM media WHERE client_id = ? ORDER BY sort_order ASC, created_at DESC'
     ).bind(clientId).all();
 
     return new Response(

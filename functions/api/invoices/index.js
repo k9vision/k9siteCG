@@ -38,8 +38,10 @@ export async function onRequest(context) {
           SELECT invoices.*,
             COALESCE(invoices.recipient_name, clients.client_name) as client_name,
             COALESCE(invoices.recipient_email, clients.email) as client_email,
-            clients.dog_name, clients.dog_breed
+            clients.dog_name, clients.dog_breed,
+            contacts.name as contact_name
           FROM invoices LEFT JOIN clients ON invoices.client_id = clients.id
+          LEFT JOIN contacts ON invoices.contact_id = contacts.id
           ORDER BY invoices.created_at DESC
         `).all();
         results = data.results;
@@ -89,6 +91,7 @@ export async function onRequest(context) {
       // Create new invoice
       const {
         client_id,
+        contact_id,
         recipient_email,
         recipient_name,
         trainer_name,
@@ -137,13 +140,14 @@ export async function onRequest(context) {
       const tax_amount = taxable * ((tax_rate || 0) / 100);
       const total = taxable + tax_amount;
 
-      // INSERT into DB — client_id is NULL for non-clients
+      // INSERT into DB — client_id is NULL for non-clients, contact_id links to contacts table
       const invoiceResult = await env.DB.prepare(
-        `INSERT INTO invoices (invoice_number, client_id, trainer_name, date, due_date, subtotal, tax_rate, tax_amount, total, notes, recipient_email, recipient_name, discount_type, discount_value, discount_amount)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO invoices (invoice_number, client_id, contact_id, trainer_name, date, due_date, subtotal, tax_rate, tax_amount, total, notes, recipient_email, recipient_name, discount_type, discount_value, discount_amount)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         invoice_number,
         isNonClient ? null : client_id,
+        contact_id ? parseInt(contact_id) : null,
         trainer_name, date, due_date || null,
         subtotal, tax_rate || 0, tax_amount, total,
         notes || null, recipient_email || null, recipient_name || null,
