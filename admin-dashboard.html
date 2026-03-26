@@ -172,8 +172,8 @@
                     <div id="notif-panel" class="hidden absolute right-0 top-12 w-96 bg-card-dark dark:bg-card-light border border-border-dark dark:border-border-light rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
                         <div class="flex justify-between items-center p-4 border-b border-border-dark dark:border-border-light">
                             <h4 class="font-bold">Notifications</h4>
-                            <button onclick="markAllNotificationsRead()" class="text-xs text-primary hover:underline">Mark all read</button>
-                            <button onclick="clearAllNotifications()" class="text-xs text-red-400 hover:underline ml-2">Clear all</button>
+                            <button onclick="event.stopPropagation(); markAllNotificationsRead()" class="text-xs text-primary hover:underline">Mark all read</button>
+                            <button onclick="event.stopPropagation(); clearAllNotifications()" class="text-xs text-red-400 hover:underline ml-2">Clear all</button>
                         </div>
                         <div id="notif-list" class="divide-y divide-border-dark dark:divide-border-light">
                             <p class="p-4 text-gray-400 dark:text-gray-600 text-sm">No notifications</p>

@@ -2621,21 +2621,36 @@
 
         async function markAllNotificationsRead() {
             try {
-                await fetch(`${API_BASE}/notifications/read-all`, { method: 'POST', headers: getAuthHeaders() });
-                loadNotifications();
-                fetchUnreadCount();
+                const res = await fetch(`${API_BASE}/notifications/read-all`, { method: 'POST', headers: getAuthHeaders() });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('All notifications marked as read', 'success');
+                    await loadNotifications();
+                    await fetchUnreadCount();
+                } else {
+                    showToast(data.error || 'Failed to mark notifications', 'error');
+                }
             } catch (error) {
                 console.error('Mark all read error:', error);
+                showToast('Failed to mark notifications read', 'error');
             }
         }
 
         async function clearAllNotifications() {
+            if (!confirm('Clear all notifications?')) return;
             try {
-                await fetch(`${API_BASE}/notifications/clear`, { method: 'POST', headers: getAuthHeaders() });
-                loadNotifications();
-                fetchUnreadCount();
+                const res = await fetch(`${API_BASE}/notifications/clear`, { method: 'POST', headers: getAuthHeaders() });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('All notifications cleared', 'success');
+                    await loadNotifications();
+                    await fetchUnreadCount();
+                } else {
+                    showToast(data.error || 'Failed to clear notifications', 'error');
+                }
             } catch (error) {
                 console.error('Clear notifications error:', error);
+                showToast('Failed to clear notifications', 'error');
             }
         }
 
