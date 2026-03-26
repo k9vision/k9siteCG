@@ -3121,7 +3121,7 @@
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick="emailInvoice(${inv.id})" class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">📧 Email</button>
-                                    <button onclick="previewInvoiceEmail()" class="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500">Preview</button>
+                                    <button onclick="previewInvoiceEmail(${inv.id})" class="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-500">Preview</button>
                                     <button onclick="viewInvoiceDetails(${inv.id})" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700">View</button>
                                 </div>
                             </div>
@@ -5440,21 +5440,53 @@
             }
         }
 
-        function previewEmail(template, params) {
+        async function previewEmail(template, params) {
             const iframe = document.getElementById('email-preview-iframe');
-            const paramsStr = encodeURIComponent(JSON.stringify(params || {}));
-            iframe.src = `${API_BASE}/email/preview?template=${template}&params=${paramsStr}`;
             document.getElementById('email-preview-modal').classList.remove('hidden');
+            iframe.srcdoc = '<p style="padding:20px;color:#888;">Loading preview...</p>';
+            try {
+                const paramsStr = encodeURIComponent(JSON.stringify(params || {}));
+                const res = await fetch(`${API_BASE}/email/preview?template=${template}&params=${paramsStr}`, {
+                    headers: getAuthHeaders()
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    iframe.srcdoc = `<p style="padding:20px;color:red;">Failed to load preview: ${err.error || res.statusText}</p>`;
+                    return;
+                }
+                const html = await res.text();
+                iframe.srcdoc = html;
+            } catch (e) {
+                iframe.srcdoc = '<p style="padding:20px;color:red;">Failed to load preview</p>';
+            }
         }
         function closeEmailPreview() {
             document.getElementById('email-preview-modal').classList.add('hidden');
-            document.getElementById('email-preview-iframe').src = '';
+            document.getElementById('email-preview-iframe').srcdoc = '';
         }
 
-        async function previewInvoiceEmail() {
-            const invNumEl = document.querySelector('#invoice-preview-content .font-bold');
-            if (!invNumEl) { showToast('Open an invoice first to preview its email', 'error'); return; }
-            previewEmail('invoice', {});
+        async function previewInvoiceEmail(invoiceId) {
+            if (!invoiceId) { showToast('No invoice selected', 'error'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/invoices/${invoiceId}`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (!data.success) { previewEmail('invoiceEmail', {}); return; }
+                const inv = data.invoice;
+                const items = inv.items || [];
+                previewEmail('invoiceEmail', {
+                    invoice: {
+                        invoice_number: inv.invoice_number, client_name: inv.client_name || inv.recipient_name || '',
+                        dog_name: inv.dog_name || '', trainer_name: inv.trainer_name,
+                        date: inv.date, due_date: inv.due_date,
+                        subtotal: inv.subtotal, tax_rate: inv.tax_rate, tax_amount: inv.tax_amount, total: inv.total,
+                        discount_amount: inv.discount_amount, notes: inv.notes
+                    },
+                    items: items.map(i => ({
+                        service_name: i.service_name, quantity: i.quantity, price: i.price,
+                        total: i.total, due_date: i.due_date, amount_paid: i.amount_paid
+                    }))
+                });
+            } catch (e) { previewEmail('invoiceEmail', {}); }
         }
 
         async function markNoShow(id) {
