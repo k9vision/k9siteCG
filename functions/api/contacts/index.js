@@ -43,6 +43,10 @@ export async function onRequestPost(context) {
 
     const { name, email, phone, dog_name, source, notes } = await context.request.json();
     if (!name) return new Response(JSON.stringify({ error: 'Name is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    if (email) {
+      const { isValidEmail } = await import('../../utils/validate.js');
+      if (!isValidEmail(email)) return new Response(JSON.stringify({ error: 'Invalid email format' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
 
     const contact = await context.env.DB.prepare(
       `INSERT INTO contacts (name, email, phone, dog_name, source, notes) VALUES (?, ?, ?, ?, ?, ?) RETURNING *`

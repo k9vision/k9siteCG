@@ -8,6 +8,16 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ error: auth.error }), { status: auth.status, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Rate limiting: 5 password change attempts per minute per IP
+    const ip = context.request.headers.get('CF-Connecting-IP') || 'unknown';
+    try {
+      const { checkRateLimit } = await import('../../utils/rate-limit.js');
+      const limit = await checkRateLimit(context.env.DB, { ip, action: 'change-password', maxAttempts: 5, windowSeconds: 60 });
+      if (!limit.allowed) {
+        return new Response(JSON.stringify({ error: 'Too many attempts. Please try again shortly.' }), { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': String(limit.retryAfter) } });
+      }
+    } catch (e) { /* rate limit table may not exist yet, continue */ }
+
     const { current_password, new_password } = await context.request.json();
 
     if (!current_password || !new_password) {

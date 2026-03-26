@@ -189,7 +189,7 @@ export async function onRequestPut(context) {
         // Email admin when client reschedules
         if (auth.user.role === 'client') {
           await sendEmail(context.env, {
-            to: 'trainercg@k9visiontx.com',
+            to: context.env.ADMIN_EMAIL || 'trainercg@k9visiontx.com',
             subject: `Client Rescheduled: ${client?.client_name || 'Client'} - ${newDate}`,
             html: appointmentRescheduledHtml(
               client?.client_name || 'A client', client?.dog_name || 'their dog',
@@ -232,7 +232,7 @@ export async function onRequestPut(context) {
           });
 
           await sendEmail(context.env, {
-            to: 'trainercg@k9visiontx.com',
+            to: context.env.ADMIN_EMAIL || 'trainercg@k9visiontx.com',
             subject: `Client Confirmed: ${client?.client_name || 'Client'} - ${existing.appointment_date}`,
             html: `<p><strong>${client?.client_name || 'A client'}</strong> has confirmed their appointment on <strong>${existing.appointment_date}</strong> at <strong>${existing.start_time}</strong>.</p>`
           });
@@ -293,7 +293,7 @@ export async function onRequestPut(context) {
         // Email admin when client cancels
         if (auth.user.role === 'client') {
           await sendEmail(context.env, {
-            to: 'trainercg@k9visiontx.com',
+            to: context.env.ADMIN_EMAIL || 'trainercg@k9visiontx.com',
             subject: `Client Cancelled: ${client?.client_name || 'Client'} - ${existing.appointment_date}`,
             html: appointmentCancelledHtml(
               client?.client_name || 'A client', client?.dog_name || 'their dog',

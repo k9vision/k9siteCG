@@ -48,7 +48,7 @@ export async function requireAuth(context) {
   }
 
   const token = authHeader.substring(7);
-  const user = await verifyToken(token, context.env.JWT_SECRET || 'your-secret-key');
+  const user = await verifyToken(token, context.env.JWT_SECRET);
 
   if (!user) {
     return {

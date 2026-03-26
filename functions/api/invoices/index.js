@@ -109,6 +109,12 @@ export async function onRequest(context) {
       if (isNonClient && !recipient_email) {
         return new Response(JSON.stringify({ error: 'Either a client or recipient email is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
+      if (recipient_email) {
+        const { isValidEmail } = await import('../../utils/validate.js');
+        if (!isValidEmail(recipient_email)) {
+          return new Response(JSON.stringify({ error: 'Invalid recipient email format' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+      }
       if (!trainer_name || !date || !items || items.length === 0) {
         return new Response(JSON.stringify({ error: 'Trainer name, date, and at least one item are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }

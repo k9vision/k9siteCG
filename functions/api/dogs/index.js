@@ -108,7 +108,7 @@ export async function onRequestPost(context) {
       // Send email to admin
       if (context.env.RESEND_API_KEY) {
         try {
-          const adminEmail = 'k9vision@yahoo.com';
+          const adminEmail = context.env.ADMIN_NOTIFY_EMAIL || 'k9vision@yahoo.com';
           await sendEmail(context.env, {
             to: adminEmail,
             subject: `New Dog Added - ${dog_name} (${clientName})`,

@@ -53,7 +53,7 @@ export async function onRequestPost(context) {
         blocked_date, reason || null, result.all_day, start_time || null, end_time || null
       );
       context.waitUntil(sendEmail(context.env, {
-        to: 'k9vision@yahoo.com',
+        to: context.env.ADMIN_NOTIFY_EMAIL || 'k9vision@yahoo.com',
         subject: 'K9 Vision: Date Blocked',
         html
       }));

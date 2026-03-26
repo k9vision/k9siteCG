@@ -48,7 +48,7 @@ export async function onRequest(context) {
       },
       body: JSON.stringify({
         from: 'trainercg@k9visiontx.com',
-        to: 'k9vision@yahoo.com',
+        to: env.ADMIN_NOTIFY_EMAIL || 'k9vision@yahoo.com',
         subject: `New Consultation Request from ${name.trim()}`,
         html: htmlBody
       })

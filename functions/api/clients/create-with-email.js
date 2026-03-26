@@ -64,6 +64,10 @@ export async function onRequest(context) {
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const { isValidEmail } = await import('../../utils/validate.js');
+    if (!isValidEmail(email)) {
+      return new Response(JSON.stringify({ error: 'Please enter a valid email address' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
 
     // Generate or use provided credentials
     const finalUsername = username || generateUsername(client_name);

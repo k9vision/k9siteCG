@@ -90,7 +90,7 @@ export async function onRequest(context) {
     // Also send a copy to admin
     try {
       await sendEmail(env, {
-        to: 'trainercg@k9visiontx.com',
+        to: env.ADMIN_EMAIL || 'trainercg@k9visiontx.com',
         subject: `[Copy] Invoice #${invoice.invoice_number} sent to ${invoice.client_name}`,
         html,
         attachments: [{

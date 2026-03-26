@@ -9,6 +9,16 @@ export async function onRequestPost(context) {
   const db = env.DB;
 
   try {
+    // Rate limiting: 3 registration attempts per minute per IP
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    try {
+      const { checkRateLimit } = await import('../../utils/rate-limit.js');
+      const limit = await checkRateLimit(db, { ip, action: 'register', maxAttempts: 3, windowSeconds: 60 });
+      if (!limit.allowed) {
+        return new Response(JSON.stringify({ error: 'Too many registration attempts. Please try again shortly.' }), { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': String(limit.retryAfter) } });
+      }
+    } catch (e) { /* rate limit table may not exist yet, continue */ }
+
     const { client_name, email, dog_name, breed, age, username, password } = await request.json();
 
     // Validate required fields
@@ -17,6 +27,11 @@ export async function onRequestPost(context) {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    const { isValidEmail } = await import('../../utils/validate.js');
+    if (!isValidEmail(email)) {
+      return new Response(JSON.stringify({ error: 'Please enter a valid email address' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     if (username.length < 3) {

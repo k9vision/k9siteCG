@@ -180,7 +180,7 @@ export async function onRequestPost(context) {
         // Client booked: notify admin
         const { sendEmail, appointmentBookedNotificationHtml } = await import('../../utils/emails.js');
         await sendEmail(context.env, {
-          to: 'trainercg@k9visiontx.com',
+          to: context.env.ADMIN_EMAIL || 'trainercg@k9visiontx.com',
           subject: `New Booking: ${client?.client_name || 'Client'} - ${appointment_date}`,
           html: appointmentBookedNotificationHtml(
             client?.client_name || 'A client',

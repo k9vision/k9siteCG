@@ -21,6 +21,16 @@ async function generateToken(payload, secret) {
 
 export async function onRequestPost(context) {
   try {
+    // Rate limiting: 5 login attempts per minute per IP
+    const ip = context.request.headers.get('CF-Connecting-IP') || 'unknown';
+    try {
+      const { checkRateLimit } = await import('../../utils/rate-limit.js');
+      const limit = await checkRateLimit(context.env.DB, { ip, action: 'login', maxAttempts: 5, windowSeconds: 60 });
+      if (!limit.allowed) {
+        return new Response(JSON.stringify({ error: 'Too many login attempts. Please try again in a minute.' }), { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': String(limit.retryAfter) } });
+      }
+    } catch (e) { /* rate limit table may not exist yet, continue */ }
+
     const { username, password } = await context.request.json();
 
     if (!username || !password) {
@@ -76,7 +86,7 @@ export async function onRequestPost(context) {
         role: result.role,
         exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
       },
-      context.env.JWT_SECRET || 'your-secret-key'
+      context.env.JWT_SECRET
     );
 
     return new Response(

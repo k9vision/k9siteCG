@@ -11,7 +11,7 @@ export async function onRequestGet(context) {
     }
 
     // Verify the JWT from state to identify the user
-    const user = await verifyToken(state, context.env.JWT_SECRET || 'your-secret-key');
+    const user = await verifyToken(state, context.env.JWT_SECRET);
     if (!user) {
       return Response.redirect('https://k9visiontx.com/admin-dashboard.html?gcal=error', 302);
     }

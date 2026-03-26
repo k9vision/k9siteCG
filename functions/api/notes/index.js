@@ -70,7 +70,7 @@ export async function onRequestPost(context) {
         });
 
         await sendEmail(context.env, {
-          to: 'trainercg@k9visiontx.com',
+          to: context.env.ADMIN_EMAIL || 'trainercg@k9visiontx.com',
           subject: `New Message from ${clientName}`,
           html: clientNoteNotificationHtml(clientName, dogName, noteTitle, truncatedContent)
         });

@@ -105,7 +105,7 @@ export async function onRequestPost(context) {
 
         const { sendEmail, mediaUploadNotificationHtml } = await import('../../utils/emails.js');
         await sendEmail(context.env, {
-          to: 'trainercg@k9visiontx.com',
+          to: context.env.ADMIN_EMAIL || 'trainercg@k9visiontx.com',
           subject: `New ${type} upload from ${clientInfo?.client_name || 'a client'}`,
           html: mediaUploadNotificationHtml(
             clientInfo?.client_name || 'A client',

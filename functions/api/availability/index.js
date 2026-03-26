@@ -56,7 +56,7 @@ export async function onRequestPost(context) {
         start_time, end_time, specific_date || null
       );
       context.waitUntil(sendEmail(context.env, {
-        to: 'k9vision@yahoo.com',
+        to: context.env.ADMIN_NOTIFY_EMAIL || 'k9vision@yahoo.com',
         subject: 'K9 Vision: New Availability Set',
         html
       }));
