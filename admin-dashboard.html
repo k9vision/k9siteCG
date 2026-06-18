@@ -265,10 +265,63 @@
                 <button onclick="showReports()" class="bg-emerald-600 hover:bg-emerald-800 text-white font-bold py-3 px-6 rounded transition-colors">
                     📊 Reports
                 </button>
+                <button onclick="showVisitorGeo()" class="bg-sky-600 hover:bg-sky-800 text-white font-bold py-3 px-6 rounded transition-colors">
+                    🌎 Visitor Geography
+                </button>
             </div>
         </div>
 
         <div id="sections-container">
+
+        <!-- Visitor Geography (first-party, from Cloudflare request.cf) -->
+        <div id="visitor-geo-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl font-bold">🌎 Visitor Geography</h3>
+                <div class="flex items-center gap-2">
+                    <span id="geo-total" class="text-sm text-gray-400 dark:text-gray-600"></span>
+                    <button onclick="loadVisitorGeo()" class="bg-primary text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Refresh</button>
+                    <button onclick="hideSection('visitor-geo-section')" class="text-gray-400 hover:text-white dark:hover:text-gray-800 text-2xl leading-none px-2" title="Close">&times;</button>
+                </div>
+            </div>
+            <p class="text-sm text-gray-400 dark:text-gray-600 mb-4">Where your website visitors are located — captured live at the Cloudflare edge. State/city/ZIP are IP-based and approximate; bot traffic may appear.</p>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="font-semibold mb-2">Top States / Regions</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-border-dark dark:border-border-light text-left">
+                                    <th class="pb-2 font-semibold">State / Region</th>
+                                    <th class="pb-2 font-semibold">Country</th>
+                                    <th class="pb-2 font-semibold text-right">Views</th>
+                                </tr>
+                            </thead>
+                            <tbody id="geo-states-body">
+                                <tr><td colspan="3" class="py-4 text-gray-400 dark:text-gray-600 text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-2">Top Cities</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-border-dark dark:border-border-light text-left">
+                                    <th class="pb-2 font-semibold">City</th>
+                                    <th class="pb-2 font-semibold">State</th>
+                                    <th class="pb-2 font-semibold hidden sm:table-cell">ZIP</th>
+                                    <th class="pb-2 font-semibold text-right">Views</th>
+                                </tr>
+                            </thead>
+                            <tbody id="geo-cities-body">
+                                <tr><td colspan="4" class="py-4 text-gray-400 dark:text-gray-600 text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Contacts Management -->
         <div id="contacts-section" class="hidden bg-card-dark dark:bg-card-light p-6 rounded-lg shadow border border-border-dark dark:border-border-light mb-8">

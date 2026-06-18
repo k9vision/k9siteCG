@@ -45,3 +45,30 @@
     send_page_view: true          // GA4 enhanced measurement handles scroll/outbound clicks
   });
 })();
+
+/*
+ * First-party visitor-geography beacon — works with NO Google Analytics setup.
+ * Posts the current page + referrer to /api/track, where the Cloudflare Pages
+ * Function reads request.cf (city / state / ZIP / country) and stores it in D1.
+ * Fire-and-forget; runs independently of the GA config above and never blocks
+ * or breaks the page. View results in the admin dashboard → Visitor Geography.
+ */
+(function () {
+  'use strict';
+  try {
+    var payload = JSON.stringify({
+      page_url: location.pathname + location.search,
+      referrer: document.referrer || null
+    });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/track', new Blob([payload], { type: 'application/json' }));
+    } else {
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true
+      }).catch(function () {});
+    }
+  } catch (e) { /* never break the page over analytics */ }
+})();

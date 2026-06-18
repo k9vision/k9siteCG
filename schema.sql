@@ -115,6 +115,22 @@ CREATE INDEX IF NOT EXISTS idx_invoices_client_id ON invoices(client_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number);
 CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id ON invoice_items(invoice_id);
 
+-- First-party visitor geo tracking from Cloudflare request.cf (no IP/PII stored)
+CREATE TABLE IF NOT EXISTS page_views (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  page_url TEXT,
+  referrer TEXT,
+  city TEXT,
+  region TEXT,        -- state / province (e.g. "Texas")
+  region_code TEXT,   -- state abbreviation (e.g. "TX")
+  postal_code TEXT,   -- ZIP / postal code (approximate)
+  country TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_page_views_region ON page_views(region);
+CREATE INDEX IF NOT EXISTS idx_page_views_city ON page_views(city);
+CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at);
+
 -- Insert default services
 INSERT OR IGNORE INTO services (name, description, price, active) VALUES
 ('Puppy Foundation', 'Basic puppy training and socialization', 150.00, 1),

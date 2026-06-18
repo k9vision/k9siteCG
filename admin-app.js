@@ -3616,6 +3616,49 @@
         // --- Contacts Management ---
         let allContacts = [];
 
+        function showVisitorGeo() {
+            showSection('visitor-geo-section');
+            loadVisitorGeo();
+        }
+
+        async function loadVisitorGeo() {
+            const statesBody = document.getElementById('geo-states-body');
+            const citiesBody = document.getElementById('geo-cities-body');
+            const totalEl = document.getElementById('geo-total');
+            try {
+                const res = await fetch(`${API_BASE}/analytics/geo`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to load');
+
+                totalEl.textContent = `${(data.total || 0).toLocaleString()} total views`;
+
+                const states = data.states || [];
+                statesBody.innerHTML = states.length === 0
+                    ? '<tr><td colspan="3" class="py-4 text-gray-400 dark:text-gray-600 text-center">No data yet</td></tr>'
+                    : states.map(s => `
+                        <tr class="border-b border-border-dark dark:border-border-light">
+                            <td class="py-2 font-medium">${s.region || '—'}${s.region_code ? ` (${s.region_code})` : ''}</td>
+                            <td class="py-2 text-gray-400 dark:text-gray-600">${s.country || '—'}</td>
+                            <td class="py-2 text-right">${(s.views || 0).toLocaleString()}</td>
+                        </tr>`).join('');
+
+                const cities = data.cities || [];
+                citiesBody.innerHTML = cities.length === 0
+                    ? '<tr><td colspan="4" class="py-4 text-gray-400 dark:text-gray-600 text-center">No data yet</td></tr>'
+                    : cities.map(c => `
+                        <tr class="border-b border-border-dark dark:border-border-light">
+                            <td class="py-2 font-medium">${c.city || '—'}</td>
+                            <td class="py-2 text-gray-400 dark:text-gray-600">${c.region_code || c.region || '—'}</td>
+                            <td class="py-2 text-gray-400 dark:text-gray-600 hidden sm:table-cell">${c.postal_code || '—'}</td>
+                            <td class="py-2 text-right">${(c.views || 0).toLocaleString()}</td>
+                        </tr>`).join('');
+            } catch (e) {
+                console.error('Load visitor geography error:', e);
+                statesBody.innerHTML = '<tr><td colspan="3" class="py-4 text-red-400 text-center">Failed to load</td></tr>';
+                citiesBody.innerHTML = '<tr><td colspan="4" class="py-4 text-red-400 text-center">Failed to load</td></tr>';
+            }
+        }
+
         function showContacts() {
             showSection('contacts-section');
             loadContacts();
