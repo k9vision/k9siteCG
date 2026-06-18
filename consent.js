@@ -82,6 +82,8 @@
       'cursor:pointer;white-space:nowrap;transition:background .15s,opacity .15s}' +
       '#k9c-banner .k9c-primary{background:#3B82F6;color:#fff}' +
       '#k9c-banner .k9c-primary:hover{background:#1D4ED8}' +
+      '#k9c-banner .k9c-solid{background:#374151;color:#fff}' +
+      '#k9c-banner .k9c-solid:hover{background:#4B5563}' +
       '#k9c-banner .k9c-ghost{background:transparent;color:#E5E7EB;border:1px solid #4B5563}' +
       '#k9c-banner .k9c-ghost:hover{background:rgba(255,255,255,.08)}' +
       '#k9c-banner .k9c-x{position:absolute;top:8px;right:10px;background:transparent;border:0;color:#9CA3AF;' +
@@ -131,7 +133,7 @@
           '</div>',
         '</div>',
         '<div class="k9c-actions">',
-          '<button type="button" class="k9c-btn k9c-ghost" id="k9c-reject">Reject All</button>',
+          '<button type="button" class="k9c-btn k9c-solid" id="k9c-reject">Reject All</button>',
           '<button type="button" class="k9c-btn k9c-ghost" id="k9c-save">Save Preferences</button>',
           '<button type="button" class="k9c-btn k9c-primary" id="k9c-accept">Accept All</button>',
         '</div>',
