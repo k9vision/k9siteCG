@@ -13,6 +13,19 @@ export async function onRequest(context) {
     });
   }
 
+  // Rate limiting: 5 contact submissions per minute per IP (anti-spam)
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  try {
+    const { checkRateLimit } = await import('../../utils/rate-limit.js');
+    const limit = await checkRateLimit(env.DB, { ip, action: 'contact', maxAttempts: 5, windowSeconds: 60 });
+    if (!limit.allowed) {
+      return new Response(JSON.stringify({ error: 'Too many requests. Please try again in a minute.' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json', 'Retry-After': String(limit.retryAfter) }
+      });
+    }
+  } catch (e) { /* rate limit table may not exist yet, continue */ }
+
   try {
     const { name, phone, email, dogName, message } = await request.json();
 
