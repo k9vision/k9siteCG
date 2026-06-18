@@ -2,12 +2,13 @@
 // Uses a simple sliding window: max N attempts per window (in seconds)
 
 export async function checkRateLimit(db, { ip, action, maxAttempts = 5, windowSeconds = 60 }) {
-  const windowStart = new Date(Date.now() - windowSeconds * 1000).toISOString();
-
-  // Count recent attempts
+  // Count recent attempts within the window. Compare using SQLite datetime arithmetic so the
+  // format matches the stored created_at (datetime('now') -> "YYYY-MM-DD HH:MM:SS"). A JS
+  // toISOString() value ("...T...Z") sorts wrong vs the stored format and silently disables
+  // rate limiting entirely (the bug this replaces).
   const result = await db.prepare(
-    `SELECT COUNT(*) as count FROM rate_limits WHERE ip = ? AND action = ? AND created_at > ?`
-  ).bind(ip, action, windowStart).first();
+    `SELECT COUNT(*) as count FROM rate_limits WHERE ip = ? AND action = ? AND created_at > datetime('now', ?)`
+  ).bind(ip, action, `-${windowSeconds} seconds`).first();
 
   if (result.count >= maxAttempts) {
     return { allowed: false, retryAfter: windowSeconds };
