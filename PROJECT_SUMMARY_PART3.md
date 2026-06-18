@@ -119,3 +119,71 @@ User requested implementation of all 8 remaining backlog features:
 - Consider SMS notifications via Twilio/Brevo
 
 ---
+
+## Session 10 — Google Analytics Readiness, Marketability, First-Party Visitor Geography, Consent Banner & Global Compliance
+**Date:** June 18, 2026
+**Team Member:** Claude CLI (Supervisor + Frontend/Backend/Data/QA leads)
+**Session Focus:** Make the site analytics-ready and more marketable; add self-hosted visitor geography (state/city/ZIP) without Google Analytics; add a strict opt-in cookie-consent banner that gates all tracking; harden global privacy compliance; remove the blocked Yelp footer link.
+**Commands (user, paraphrased):**
+- "Make sure the page is ready for Google Analytics and make the site more marketable."
+- "Why does the Cloudflare traffic dashboard only show country, not state/city/ZIP?" → "Can I at least retrieve state and city?"
+- "Add a floating disclaimer bar at the bottom with accept/deny, category selection, X, and a privacy policy link."
+- "Make sure we are compliant globally; the Yelp reviews footer link is blocked — fix it or remove it."
+
+---
+
+### What Was Said
+User wanted: (1) the site ready to drop in Google Analytics and more marketable; (2) to understand why Cloudflare's dashboard only shows country and to retrieve state/city themselves; (3) a persistent consent banner gating tracking; (4) global privacy compliance and removal of a blocked Yelp footer link.
+
+### What Was Done
+
+#### 1. Google Analytics 4 readiness + marketability (commit `a82e25e72`)
+- **`analytics.js` (new):** single-source GA4 loader — Measurement ID set in ONE place (placeholder `G-XXXXXXXXXX`), installed on all 11 HTML pages; no-op until a real ID is set. Conversion events: `generate_lead` (contact form), `cta_click` (Book/CTA buttons via `data-ga`), `click_yelp` (outbound).
+- **`index.html`:** AggregateRating + Review schema (star rich-snippets), FAQ section + FAQPage schema, hero social-proof trust bar, auto-updating footer year (was hardcoded 2024), contact-section benefit checklist, FAQ links in nav/footer, Yelp added to schema `sameAs`. "Book Consultation" wording (no "free").
+
+#### 2. First-party visitor geography (commit `683f47773`)
+- **`migrations/031_page_views.sql` + `schema.sql`:** `page_views` table — coarse geo only (city/region/region_code/postal_code/country), no IP/PII.
+- **`functions/api/track/index.js` (new):** public POST beacon; reads Cloudflare `request.cf` and inserts a row; non-blocking.
+- **`analytics.js`:** fires a `sendBeacon`/`fetch` to `/api/track` per page load.
+- **`functions/api/analytics/geo.js` (new):** admin-only (`requireAdmin`) aggregation by state/city/country.
+- **`admin-dashboard.html` + `admin-app.js`:** "🌎 Visitor Geography" Quick Action + section with Top States / Top Cities tables.
+- **Verified live:** captured `Cypress, Texas (TX) 77429, US`; test rows then deleted. Migration 031 applied to remote D1.
+
+#### 3. Strict opt-in cookie consent banner (commit `9178de64c`)
+- **`consent.js` (new):** self-contained banner (own CSS, no Tailwind dep) on all 11 pages; Accept All / Reject All / Save Preferences / X; categories Strictly Necessary (locked) + Analytics & Location (off by default); stores choice in `localStorage`; exposes `window.K9Consent` and dispatches `k9:consent` event.
+- **`analytics.js` refactor:** GA + geo beacon moved into `startAnalytics()`, fired ONLY when `K9Consent.analyticsAllowed()` or on `k9:consent`. `gtag`/`trackEvent` stubs remain so conversion calls never throw pre-consent.
+- **`privacy-policy.html` (new):** honest data-practices page; linked from footers + `sitemap.xml`. Footer "Cookie Preferences" link re-opens the banner.
+
+#### 4. Global compliance hardening + Yelp footer removal (commit `8760f2327`)
+- **`consent.js`:** "Reject All" made an equally-prominent solid button (GDPR/CNIL equal-prominence).
+- **`privacy-policy.html`:** added Legal bases (GDPR/UK), Your privacy rights (incl. CCPA/CPRA "we do not sell or share"), Data retention, International transfers, Children's privacy, Changes notice.
+- **`index.html`:** removed the footer "Yelp Reviews" link (reported blocked; Yelp 403s automated checks so unverifiable). Testimonial "See more on Yelp" links and "Review Us on Yelp" button left intact.
+
+### How It Was Done
+1. **Plan mode** for the geo, consent, and compliance work — Explore agents mapped Functions/D1 patterns and admin-dashboard conventions; plans approved before coding.
+2. **Pattern reuse:** public POST + D1 insert like `functions/api/contact/index.js`; `requireAdmin` like `functions/api/stats.js`; admin fetch/render + `getAuthHeaders()` patterns from `admin-app.js`; script-include rollout pattern for `consent.js`/`analytics.js`.
+3. **Incremental commits + deploys** to Cloudflare Pages, with production verification each time (curl smoke tests, `wrangler d1 execute` reads). Remote D1 migration 031 applied with explicit user authorization.
+
+### Files Touched
+**New (5):** `analytics.js`, `consent.js`, `privacy-policy.html`, `functions/api/track/index.js`, `functions/api/analytics/geo.js`, `migrations/031_page_views.sql`
+**Modified (key):** `index.html`, `admin-dashboard.html`, `admin-app.js`, `schema.sql`, `sitemap.xml`, and all 11 HTML pages (consent.js + analytics.js includes).
+
+### Tech Stack Updates
+- Added GA4 (gtag.js) wiring; first-party analytics via Cloudflare `request.cf` → D1; client-side consent management (localStorage, strict opt-in).
+- Database: migration 031 → schema now at 31 migrations; new `page_views` table.
+
+### Security Checklist
+- Auth/RBAC: `/api/track` is public/unauthenticated (like `/api/contact`), stores no IP/PII; `/api/analytics/geo` is admin-only via `requireAdmin`.
+- Privacy: strict opt-in — no geo beacon and no GA fire until the visitor consents; consent stored client-side only.
+- SQL parameterization: all queries use prepared `bind()`.
+- Secrets: none added (GA ID is a public client-side measurement ID placeholder).
+- CORS: handled by existing `_middleware.js`.
+
+### Next Steps
+- Paste the real GA4 Measurement ID into `analytics.js` (one line) and redeploy.
+- Confirm true total Yelp review count to update `aggregateRating.reviewCount` in `index.html` schema.
+- Optional: Google Consent Mode v2 (only if/when GA4 is live with EEA traffic).
+- Recommend legal review of `privacy-policy.html`; consider DPAs on file with Cloudflare/Resend/Google.
+- Visitor Geography populates only from real consenting browser visits (production `request.cf`); not from bots/curl.
+
+---
