@@ -187,3 +187,60 @@ User wanted: (1) the site ready to drop in Google Analytics and more marketable;
 - Visitor Geography populates only from real consenting browser visits (production `request.cf`); not from bots/curl.
 
 ---
+
+## Session 11 — Bot/Scanner Hardening, Security Headers & Rate-Limiter Bug Fix
+**Date:** June 18, 2026
+**Team Member:** Claude CLI (Supervisor + Backend/Data/QA leads)
+**Session Focus:** Explain the 30-day 404/403/405/499/401 error volume and harden the site against bot/scanner traffic and brute-force logins.
+**Command (user, paraphrased):** "Why so many 404/403/405/499/401 errors in the last 30 days? Add bot/WAF protection, rate-limit /api/*, tail live traffic now — and what else can be done as of June 2026?"
+
+---
+
+### What Was Said
+User was alarmed by the error-code volume in Cloudflare analytics and wanted both an explanation and concrete hardening (WAF/bot protection, API rate limiting, a live traffic tail), plus a full menu of further options.
+
+### What Was Done
+
+#### Diagnosis
+- Traced each code to its source: **401** = `requireAuth` (`functions/utils/auth.js`) + failed logins (`functions/api/auth/login.js`); **403** = `requireAdmin`/ownership checks across ~12 endpoints + Cloudflare edge bot-block; **405** = wrong HTTP method on POST/GET-only endpoints; **404** = automated vulnerability scanners probing `/wp-login.php`, `/.env`, etc.; **499** = client closed connection.
+- Conclusion: overwhelmingly **automated bot/scanner traffic + normal auth behavior** (no 5xx), and it **predates** the current session's work.
+
+#### Code hardening (deployed + verified live)
+1. **`_headers` (new):** enforcing security headers — `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Strict-Transport-Security`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`; plus a **Content-Security-Policy-Report-Only** with a full allowlist (Tailwind CDN, jsdelivr, unpkg, Google Fonts/GA, unsplash, self) — staged so it cannot break the live site; flip to enforcing later.
+2. **`functions/_middleware.js`:** early **403** short-circuit for known scanner probe paths (`/wp-*`, `/xmlrpc.php`, `/.env`, `/.git`, `phpmyadmin`, `*.php`, etc.) before any Function/static lookup. Verified: probes → 403, real pages → 200.
+3. **`functions/api/contact/index.js`:** rate-limit the public contact form to 5/min/IP via the existing `checkRateLimit` helper (anti-spam).
+4. **🐛 BUG FIX — `functions/utils/rate-limit.js`:** the window check compared SQLite `created_at` ("YYYY-MM-DD HH:MM:SS") against a JS `toISOString()` value ("...T...Z"); the space-vs-`T` made the string comparison **always false**, so the attempt count was always 0 and **rate limiting never triggered** (login/register/change-password were silently unprotected). Fixed to `datetime('now', '-N seconds')`. Verified: 429 now fires on the 6th rapid request.
+
+#### Live tail
+- Ran `wrangler pages deployment tail <deployment-id> --project-name=k9sitecg` (non-interactive mode requires the deployment ID); captured live requests incl. scanner probes flowing through the middleware.
+
+#### Cloudflare dashboard guidance (user action — not toggleable via wrangler OAuth, no zone scope)
+- The actual reducers of edge error counts: **Bot Fight Mode**, **Block AI bots**, **WAF custom rule** blocking scanner paths, **WAF managed ruleset**, **edge Rate Limiting rules** on `/api/*`, **Security Level Medium/High**, and **Notifications / Security → Events** review.
+
+### How It Was Done
+1. **Plan mode** + 1 Explore agent mapped existing protections (found a working-looking but broken rate limiter, no `_headers`, no CSP, no CAPTCHA).
+2. **Reused** `functions/utils/rate-limit.js` (`checkRateLimit`) rather than rebuilding.
+3. **Incremental commits + deploys**, each verified with production `curl` (headers, 403 scanner block, 429 rate-limit) and a live `wrangler tail`.
+
+### Files Touched
+**New (1):** `_headers`
+**Modified (3):** `functions/_middleware.js`, `functions/api/contact/index.js`, `functions/utils/rate-limit.js`
+**Commits:** `3eb6bdbe2` (hardening), `9f3fb0707` (rate-limiter fix).
+
+### Tech Stack Updates
+- HTTP security headers via Cloudflare Pages `_headers`. No DB migration (`rate_limits` table already exists from migration 030).
+
+### Security Checklist
+- **Rate limiting now actually enforced** (login, register, change-password, contact) — previously a no-op due to the datetime bug.
+- Scanner probes blocked early with a cheap 403 (no Function/static work).
+- Security headers added; CSP staged Report-Only (flip to enforcing after a clean console check).
+- No new secrets; parameterized SQL; no PII stored.
+- Edge controls (Bot Fight Mode / WAF) documented as user dashboard actions.
+
+### Next Steps
+- **Enable Bot Fight Mode + WAF rules** in the Cloudflare dashboard (highest impact on the error counts).
+- Optional: **Turnstile** on login + contact form (`turnstile-spin` skill; needs site/secret keys) — strongest defense vs credential-stuffing 401s and form spam.
+- Flip the CSP from Report-Only to enforcing once the browser console shows no violations.
+- Review **Security → Events** for the real offending IPs/paths.
+
+---
