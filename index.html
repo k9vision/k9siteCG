@@ -94,9 +94,39 @@
     "opens": "08:00",
     "closes": "18:00"
   },
-  "sameAs": []
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "5.0",
+    "bestRating": "5",
+    "reviewCount": "6"
+  },
+  "review": [
+    {
+      "@type": "Review",
+      "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+      "author": { "@type": "Person", "name": "Kahleah M." },
+      "reviewBody": "If I could give more than 5 stars I would! My dog Ace had problems listening and jumping on kids. K9 Vision transformed him."
+    },
+    {
+      "@type": "Review",
+      "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+      "author": { "@type": "Person", "name": "Drake M." },
+      "reviewBody": "It was important to have a well-trained Bully. K9 Vision exceeded our expectations from the very first consultation."
+    },
+    {
+      "@type": "Review",
+      "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+      "author": { "@type": "Person", "name": "Ashley B." },
+      "reviewBody": "We just completed training for our pit bull and it exceeded our expectations. Now we can include her in family outings."
+    }
+  ],
+  "sameAs": [
+    "https://www.yelp.com/biz/k9-vision-houston-2"
+  ]
 }
 </script>
+<!-- Google Analytics 4 — configure your Measurement ID once in /analytics.js -->
+<script src="/analytics.js"></script>
 </head>
 <body class="bg-background-dark dark:bg-background-light font-display text-text-dark dark:text-text-light antialiased">
 <header class="bg-background-dark/90 dark:bg-background-light/90 backdrop-blur-sm fixed top-0 left-0 right-0 z-50 border-b border-border-dark dark:border-border-light">
@@ -111,7 +141,8 @@
 <a class="text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-primary transition-colors" href="/portal.html">Client Login</a>
 <a class="text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-primary transition-colors" href="#services">Services</a>
 <a class="text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-primary transition-colors" href="#about">About</a>
-<a class="bg-primary text-white px-5 py-2 rounded-full font-medium hover:bg-blue-700 transition-colors" href="#contact">Book Now</a>
+<a class="text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-primary transition-colors" href="#faq">FAQ</a>
+<a data-ga="cta_book_now_nav" class="bg-primary text-white px-5 py-2 rounded-full font-medium hover:bg-blue-700 transition-colors" href="#contact">Book Now</a>
 </nav>
 <img alt="K9 Vision Logo" class="h-14 w-auto object-contain" src="k9visionlogo.jpg"/>
 <button id="mobile-menu-button" class="md:hidden p-2 rounded-md text-text-dark dark:text-text-light hover:bg-card-dark dark:hover:bg-card-light transition-colors">
@@ -125,7 +156,8 @@
 <a class="block px-3 py-2 rounded-md text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-primary hover:bg-card-dark dark:hover:bg-card-light transition-colors" href="/portal.html">Client Login</a>
 <a class="block px-3 py-2 rounded-md text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-primary hover:bg-card-dark dark:hover:bg-card-light transition-colors" href="#services">Services</a>
 <a class="block px-3 py-2 rounded-md text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-primary hover:bg-card-dark dark:hover:bg-card-light transition-colors" href="#about">About</a>
-<a class="block px-3 py-2 rounded-md bg-primary text-white hover:bg-blue-700 transition-colors text-center" href="#contact">Book Now</a>
+<a class="block px-3 py-2 rounded-md text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-primary hover:bg-card-dark dark:hover:bg-card-light transition-colors" href="#faq">FAQ</a>
+<a data-ga="cta_book_now_nav_mobile" class="block px-3 py-2 rounded-md bg-primary text-white hover:bg-blue-700 transition-colors text-center" href="#contact">Book Now</a>
 </nav>
 </div>
 </div>
@@ -141,12 +173,29 @@
                     Unlock your dog's potential with our proven, balanced training methods. Build a stronger bond and a happier life together.
                 </p>
 <div class="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
-<a class="w-full sm:w-auto bg-primary text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-lg" href="#contact">
+<a data-ga="cta_book_consultation_hero" class="w-full sm:w-auto bg-primary text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-lg" href="#contact">
                         Book Consultation
                     </a>
-<a class="w-full sm:w-auto bg-white/10 text-white backdrop-blur-sm border border-white/20 px-8 py-4 rounded-full font-semibold text-lg hover:bg-white/20 transition-transform transform hover:scale-105 shadow-lg" href="#services">
+<a data-ga="cta_our_services_hero" class="w-full sm:w-auto bg-white/10 text-white backdrop-blur-sm border border-white/20 px-8 py-4 rounded-full font-semibold text-lg hover:bg-white/20 transition-transform transform hover:scale-105 shadow-lg" href="#services">
                         Our Services
                     </a>
+</div>
+<!-- Trust / social-proof bar -->
+<div class="mt-10 flex flex-wrap justify-center items-center gap-x-8 gap-y-3 text-gray-200">
+<div class="flex items-center gap-2">
+<span class="flex text-yellow-400" aria-label="5 out of 5 stars">
+<span class="material-icons text-base">star</span><span class="material-icons text-base">star</span><span class="material-icons text-base">star</span><span class="material-icons text-base">star</span><span class="material-icons text-base">star</span>
+</span>
+<span class="text-sm font-medium">5-Star Rated on Yelp</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-icons text-primary text-lg">location_on</span>
+<span class="text-sm font-medium">Houston, TX &amp; Surrounding Areas</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-icons text-primary text-lg">verified</span>
+<span class="text-sm font-medium">Certified, Balanced Training</span>
+</div>
 </div>
 </div>
 </section>
@@ -359,12 +408,98 @@ Review Us on Yelp
 </script>
 </div>
 </section>
-<section class="py-20 sm:py-24 bg-card-dark dark:bg-card-light" id="contact">
+<section class="py-20 sm:py-24 bg-card-dark dark:bg-card-light" id="faq">
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
+<div class="text-center mb-12">
+<h2 class="text-3xl sm:text-4xl font-bold text-text-dark dark:text-text-light">Frequently Asked Questions</h2>
+<p class="mt-4 text-lg text-gray-400 dark:text-gray-600">Everything you need to know before getting started.</p>
+</div>
+<div class="space-y-4">
+<details class="group bg-background-dark dark:bg-background-light rounded-lg border border-border-dark dark:border-border-light p-6">
+<summary class="flex justify-between items-center cursor-pointer list-none font-semibold text-lg text-text-dark dark:text-text-light">
+<span>What training methods does K9 Vision use?</span>
+<span class="material-icons text-primary transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<p class="mt-4 text-gray-400 dark:text-gray-600">We use balanced, science-based training — combining positive reinforcement with clear, fair communication. Every plan is tailored to your dog's individual temperament and your specific goals, so the results last a lifetime.</p>
+</details>
+<details class="group bg-background-dark dark:bg-background-light rounded-lg border border-border-dark dark:border-border-light p-6">
+<summary class="flex justify-between items-center cursor-pointer list-none font-semibold text-lg text-text-dark dark:text-text-light">
+<span>What areas do you serve?</span>
+<span class="material-icons text-primary transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<p class="mt-4 text-gray-400 dark:text-gray-600">We proudly serve Houston, TX and the surrounding areas. Fill out our intake form with your location and we'll confirm availability and the best program for you.</p>
+</details>
+<details class="group bg-background-dark dark:bg-background-light rounded-lg border border-border-dark dark:border-border-light p-6">
+<summary class="flex justify-between items-center cursor-pointer list-none font-semibold text-lg text-text-dark dark:text-text-light">
+<span>How does the process get started?</span>
+<span class="material-icons text-primary transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<p class="mt-4 text-gray-400 dark:text-gray-600">Every program begins with a consultation and in-person evaluation. We assess your dog's specific needs, then present a customized training plan built for long-term success — with no obligation.</p>
+</details>
+<details class="group bg-background-dark dark:bg-background-light rounded-lg border border-border-dark dark:border-border-light p-6">
+<summary class="flex justify-between items-center cursor-pointer list-none font-semibold text-lg text-text-dark dark:text-text-light">
+<span>What dogs and behavior issues do you work with?</span>
+<span class="material-icons text-primary transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<p class="mt-4 text-gray-400 dark:text-gray-600">All breeds, ages, and temperaments. From puppy foundations and everyday obedience to behavioral rehabilitation (aggression, anxiety, reactivity), protection work, and scent detection — we build a plan around your dog.</p>
+</details>
+<details class="group bg-background-dark dark:bg-background-light rounded-lg border border-border-dark dark:border-border-light p-6">
+<summary class="flex justify-between items-center cursor-pointer list-none font-semibold text-lg text-text-dark dark:text-text-light">
+<span>How long does training take and what does it cost?</span>
+<span class="material-icons text-primary transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<p class="mt-4 text-gray-400 dark:text-gray-600">It depends on your dog and your goals — which is exactly what your evaluation determines. After the consultation we'll give you a clear timeline and pricing tailored to your situation, so there are no surprises.</p>
+</details>
+</div>
+<div class="text-center mt-10">
+<a data-ga="cta_book_consultation_faq" href="#contact" class="inline-block bg-primary text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-lg">Still have questions? Book a Consultation</a>
+</div>
+</div>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What training methods does K9 Vision use?",
+      "acceptedAnswer": { "@type": "Answer", "text": "We use balanced, science-based training — combining positive reinforcement with clear, fair communication. Every plan is tailored to your dog's individual temperament and your specific goals, so the results last a lifetime." }
+    },
+    {
+      "@type": "Question",
+      "name": "What areas do you serve?",
+      "acceptedAnswer": { "@type": "Answer", "text": "We proudly serve Houston, TX and the surrounding areas. Fill out our intake form with your location and we'll confirm availability and the best program for you." }
+    },
+    {
+      "@type": "Question",
+      "name": "How does the process get started?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Every program begins with a consultation and in-person evaluation. We assess your dog's specific needs, then present a customized training plan built for long-term success — with no obligation." }
+    },
+    {
+      "@type": "Question",
+      "name": "What dogs and behavior issues do you work with?",
+      "acceptedAnswer": { "@type": "Answer", "text": "All breeds, ages, and temperaments. From puppy foundations and everyday obedience to behavioral rehabilitation (aggression, anxiety, reactivity), protection work, and scent detection — we build a plan around your dog." }
+    },
+    {
+      "@type": "Question",
+      "name": "How long does training take and what does it cost?",
+      "acceptedAnswer": { "@type": "Answer", "text": "It depends on your dog and your goals — which is exactly what your evaluation determines. After the consultation we'll give you a clear timeline and pricing tailored to your situation, so there are no surprises." }
+    }
+  ]
+}
+</script>
+</section>
+<section class="py-20 sm:py-24 bg-background-dark dark:bg-background-light" id="contact">
 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
 <div class="grid md:grid-cols-2 gap-12 items-center">
 <div class="md:pr-8">
 <h2 class="text-3xl sm:text-4xl font-bold text-text-dark dark:text-text-light">Ready to Start Training?</h2>
-<p class="mt-4 text-lg text-gray-400 dark:text-gray-600">Ready to see real progress? Please fill out our intake form to schedule your professional training evaluation. This allows us to analyze your dog's specific needs and present you with a tailored strategy designed for long-term success.</p>
+<p class="mt-4 text-lg text-gray-400 dark:text-gray-600">Ready to see real progress? Fill out our intake form to schedule your professional training evaluation. This allows us to analyze your dog's specific needs and present you with a tailored strategy designed for long-term success.</p>
+<ul class="mt-6 space-y-3">
+<li class="flex items-center gap-3 text-text-dark dark:text-text-light"><span class="material-icons text-primary">check_circle</span><span>No-obligation consultation</span></li>
+<li class="flex items-center gap-3 text-text-dark dark:text-text-light"><span class="material-icons text-primary">check_circle</span><span>Custom plan built around your dog &amp; goals</span></li>
+<li class="flex items-center gap-3 text-text-dark dark:text-text-light"><span class="material-icons text-primary">check_circle</span><span>We typically respond within 24 hours</span></li>
+</ul>
 </div>
 <div class="bg-background-dark dark:bg-background-light p-8 rounded-lg shadow-lg border border-border-dark dark:border-border-light">
 <h3 class="text-2xl font-semibold mb-6 text-text-dark dark:text-text-light">Book a Consultation</h3>
@@ -414,11 +549,17 @@ Review Us on Yelp
 <a class="text-base text-gray-500 dark:text-gray-400 hover:text-white" href="#about">About</a>
 </div>
 <div class="px-5 py-2">
+<a class="text-base text-gray-500 dark:text-gray-400 hover:text-white" href="#faq">FAQ</a>
+</div>
+<div class="px-5 py-2">
+<a class="text-base text-gray-500 dark:text-gray-400 hover:text-white" href="https://www.yelp.com/biz/k9-vision-houston-2" target="_blank" rel="noopener noreferrer">Yelp Reviews</a>
+</div>
+<div class="px-5 py-2">
 <a class="text-base text-gray-500 dark:text-gray-400 hover:text-white" href="#contact">Contact</a>
 </div>
 </nav>
 <div class="text-center text-gray-500 dark:text-gray-400">
-<p>© 2024 K9 Vision. All Rights Reserved.</p>
+<p>© <span id="footer-year">2026</span> K9 Vision. All Rights Reserved.</p>
 </div>
 </div>
 </footer>
@@ -464,6 +605,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(data.error || 'Something went wrong');
             }
 
+            // GA4 conversion: a lead was successfully submitted
+            if (window.trackEvent) {
+                window.trackEvent('generate_lead', {
+                    form_name: 'contact',
+                    contact_method: email ? 'email' : 'phone'
+                });
+            }
+
             form.reset();
             alert('Thank you! Your consultation request has been sent. We will be in touch soon.');
         } catch (err) {
@@ -486,6 +635,28 @@ document.addEventListener('DOMContentLoaded', function() {
     mobileMenuLinks.forEach(link => {
         link.addEventListener('click', function() {
             mobileMenu.classList.add('hidden');
+        });
+    });
+
+    // Keep the footer copyright year current automatically
+    const yearEl = document.getElementById('footer-year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+    // GA4: track CTA button clicks (any element with data-ga)
+    document.querySelectorAll('[data-ga]').forEach(el => {
+        el.addEventListener('click', function() {
+            if (window.trackEvent) {
+                window.trackEvent('cta_click', { cta_id: el.getAttribute('data-ga') });
+            }
+        });
+    });
+
+    // GA4: track clicks out to Yelp (reviews / write-a-review)
+    document.querySelectorAll('a[href*="yelp.com"]').forEach(el => {
+        el.addEventListener('click', function() {
+            if (window.trackEvent) {
+                window.trackEvent('click_yelp', { link_url: el.href });
+            }
         });
     });
 });
