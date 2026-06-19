@@ -129,7 +129,7 @@
             '<label class="k9c-cat"><input type="checkbox" checked disabled> ' +
               '<span><strong>Strictly Necessary</strong> — required for the site to work. Always on.</span></label>',
             '<label class="k9c-cat"><input type="checkbox" id="k9c-analytics"' + (preAnalytics ? ' checked' : '') + '> ' +
-              '<span><strong>Analytics &amp; Location</strong> — visitor geography &amp; Google Analytics.</span></label>',
+              '<span><strong>Analytics &amp; Location</strong> — visitor geography, Google Analytics &amp; Microsoft Clarity.</span></label>',
           '</div>',
         '</div>',
         '<div class="k9c-actions">',

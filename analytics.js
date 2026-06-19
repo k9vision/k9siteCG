@@ -17,7 +17,11 @@
   'use strict';
 
   // 👇 PASTE YOUR REAL MEASUREMENT ID HERE (replace G-XXXXXXXXXX)
-  var GA_MEASUREMENT_ID = 'G-XXXXXXXXXX';
+  var GA_MEASUREMENT_ID = 'G-NQB0YE5XM2';
+
+  // Microsoft Clarity project ID (session insights / heatmaps). Empty string = off.
+  // Like GA above, this loads ONLY after the visitor grants Analytics consent.
+  var CLARITY_PROJECT_ID = 'x9ln6uthfu';
 
   // Safe no-op stubs so conversion calls elsewhere never throw before
   // consent/setup (they simply queue to dataLayer and go nowhere until GA starts).
@@ -41,6 +45,16 @@
       anonymize_ip: true,
       send_page_view: true
     });
+  }
+
+  function startClarity() {
+    // Official Microsoft Clarity loader — fires only after Analytics consent.
+    if (!CLARITY_PROJECT_ID) return;
+    (function (c, l, a, r, i, t, y) {
+      c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments); };
+      t = l.createElement(r); t.async = 1; t.src = 'https://www.clarity.ms/tag/' + i;
+      y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+    })(window, document, 'clarity', 'script', CLARITY_PROJECT_ID);
   }
 
   function sendGeoBeacon() {
@@ -68,6 +82,7 @@
     if (started) return; // run once per page load
     started = true;
     startGA();
+    startClarity();
     sendGeoBeacon();
   }
 

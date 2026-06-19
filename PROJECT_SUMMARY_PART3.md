@@ -244,3 +244,41 @@ User was alarmed by the error-code volume in Cloudflare analytics and wanted bot
 - Review **Security → Events** for the real offending IPs/paths.
 
 ---
+
+## Session 12 — Activate GA4 + Add Microsoft Clarity (both consent-gated), deployed
+**Date:** June 19, 2026
+**Team Member:** Claude CLI (Supervisor + Frontend/QA leads)
+**Session Focus:** Plug the real GA4 Measurement ID into the existing consent-gated analytics infra, then add Microsoft Clarity the same consent-first way, update disclosures, and deploy.
+**Command (user, paraphrased):** "Here's the gtag.js snippet for `G-NQB0YE5XM2` — set up Google Analytics" → chose **consent-gated** (option 1), all pages tracked. Then: "deploy, and here's the Microsoft Clarity code (project `x9ln6uthfu`)."
+
+---
+
+### What Was Said
+User pasted the standard `gtag.js` snippet (`G-NQB0YE5XM2`) and later the Microsoft Clarity loader (`x9ln6uthfu`), expecting manual per-page pastes. Exploration showed the site **already has a complete, consent-first analytics integration** (`/analytics.js` + `/consent.js`) on every served page. User endorsed keeping that consent-gated design instead of the always-on raw snippets. The GA screenshot confirmed the Measurement ID matched the K9VisionTX stream.
+
+### What Was Done
+- **GA4 — `analytics.js` line 20:** replaced placeholder `GA_MEASUREMENT_ID = 'G-XXXXXXXXXX'` → `'G-NQB0YE5XM2'` (single source of truth per the file header). Line 34's `indexOf('G-XXXXXXXXXX')` guard left untouched (now false → `startGA()` runs).
+- **Clarity — `analytics.js`:** added `CLARITY_PROJECT_ID = 'x9ln6uthfu'` + a `startClarity()` function (official Microsoft loader), called from `startAnalytics()` alongside `startGA()`/`sendGeoBeacon()`. So Clarity loads **only after Analytics consent**, never the raw always-on snippet.
+- **`_headers` CSP:** added `https://www.clarity.ms https://*.clarity.ms` to `script-src` and `https://*.clarity.ms https://c.bing.com` to `connect-src`, so flipping CSP from Report-Only to enforcing later won't block Clarity.
+- **Disclosures:** `privacy-policy.html` — added a "Site-experience analytics (Microsoft Clarity)" collected-data bullet and a Microsoft Clarity entry in the third-party list. `consent.js` — banner copy now reads "visitor geography, Google Analytics & Microsoft Clarity" so consent accurately covers what it gates.
+- **Coverage:** all 12 served pages include `/analytics.js` + `/consent.js` → both GA + Clarity tracked once consent is granted. `actual_live_site.html` (local backup, not served) left alone.
+- **Deployed** `npx wrangler pages deploy . --project-name=k9sitecg` → deployment `https://14f373dc.k9sitecg.pages.dev` (prod `k9visiontx.com`). Verified live: `analytics.js` serves both IDs + `startClarity()`; production CSP header includes the Clarity allowlist.
+
+### How It Was Done
+1. **Plan mode** + Explore agent confirmed the consent-first infra; raw snippets deemed unnecessary/harmful to privacy posture.
+2. **Reused** the existing `analytics.js`/`consent.js` machinery — config + one small function, not per-page edits.
+3. Single deploy for both changes; verified with production `curl` (served JS + CSP response header).
+
+### Files Touched
+**Modified (4):** `analytics.js` (GA ID + Clarity loader), `_headers` (CSP allowlist), `privacy-policy.html` (disclosures), `consent.js` (banner copy).
+
+### Security / Privacy Impact Note
+- Both GA4 and Clarity are **strictly consent-gated**: nothing loads until the visitor accepts "Analytics & Location" (`window.K9Consent`). GA runs with `anonymize_ip: true`; Clarity auto-masks form inputs/text.
+- **No always-on third-party script added.** Disclosures updated so the cookie banner + privacy policy honestly name Clarity (session-behavior/heatmaps) — "Nothing is tracked until you choose" still holds.
+- GA Measurement ID and Clarity project ID are public by design (ship in client JS) — no secret-handling concern. No DB/schema change. CSP allowlist kept accurate.
+
+### Next Steps
+- **Verify** (incognito): banner shows → no `gtag/js` or `clarity.ms/tag` request before Accept → after Accept both fire → GA **Realtime** + Clarity dashboard show the visit.
+- When ready, flip `_headers` CSP from Report-Only to enforcing (allowlist now covers GA + Clarity).
+
+---
