@@ -282,3 +282,42 @@ User pasted the standard `gtag.js` snippet (`G-NQB0YE5XM2`) and later the Micros
 - When ready, flip `_headers` CSP from Report-Only to enforcing (allowlist now covers GA + Clarity).
 
 ---
+
+## Session 13 — SEO: Board & Train + Houston-Area Targeting from Google Trends
+**Date:** June 21, 2026
+**Team Member:** Claude CLI (Supervisor + Frontend/QA leads)
+**Session Focus:** Turn observed Houston search demand (Google Trends: `dog board and train near me` BREAKOUT, `dog board and train` +80%, `how to train a dog`, `dog training tips`) into on-page content + schema so the public site ranks for those queries. Single-page enhancement (no blog), per user choice.
+
+---
+
+### What Was Said
+User shared a Google Trends screenshot (Houston, past week) and asked how to "add it to my code" so `k9visiontx.com` surfaces for those searches, plus a 2026 SEO checklist. Clarified via plan mode: (1) **Yes**, they offer board & train → build it prominently; (2) **enhance the existing single page** (no separate blog); (3) **Yes**, add Houston-area suburb targeting. Confirmed: **no phone** to list (schema `telephone` left empty, not fabricated); real service areas = Houston, Katy, Cypress, Spring, The Woodlands, Sugar Land, Pearland, Hockley, Waller, Montgomery County, Fort Bend County.
+
+### What Was Done
+- **`index.html` — new content:** added a dedicated **Board & Train in Houston** section (`id="board-and-train"`, "Most Popular Program"), a matching highlighted **Board & Train** card in the services scroll, and a **Service Areas** section (`id="areas"`) with 11 location chips. Wired "Board & Train" into desktop nav, mobile nav, and footer; added "Service Areas" to footer.
+- **`index.html` — FAQ:** expanded from 5 → **9** Q&As, adding "What is board and train?", "How much does board and train cost in Houston?", "What are some basic dog training tips for new owners?", "How do I start training my dog at home?" — capturing the informational queries on a single page. Mirrored all four into the **FAQPage JSON-LD** (visible text === schema, verified).
+- **`index.html` — meta/schema:** retuned `<title>`, meta description, OG/Twitter tags to include "board and train" + Houston suburbs. LocalBusiness JSON-LD: `areaServed` expanded from 1 City → **11** Cities/AdministrativeAreas, added a **`hasOfferCatalog`** of 6 Services (incl. Board & Train). Hero subhead now names "Houston dog training and board & train."
+- **Crawl hygiene (audit-driven):** added `<meta name="robots" content="noindex,nofollow">` to 8 private pages (portal, admin-dashboard, client-dashboard, register, setup-account, reset-password, forgot-password, verify-email) and `noindex` to `review.html` (defense-in-depth atop existing robots.txt). Refreshed `sitemap.xml` home `lastmod` → 2026-06-21.
+- **Verified:** both JSON-LD blocks parse (Python `json.loads`); 9 visible FAQ === 9 schema names; sections 8/8 balanced, details 9/9.
+
+### How It Was Done
+1. **Plan mode** + two Explore agents audited current on-page SEO (already strong: schema, sitemap, OG, GA4) and infra; established the real gap was **zero board & train content** + no suburb targeting.
+2. **Reused existing markup patterns** — service-card, `<details>` FAQ, section padding/bg-alternation, `data-ga` CTA buttons — so no new CSS/JS.
+3. Content written to **genuinely match intent** (not keyword-stuffed); service areas named only where the trainer actually works (truthfulness).
+4. Programmatic verification of JSON-LD validity and visible/schema FAQ parity before finishing.
+
+### Files Touched
+**Modified (11):** `index.html` (sections, nav/footer, FAQ + JSON-LD, title/meta/OG, LocalBusiness schema); `portal.html`, `admin-dashboard.html`, `client-dashboard.html`, `register.html`, `setup-account.html`, `reset-password.html`, `forgot-password.html`, `verify-email.html`, `review.html` (noindex meta); `sitemap.xml` (lastmod).
+
+### Security Impact Note
+- **No new endpoints, integrations, secrets, or DB/schema changes.** Content + meta-tag edits only.
+- `noindex` additions **improve** posture (defense-in-depth: private pages no longer rely on robots.txt alone). No change to auth, CORS, CSP, or rate limiting.
+- Schema `telephone` deliberately left empty (no fabricated PII). All added content is truthful to services/areas the business provides.
+
+### Next Steps
+- **Deploy:** `npx wrangler pages deploy . --project-name=k9sitecg`, then in **Google Search Console** resubmit `sitemap.xml` + "Request indexing" for `/`.
+- **Validate** the page in Google's Rich Results Test (LocalBusiness + FAQPage).
+- **Off-code (highest impact for "near me"):** optimize **Google Business Profile** (category "Dog trainer", add Board & Train + service areas, photos, hours), actively gather **Google reviews**, keep NAP consistent across site/Google/Yelp.
+- Optional later: add a real phone (`tel:` link + schema), consider prebuilt Tailwind CSS for LCP.
+
+---
