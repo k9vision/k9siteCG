@@ -321,3 +321,34 @@ User shared a Google Trends screenshot (Houston, past week) and asked how to "ad
 - Optional later: add a real phone (`tel:` link + schema), consider prebuilt Tailwind CSS for LCP.
 
 ---
+
+## Session 14 — Client guide: posting iPhone .MOV videos to TikTok/Instagram/Facebook
+**Date:** July 11, 2026
+**Team Member:** Claude CLI (Supervisor + QA/Docs lead)
+**Session Focus:** Answer the client's ask — "a perfect strategy" for getting iPhone `.MOV` training videos onto TikTok, Instagram, and Facebook — by extending the existing `marketing_k9visiontx.md` guide (client chose: add to guide, iPhone source).
+
+---
+
+### What Was Said
+User asked for a perfect strategy to post `.MOV` files to the three platforms. Clarified in plan mode: (1) deliverable = **add a section to `marketing_k9visiontx.md`** (not a separate artifact); (2) videos are recorded on **iPhone**. Confirmed no `.MOV` files present in the environment → this is guidance, not file processing.
+
+### What Was Done
+- **`marketing_k9visiontx.md` — new section** "🎬 The .MOV fix — make your iPhone videos look right (not washed-out)", inserted between Step 3 (posting routine) and Step 4 (tips). Covers: why raw iPhone `.MOV` (HEVC + HDR/Dolby Vision) washes out after platform re-encode; the one-time capture fix (**Settings → Camera → Formats → Most Compatible** = H.264; **Record Video → HDR Video OFF** = SDR); converting existing clips via **CapCut** export (→ clean MP4); a per-platform spec table; the "don't repost a watermarked TikTok" rule; and a desktop workflow (CapCut desktop + web upload, or AirDrop to phone). Added a checklist line: export MP4/H.264, not raw HDR `.MOV`.
+- **Accuracy:** verified 2026 specs via web (TikTok/IG both accept `.MOV`; the culprit is the HEVC/HDR **codec**, not the `.MOV` container). Targets: **9:16, 1080×1920, MP4/H.264, ~30 fps, 15–45 s**. TikTok best 21–34 s (~288 MB in-app / 4 GB web); IG Reels best 15–30 s (1 GB); FB Reels best 15–60 s (≤90 s).
+
+### How It Was Done
+1. Plan mode; read the existing 232-line guide to build on it (not duplicate) — the gap was zero coverage of the `.MOV`/HEVC/HDR format issue.
+2. Matched the guide's plain-language, emoji-section voice and reused its CapCut/native-post/desktop patterns.
+3. Web-verified current platform limits before committing numbers (no fabricated specs).
+
+### Files Touched
+**Modified (2):** `marketing_k9visiontx.md` (new .MOV section + checklist line); `PROJECT_SUMMARY_PART3.md` (this entry).
+
+### Security Impact Note
+- **Docs-only.** No code, endpoints, integrations, secrets, DB/schema, auth, CORS, CSP, or rate-limit changes. Zero security surface.
+
+### Next Steps
+- Commit + push (auto-deploys the repo via the Pages Git integration — the `.md` is a client reference doc, not a rendered public page).
+- Optional: if the client drops actual `.MOV` files into the workspace, convert/resize to 9:16 H.264 MP4 with the Adobe video tools.
+
+---

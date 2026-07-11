@@ -87,6 +87,66 @@ Fine for a small business, just don't expect unlimited.
 
 ---
 
+## 🎬 The .MOV fix — make your iPhone videos look right (not washed-out)
+
+Your iPhone saves videos as **.MOV files**, and by default it uses a space-saving
+format called **HEVC** with **HDR** color. Instagram, TikTok, and Facebook all
+*accept* .MOV — but they **re-compress every video** you upload, and HDR/HEVC
+footage often comes out **washed-out, too dark, or oddly tinted** on other people's
+phones. It's the #1 reason a clip that looked great on your screen looks "off" once
+it's posted.
+
+Good news: it's a **one-time setting**, and clips you've already shot are easy to fix.
+
+### ✅ Best fix — change one setting, and every future video is ready
+Do this once on your iPhone:
+1. **Settings → Camera → Formats → tap "Most Compatible."**
+   This records in the standard **H.264** format every app handles perfectly — still full HD.
+2. **Settings → Camera → Record Video → turn OFF "HDR Video."**
+   Now your colors look the same everywhere instead of shifting after upload.
+
+That's it — from now on your videos are already in the safe format, and you lose
+nothing that matters for social media.
+
+### 🔧 Already shot a bunch of clips? Convert them the easy way
+For videos you filmed *before* changing that setting:
+- **Easiest:** open the clip in **CapCut** (the free app from Step 3), trim/caption it,
+  and hit **Export.** CapCut always saves a clean, standard **MP4** — so just editing
+  and posting *from CapCut* fixes the problem automatically. No extra step.
+- **On a computer?** Use **CapCut for desktop** (also free) to open the .MOV and export an MP4.
+
+### 📐 The "right" video, in one line
+Aim for **vertical 9:16, 1080×1920, MP4 (H.264), ~30 fps, 15–45 seconds.** That single
+format is ideal for all three platforms:
+
+| Platform | Accepts | Best length | Upload limit |
+|---|---|---|---|
+| **TikTok** | MP4 / .MOV (H.264) | ~21–34 sec | ~288 MB in the app; up to 4 GB from tiktok.com |
+| **Instagram Reels** | MP4 / .MOV (H.264) | 15–30 sec | 1 GB |
+| **Facebook Reels** | MP4 (H.264) | 15–60 sec (90 sec max) | large (up to 4 GB) |
+
+> **You don't need to memorize this.** If your clip is a short, vertical **MP4 from
+> CapCut**, it's already inside every limit above.
+
+### ⚠️ One thing NOT to do
+Don't **download your posted TikTok** (the one with the little TikTok watermark) and
+re-upload it to Instagram or Facebook. All three platforms **quietly bury** videos that
+carry a competitor's watermark or look "recycled." Instead: **export the clean file
+once**, then **upload it fresh inside each app.** Same video, posted natively three
+times — that's what the algorithms reward.
+
+### 💻 If your .MOV files are on a computer (not your phone)
+Two easy options:
+- **Post from the computer:** convert with **CapCut desktop**, then upload in a browser —
+  **tiktok.com**, **instagram.com**, and **Meta Business Suite** (for your Facebook Page)
+  all let you upload video straight from the web.
+- **Or send them to your phone:** **AirDrop** (or Google Photos) the clips to your iPhone
+  and post in the apps as usual — in-app posting is usually smoothest, especially for TikTok.
+
+Either way, finish with the same call to action: **"Book at k9visiontx.com."**
+
+---
+
 ## Step 4 — Tips that make dog-training videos perform
 
 - **Shoot vertical (9:16)** — full-screen on phones; what Reels/TikTok reward.
@@ -215,6 +275,7 @@ Don't drop an ad here. Instead build name recognition by **helping** (share a fr
 - [ ] Instagram is a **Creator/Business** account
 - [ ] A **Facebook Page** exists and is **linked** to Instagram
 - [ ] Video is **vertical** and has a **strong first 2 seconds**
+- [ ] Exported as a standard **MP4 (H.264)** — not a raw HDR .MOV — so colors don't wash out
 - [ ] **Captions** added (CapCut)
 - [ ] Posted to **Instagram** (with "Also share to Facebook" on)
 - [ ] Posted to **TikTok**
