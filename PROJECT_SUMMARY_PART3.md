@@ -444,3 +444,46 @@ Session 15 ended by suggesting migration 031 might never have run in production.
   then verify: `SELECT traffic_type, COUNT(*) FROM page_views GROUP BY traffic_type` → expect **2 internal, 3 proxied, 5 visitor**. Until this runs, `/api/track` INSERTs will fail (silently, HTTP 200) against the un-migrated production table — apply it before or immediately after deploying.
 - **Known gaps, deliberately not addressed:** `/api/track` has no rate limit and `page_views` has no retention job (unbounded growth); the panel counts **views, not visitors** (three Houston rows 28s apart are almost certainly one person — there is no session identifier); `geo.js` still returns `countries`, which the UI discards.
 - Google Business Profile work still parked pending a Place ID.
+
+## Session 17 — Rate-limit the beacon + fix Google brand-name matching
+**Date:** August 15, 2026
+**Team Member:** Claude CLI (Supervisor + Backend/SEO leads)
+**Session Focus:** "add rate limiting to /api/track, also when i type in k9visiontx the google profile comes up but if i type K9VISION TX the google profile does not come up"
+
+---
+
+### What Was Said
+Two requests. Rate limiting was a gap flagged and deferred in Session 16. The Google observation came with a screenshot that changed the diagnosis materially.
+
+### What Was Found
+- **A Google Business Profile DOES exist**, overturning the Session 15 conclusion (and a research agent that searched five indexes and concluded across all of them that none did — Google blocks automated fetches, so every index was inferring). The user's screenshot is authoritative: panel name **`K9VisionTX`**, category Dog trainer, service-area (no address), hours "Open 24 hours", **no phone**, and **"Be the first to review" — zero Google reviews**.
+- **This finally answers the question that opened Session 15.** "I set up a Google review and it's not showing" — the profile has no reviews at all. Likely cause: **two unrelated businesses share the name** — K9 Vision Inc. (Buffalo NY, also a dog trainer) and K9 Vision System (dog-mounted cameras, 6K IG followers) — so a reviewer searching "K9 Vision" could easily have reviewed the wrong listing.
+- **The name is rendered four ways**, which is the direct cause of the query discrepancy: GBP `K9VisionTX`, site title/og/twitter/body `K9 Vision` (11x), JSON-LD `K9 Vision TX`, Yelp `K9 VISION` (4.8 stars, 16 reviews, 44 photos). Google matches brand queries against the profile name, so the unspaced token hits and the spaced one does not.
+- **Rate-limiting conflict:** the shared `rate_limits.ip` column stores the **raw IP**. Acceptable for login/contact; not for a beacon firing on every page load, since `privacy-policy.html` states "We do **not** store your raw IP address" and `track/index.js` says "No IP or PII is stored."
+
+### What Was Done
+- **`functions/api/track/index.js`** — added `hashIp()` using `crypto.subtle` + `TextEncoder` (the repo's existing convention from `utils/auth.js`), producing `SHA-256(JWT_SECRET + ':' + ip)` hex. Rate limiting reuses `checkRateLimit` unmodified at **30/min per hashed IP**, action `track`, via the established dynamic `await import()` inside a **fail-open** try. Returns **429 + Retry-After** when exceeded. The salt is load-bearing: unsalted SHA-256 of an IPv4 is brute-forceable in seconds (~4 billion inputs).
+- **`privacy-policy.html`** — discloses the one-way, irreversible IP-derived fingerprint, deleted within the hour. Keeps the "no raw IP" statement literally true.
+- **`index.html`** — JSON-LD `name` -> **"K9 Vision"** (matching the profile's planned rename, the logo, Yelp, and the site's own 11 mentions); added `alternateName: ["K9VisionTX", "K9 Vision TX", "K9 Vision Houston", "K9 Vision Dog Training"]` so Google can tell the spellings are one entity; **removed the empty `"telephone": ""`** (an empty string asserts a blank value — worse than an absent key; the no-phone decision stands). Replaced the stale "profile may not exist" comment with the confirmed state and the name-collision warning.
+
+### How It Was Done
+1. Treated the screenshot as ground truth over the research agent's confident-but-inferred conclusion.
+2. Deliberately did **not** modify `checkRateLimit` — four other call sites depend on it. Only the value passed in changed.
+3. **11/11** `hashIp` unit tests (deterministic, salt-sensitive, 64-char hex, contains no dotted-quad, never throws on missing salt / IPv6 / 'unknown'). **35 live POSTs -> exactly 30x200 then 5x429**, with `page_views` holding exactly 30 rows, proving throttled requests insert nothing. Verified `rate_limits` holds **30 hex digests and zero dotted-quad IPs**. Dropped `rate_limits` and confirmed the beacon still records (fails open). Full regression: **21/21** classifier, **7/7** track e2e, **26/26** consent, **6/6** gate — none of their many page loads throttled.
+
+### Files Touched
+**Modified (4):** `functions/api/track/index.js`, `privacy-policy.html`, `index.html`, `PROJECT_SUMMARY_PART3.md` (this entry).
+
+### Security Impact Note
+- **No new endpoint.** `/api/track` stays public and unauthenticated, but is now throttled at 30/min per hashed IP, closing the unbounded-insert abuse vector flagged in Session 16.
+- **Privacy improved, not degraded.** The site's first per-visitor abuse record stores a salted one-way digest, never an IP, and expires within the hour via the existing cleanup. Disclosed in the privacy policy. Both published "no raw IP" claims remain literally true — verified by grepping the column for dotted-quads (zero found).
+- **Salt** is `env.JWT_SECRET` with a constant fallback for local dev. Reusing the auth secret as a hash salt is pragmatic but not ideal; a dedicated `TRACK_SALT` var would be cleaner if ever rotated independently.
+- **Fails open by design** — a missing `rate_limits` table or hashing error records the view rather than dropping it. Availability favored over throttling, matching `/api/contact`.
+- **Unchanged:** auth, CORS, CSP, `_middleware.js`, `consent.js`, `rate-limit.js`, DB schema (no migration needed — `rate_limits` already exists from 030).
+
+### Next Steps
+- **Owner, off-code:** rename the profile to **"K9 Vision"** (Google requires the real-world name; URL-style names risk suspension — expect brief re-verification). Hunt the missing review on the Buffalo / camera-company listings. Fill the profile out (photos, service areas matching `areaServed`, reconsider "Open 24 hours", secondary category Pet boarding service). **Ask past clients for Google reviews — Yelp has 16, Google has 0**, which is the single biggest reason competitors win the local pack.
+- **Place ID obtained and wired in — no longer blocked.** The owner first supplied a 20-digit **Business Profile ID** (`55687547460846647028`). That is *not* usable for a review link: `writereview` accepts only a `ChIJ…` Place ID, and the number is not even a valid CID — at 20 digits it exceeds the 64-bit maximum (`18446744073709551615`) by more than 3×. It was **not** written into the site, since a wrong ID would send customers to another business — a live risk given the three same-named companies. It is, however, exactly the identifier Google Support asks for, so it is worth keeping for the missing-review ticket.
+  The owner then supplied the profile's own "Ask for reviews" short link, `https://g.page/r/Cck-Riu4E4RNEBM/review`, which **302-redirects** to `search.google.com/local/writereview?placeid=`**`ChIJVwB6YhFTAa4RyT5GK7gThE0`** — authoritative by construction. Wired into `#google-review-cta` and into `sameAs` as `https://www.google.com/maps/place/?q=place_id:ChIJVwB6YhFTAa4RyT5GK7gThE0`. The placeholder guard in the DOMContentLoaded block was removed as dead code, so the button now renders. Verified: **10/10** CTA checks (renders, visible, real Place ID, `target=_blank` + `noopener`, fires `cta_click`/`review_google`, shares the flex row with the Yelp button) and the consent suite's obsolete "CTA hidden" assertion was updated, taking it to **27/27**.
+- **Social profiles added to `sameAs`:** `https://www.instagram.com/k9vision_ag/` (verified HTTP 200) and `https://www.facebook.com/charles.goodman.58`. Facebook could not be verified programmatically — a control test showed FB returns HTTP 400 to unauthenticated bots for a valid page, an invalid handle, and this URL alike, so the status carries no information. **Caveat recorded in the schema comment:** the Facebook entry is a *personal profile*, not a business Page. `sameAs` is meant to list other URLs for the same entity, so a Page would be a cleaner signal and should be swapped in if one is created.
+- Still open: `page_views` retention (rate limiting caps the rate, not lifetime growth); views vs unique visitors.

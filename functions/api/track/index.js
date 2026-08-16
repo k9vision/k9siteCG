@@ -24,6 +24,21 @@ const BOT_UA = /bot|crawl|spider|slurp|facebookexternalhit|meta-external|bingpre
 const PROXY_AS_ORG = /facebook|meta platforms|instagram|tiktok|bytedance|snap inc|amazon|google cloud|microsoft azure|digitalocean|linode|hetzner|ovh|oracle cloud/i;
 const PROXY_ASNS = [32934, 63293, 54115]; // Meta / Facebook
 
+// Rate limiting keys off a one-way hash of the IP, never the IP itself. The shared
+// rate_limits table stores its `ip` column verbatim, which is fine for login/contact
+// (a few rows, tied to auth abuse) but not for a beacon that fires on every page load
+// by every visitor — that would contradict both the header above and the privacy
+// policy's "we do not store your raw IP address". The salt matters: an unsalted
+// SHA-256 of an IPv4 is brute-forceable in seconds, since there are only ~4 billion.
+// Exported for tests.
+export async function hashIp(ip, secret) {
+  const data = new TextEncoder().encode(`${secret || 'k9-track-fallback-salt'}:${ip}`);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 // Exported for tests. Pages routes only the onRequest* exports, so this is inert at runtime.
 export function classify({ pageUrl, userAgent, asOrg, asn, internalHint }) {
   if (userAgent && BOT_UA.test(userAgent)) return 'bot';
@@ -46,6 +61,25 @@ export async function onRequest(context) {
       headers: { 'Content-Type': 'application/json' }
     });
   }
+
+  // Throttle floods. 30/minute is far above real browsing but stops anyone from
+  // spamming the endpoint to pollute the geography report or grow the table.
+  // Fails open (same pattern as /api/contact) so a missing rate_limits table or a
+  // hashing error can never cost a legitimate page view.
+  try {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const hashedIp = await hashIp(ip, env.JWT_SECRET);
+    const { checkRateLimit } = await import('../../utils/rate-limit.js');
+    const limit = await checkRateLimit(env.DB, {
+      ip: hashedIp, action: 'track', maxAttempts: 30, windowSeconds: 60
+    });
+    if (!limit.allowed) {
+      return new Response(JSON.stringify({ error: 'Too many requests' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json', 'Retry-After': String(limit.retryAfter) }
+      });
+    }
+  } catch (e) { /* rate limit unavailable — record the view anyway */ }
 
   try {
     const cf = request.cf || {};

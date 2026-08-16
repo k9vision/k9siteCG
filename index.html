@@ -69,20 +69,32 @@
   and it can draw a manual action). Real ratings must come from the Google Business
   Profile. The visible testimonial cards further down the page are unaffected.
 
-  TODO: once the Google Business Profile is verified, add its URL to "sameAs" below —
-  "https://www.google.com/maps/place/?q=place_id:YOUR_PLACE_ID"
-  That association is the highest-value line here for "dog trainer near me" ranking.
+  The Google Business Profile DOES exist (category "Dog trainer", service-area, no
+  address). "name" here is deliberately "K9 Vision" — the real-world name on the logo,
+  on Yelp, and throughout this page — which the Google profile is being renamed to match.
+  "alternateName" carries the other spellings, including the domain-style "K9VisionTX",
+  so Google can tell that "k9visiontx" and "K9 Vision TX" are the same business. Note
+  two unrelated companies share the name: K9 Vision Inc. (Buffalo, NY) and K9 Vision
+  System (dog cameras) — hence the need for explicit entity signals.
+
+  The profile is now linked from "sameAs" below via its Place ID
+  (ChIJVwB6YhFTAa4RyT5GK7gThE0), which is the highest-value association here for
+  "dog trainer near me" ranking.
+
+  NOTE: the Facebook entry is a PERSONAL profile (the owner's), not a business Page.
+  "sameAs" is meant to list other URLs for the SAME entity, so a Page would be a
+  cleaner signal — swap it here if one is ever created.
 -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
-  "name": "K9 Vision TX",
+  "name": "K9 Vision",
+  "alternateName": ["K9VisionTX", "K9 Vision TX", "K9 Vision Houston", "K9 Vision Dog Training"],
   "description": "Professional dog training and board & train in Houston, TX and surrounding areas. Specializing in obedience, puppy training, behavior modification, protection, and scent work.",
   "url": "https://k9visiontx.com",
   "logo": "https://k9visiontx.com/k9visionlogo.jpg",
   "image": "https://k9visiontx.com/k9visionlogo.jpg",
-  "telephone": "",
   "email": "k9vision@yahoo.com",
   "address": {
     "@type": "PostalAddress",
@@ -128,7 +140,10 @@
     ]
   },
   "sameAs": [
-    "https://www.yelp.com/biz/k9-vision-houston-2"
+    "https://www.google.com/maps/place/?q=place_id:ChIJVwB6YhFTAa4RyT5GK7gThE0",
+    "https://www.yelp.com/biz/k9-vision-houston-2",
+    "https://www.instagram.com/k9vision_ag/",
+    "https://www.facebook.com/charles.goodman.58"
   ]
 }
 </script>
@@ -448,9 +463,9 @@
 </svg>
 Review Us on Yelp
 </a>
-<!-- Replace PLACE_ID_HERE with the Google Business Profile Place ID. Until then the
-     script below removes this button, so a broken link is never shown publicly. -->
-<a id="google-review-cta" data-ga="review_google" href="https://search.google.com/local/writereview?placeid=PLACE_ID_HERE" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto inline-flex justify-center items-center bg-blue-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-lg">
+<!-- Place ID resolved from the profile's own "Ask for reviews" short link
+     (https://g.page/r/Cck-Riu4E4RNEBM/review -> 302 -> this placeid). -->
+<a id="google-review-cta" data-ga="review_google" href="https://search.google.com/local/writereview?placeid=ChIJVwB6YhFTAa4RyT5GK7gThE0" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto inline-flex justify-center items-center bg-blue-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-lg">
 <svg class="w-6 h-6 mr-2" viewBox="0 0 24 24" aria-hidden="true">
 <path fill="#FFFFFF" d="M12 2l2.9 6.26L21.8 9l-5.2 4.66L18.1 21 12 17.27 5.9 21l1.5-7.34L2.2 9l6.9-.74L12 2z"/>
 </svg>
@@ -765,13 +780,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
-    // Hide the Google review button until a real Place ID is filled in, so the
-    // placeholder link can never reach a visitor.
-    const googleCta = document.getElementById('google-review-cta');
-    if (googleCta && googleCta.href.includes('PLACE_ID_HERE')) {
-        googleCta.remove();
-    }
 
     // GA4: track clicks out to Yelp (reviews / write-a-review)
     document.querySelectorAll('a[href*="yelp.com"]').forEach(el => {
