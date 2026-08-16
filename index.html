@@ -61,6 +61,18 @@
             scrollbar-width: none;
         }
     </style>
+<!--
+  LocalBusiness structured data.
+
+  NOTE: aggregateRating / review markup was deliberately removed — Google does not
+  honor review markup a business publishes about itself (ineligible for rich results
+  and it can draw a manual action). Real ratings must come from the Google Business
+  Profile. The visible testimonial cards further down the page are unaffected.
+
+  TODO: once the Google Business Profile is verified, add its URL to "sameAs" below —
+  "https://www.google.com/maps/place/?q=place_id:YOUR_PLACE_ID"
+  That association is the highest-value line here for "dog trainer near me" ranking.
+-->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -115,32 +127,6 @@
       { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Scent Work", "description": "Scent detection training that builds confidence and focus." } }
     ]
   },
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "5.0",
-    "bestRating": "5",
-    "reviewCount": "6"
-  },
-  "review": [
-    {
-      "@type": "Review",
-      "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
-      "author": { "@type": "Person", "name": "Kahleah M." },
-      "reviewBody": "If I could give more than 5 stars I would! My dog Ace had problems listening and jumping on kids. K9 Vision transformed him."
-    },
-    {
-      "@type": "Review",
-      "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
-      "author": { "@type": "Person", "name": "Drake M." },
-      "reviewBody": "It was important to have a well-trained Bully. K9 Vision exceeded our expectations from the very first consultation."
-    },
-    {
-      "@type": "Review",
-      "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
-      "author": { "@type": "Person", "name": "Ashley B." },
-      "reviewBody": "We just completed training for our pit bull and it exceeded our expectations. Now we can include her in family outings."
-    }
-  ],
   "sameAs": [
     "https://www.yelp.com/biz/k9-vision-houston-2"
   ]
@@ -455,12 +441,20 @@
 <span class="w-2 h-2 rounded-full bg-gray-400"></span>
 </div>
 </div>
-<div class="text-center">
-<a href="https://www.yelp.com/writeareview/biz/k9-vision-houston-2" target="_blank" rel="noopener noreferrer" class="inline-flex items-center bg-red-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-red-700 transition-transform transform hover:scale-105 shadow-lg">
+<div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+<a href="https://www.yelp.com/writeareview/biz/k9-vision-houston-2" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto inline-flex justify-center items-center bg-red-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-red-700 transition-transform transform hover:scale-105 shadow-lg">
 <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
 </svg>
 Review Us on Yelp
+</a>
+<!-- Replace PLACE_ID_HERE with the Google Business Profile Place ID. Until then the
+     script below removes this button, so a broken link is never shown publicly. -->
+<a id="google-review-cta" data-ga="review_google" href="https://search.google.com/local/writereview?placeid=PLACE_ID_HERE" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto inline-flex justify-center items-center bg-blue-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-blue-700 transition-transform transform hover:scale-105 shadow-lg">
+<svg class="w-6 h-6 mr-2" viewBox="0 0 24 24" aria-hidden="true">
+<path fill="#FFFFFF" d="M12 2l2.9 6.26L21.8 9l-5.2 4.66L18.1 21 12 17.27 5.9 21l1.5-7.34L2.2 9l6.9-.74L12 2z"/>
+</svg>
+Review Us on Google
 </a>
 </div>
 <script>
@@ -771,6 +765,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Hide the Google review button until a real Place ID is filled in, so the
+    // placeholder link can never reach a visitor.
+    const googleCta = document.getElementById('google-review-cta');
+    if (googleCta && googleCta.href.includes('PLACE_ID_HERE')) {
+        googleCta.remove();
+    }
 
     // GA4: track clicks out to Yelp (reviews / write-a-review)
     document.querySelectorAll('a[href*="yelp.com"]').forEach(el => {

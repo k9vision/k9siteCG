@@ -23,6 +23,13 @@
   var BANNER_ID = 'k9c-banner';
   var STYLE_ID = 'k9c-styles';
 
+  // Session-only keys. Both are cleared when the browser session ends and neither
+  // identifies the visitor; they exist purely to operate the consent tool itself.
+  var DISMISS_KEY = 'k9_dismissed';     // "×" was clicked — ask again next visit
+  var GEO_KEY = 'k9_geo';               // cached 2-letter country for this session
+  var GEO_URL = '/api/geo';
+  var GEO_TIMEOUT_MS = 1200;
+
   function readState() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -38,13 +45,27 @@
     return s;
   }
 
+  function readDismissed() {
+    try { return sessionStorage.getItem(DISMISS_KEY) === '1'; } catch (e) { return false; }
+  }
+
   var state = readState();
+  var dismissed = readDismissed();
+
+  // Show the banner only to visitors who have neither decided nor dismissed it.
+  function needBanner() { return !(state && state.decided) && !dismissed; }
+
+  function gpcEnabled() { return navigator.globalPrivacyControl === true; }
 
   // ---- Public API (defined synchronously so analytics.js can read it) ----
   window.K9Consent = {
     analyticsAllowed: function () { return !!(state && state.decided && state.analytics); },
     decided: function () { return !!(state && state.decided); },
-    openPreferences: function () { renderBanner(true); }
+    openPreferences: function () {
+      // A stored choice makes country irrelevant — render immediately, no request.
+      if (state && state.decided) { renderBanner(true); return; }
+      whenGeoReady(function () { renderBanner(true); });
+    }
   };
 
   function emit(analytics) {
@@ -57,6 +78,80 @@
     state = writeState(analytics);
     removeBanner();
     emit(analytics);
+  }
+
+  // "×" = "not now", NOT a decision. Deliberately does not call writeState (so
+  // nothing is persisted and the banner returns next visit) and does not emit a
+  // 'k9:consent' event (no choice was made). analyticsAllowed() keeps returning
+  // false for the whole session because `state` is untouched.
+  function dismiss() {
+    try { sessionStorage.setItem(DISMISS_KEY, '1'); } catch (e) {}
+    dismissed = true;
+    removeBanner();
+  }
+
+  /* ---- Country resolver ---------------------------------------------------
+   * INVARIANT: country affects ONLY the initial `checked` attribute of the
+   * analytics checkbox. It never touches `state`, never affects
+   * analyticsAllowed(), and never starts analytics. Analytics still begins only
+   * via save() -> emit() -> the 'k9:consent' listener in analytics.js, i.e. only
+   * after the visitor clicks. Do not make analyticsAllowed() consult geoCountry.
+   * ------------------------------------------------------------------------ */
+  var geoCountry = null;   // 'US' | 'DE' | ... | null (unknown -> fails closed)
+  var geoResolved = false;
+  var geoStarted = false;
+  var geoQueue = [];
+
+  function geoDone(c) {
+    if (geoResolved) return;   // first resolution wins (response vs timeout)
+    geoResolved = true;
+    geoCountry = c;
+    while (geoQueue.length) geoQueue.shift()();
+  }
+
+  function startGeo() {
+    if (geoStarted) return;
+    geoStarted = true;
+
+    // GPC forces unchecked regardless of country, so don't even ask.
+    if (gpcEnabled()) { geoDone(null); return; }
+
+    try {
+      var cached = sessionStorage.getItem(GEO_KEY);
+      if (cached) { geoDone(cached === '??' ? null : cached); return; }
+    } catch (e) { /* sessionStorage blocked — fall through to the network */ }
+
+    if (typeof fetch !== 'function') { geoDone(null); return; }
+
+    var timer = setTimeout(function () { geoDone(null); }, GEO_TIMEOUT_MS);
+
+    fetch(GEO_URL, { cache: 'no-store', credentials: 'omit' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        var c = (d && typeof d.country === 'string') ? d.country : null;
+        // Cache even if the timeout already fired — self-heals the next page view.
+        try { sessionStorage.setItem(GEO_KEY, c || '??'); } catch (e) {}
+        clearTimeout(timer);
+        geoDone(c);
+      })
+      .catch(function () { clearTimeout(timer); geoDone(null); });
+  }
+
+  function whenGeoReady(cb) {
+    if (geoResolved) { cb(); return; }
+    geoQueue.push(cb);
+    startGeo();
+  }
+
+  // Default state of the analytics checkbox, in priority order.
+  function defaultAnalyticsChecked() {
+    // A stored choice always wins — reopening preferences must mirror what the
+    // visitor actually chose, not their geography.
+    if (state && state.decided) return !!state.analytics;
+    // Global Privacy Control beats the US default (California CPRA).
+    if (gpcEnabled()) return false;
+    // Fails closed: unknown/failed/timed-out lookups are not 'US'.
+    return geoCountry === 'US';
   }
 
   function injectStyles() {
@@ -112,13 +207,13 @@
     injectStyles();
     removeBanner();
 
-    var preAnalytics = !!(state && state.analytics); // reflect prior choice when reopened
+    var preAnalytics = defaultAnalyticsChecked();
     var wrap = document.createElement('div');
     wrap.id = BANNER_ID;
     wrap.setAttribute('role', 'dialog');
     wrap.setAttribute('aria-label', 'Cookie consent');
     wrap.innerHTML = [
-      '<button type="button" class="k9c-x" aria-label="Close and reject">&times;</button>',
+      '<button type="button" class="k9c-x" aria-label="Close — we&#39;ll ask again later">&times;</button>',
       '<div class="k9c-inner">',
         '<div class="k9c-text">',
           '<strong class="k9c-title">🍪 Your privacy, your choice</strong>',
@@ -140,7 +235,7 @@
       '</div>'
     ].join('');
 
-    wrap.querySelector('.k9c-x').addEventListener('click', function () { save(false); });
+    wrap.querySelector('.k9c-x').addEventListener('click', function () { dismiss(); });
     wrap.querySelector('#k9c-reject').addEventListener('click', function () { save(false); });
     wrap.querySelector('#k9c-accept').addEventListener('click', function () { save(true); });
     wrap.querySelector('#k9c-save').addEventListener('click', function () {
@@ -151,8 +246,14 @@
     document.body.appendChild(wrap);
   }
 
-  // First visit (no decision yet) → show the banner once the DOM is ready.
-  function boot() { if (!state || !state.decided) renderBanner(false); }
+  // First visit (no decision yet) → resolve country, then show the banner once.
+  // needBanner() is checked BEFORE whenGeoReady, so visitors who already decided
+  // (the large majority of page views) never trigger the /api/geo request at all.
+  // We wait for the lookup rather than rendering unchecked and flipping later:
+  // save() reads the live checkbox, so a box that ticks itself between the
+  // visitor reading it and clicking Save would record the opposite of what they
+  // consented to.
+  function boot() { if (needBanner()) whenGeoReady(function () { renderBanner(false); }); }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {
