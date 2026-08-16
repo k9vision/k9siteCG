@@ -125,11 +125,16 @@ CREATE TABLE IF NOT EXISTS page_views (
   region_code TEXT,   -- state abbreviation (e.g. "TX")
   postal_code TEXT,   -- ZIP / postal code (approximate)
   country TEXT,
+  user_agent TEXT,
+  asn INTEGER,        -- network the request came from
+  as_org TEXT,        -- e.g. "Comcast" (consumer ISP) vs "Facebook" (proxied)
+  traffic_type TEXT DEFAULT 'visitor',  -- visitor | internal | bot | proxied
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_page_views_region ON page_views(region);
 CREATE INDEX IF NOT EXISTS idx_page_views_city ON page_views(city);
 CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at);
+CREATE INDEX IF NOT EXISTS idx_page_views_traffic_type ON page_views(traffic_type);
 
 -- Insert default services
 INSERT OR IGNORE INTO services (name, description, price, active) VALUES

@@ -61,9 +61,16 @@
     // First-party page view -> /api/track (Cloudflare Function reads request.cf:
     // city / state / ZIP / country) -> D1 -> admin "Visitor Geography" view.
     try {
+      // Signed-in = us (trainer or client), not a prospect. Path matching alone only
+      // catches the private pages; this also excludes our own visits to the public
+      // site. Reporting label only — the server treats it as a hint, not a claim.
+      var isInternal = false;
+      try { isInternal = !!localStorage.getItem('token'); } catch (e) {}
+
       var payload = JSON.stringify({
         page_url: location.pathname + location.search,
-        referrer: document.referrer || null
+        referrer: document.referrer || null,
+        internal: isInternal
       });
       if (navigator.sendBeacon) {
         navigator.sendBeacon('/api/track', new Blob([payload], { type: 'application/json' }));

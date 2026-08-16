@@ -352,3 +352,95 @@ User asked for a perfect strategy to post `.MOV` files to the three platforms. C
 - Optional: if the client drops actual `.MOV` files into the workspace, convert/resize to 9:16 H.264 MP4 with the Adobe video tools.
 
 ---
+
+## Session 15 — Google reviews wiring + geo-conditional consent default
+**Date:** August 15, 2026
+**Team Member:** Claude CLI (Supervisor + Frontend/Backend leads)
+**Session Focus:** Two unrelated complaints — "I set up a Google review for this client and it's not showing", and "in the site analytics, location needs to be checked — why wasn't that automatically clicked on?"
+
+---
+
+### What Was Said
+User reported a Google review not appearing, and clarified in plan mode that it is **not showing on Google itself** (not on the site), and that they do not have the Business Profile details to hand. Separately they asked why the **Analytics & Location** box isn't pre-ticked, and chose a custom option: **pre-check it for US visitors, leave it unchecked for non-US**. They also approved removing the self-serving review schema.
+
+### What Was Found
+- **No Google integration existed anywhere in the repo** — zero hits for `place_id`, `g.page`, `search.google.com/local/writereview`, `maps.google`, or any review-widget vendor. Every review surface pointed at Yelp; JSON-LD `sameAs` listed Yelp only. The review "not showing" is therefore entirely Google-side, and quite possibly there is no verified Business Profile at all (a web search surfaced the site but no listing). GBP setup was an unexecuted to-do from Sessions 13/14.
+- **The unchecked box was deliberate, not a bug** (`consent.js` strict opt-in, commit `9178de64c`).
+- **Genuine bug found:** the banner's `×` button called `save(false)`, persisting a permanent opt-out that `boot()` then honored forever — one stray click killed that visitor's location data for good. A direct contributor to the Visitor Geography report looking empty.
+
+### What Was Done
+- **New `functions/api/geo.js`** — public, unauthenticated, GET/HEAD only. Returns `{"country":"US"}` from `request.cf.country` and nothing else. Normalizes `XX` (unknown) and `T1` (Tor) to `null`. Sets `Cache-Control: no-store, no-cache, must-revalidate, private` + `CDN-Cache-Control: no-store` inside the Function. Needs **no D1 binding**, so unlike `/api/track` it works in preview and local dev.
+- **`consent.js`** — memoized, timeout-bounded (1200 ms) country resolver; box pre-checked only when country is `US`. Priority order: stored choice → GPC → geography. GPC (`navigator.globalPrivacyControl`) short-circuits with **no network request**. Country cached in `sessionStorage.k9_geo` (session, not local — country legitimately changes with travel/VPN). `window.K9Consent` left untouched so `analytics.js`'s synchronous top-level gate still works.
+- **`×` fixed** — now sets `sessionStorage.k9_dismissed` and persists **no decision**; banner returns next visit. Relabelled from "Close and reject". Deliberately does not `emit()` (no choice was made).
+- **`index.html`** — removed `aggregateRating` + the 3-entry `review` array from the LocalBusiness JSON-LD (Google ignores self-published review markup; it can draw a manual action). Added a "Review Us on Google" CTA beside the Yelp button reusing the existing `[data-ga]` tracker, with a JS guard that removes it while the href still contains `PLACE_ID_HERE`.
+- **`privacy-policy.html`** — disclosed the two session-only keys and the regional default; added a GPC bullet to the rights list.
+
+### How It Was Done
+1. Plan mode; two parallel Explore agents mapped every review surface and the full geography/consent data flow, then a Plan agent compared three ways for a static `consent.js` to learn the country (new endpoint vs HTMLRewriter in `_middleware.js` vs `Set-Cookie`).
+2. Chose the endpoint: HTMLRewriter would make **every** HTML response per-visitor (a silent cache-correctness hazard — an edge-cached US response replayed to an EU visitor pre-ticks their box) and would block ever tightening `script-src`; `Set-Cookie` would set a pre-consent cookie on a site whose policy promises none.
+3. Deliberately **wait** for the lookup rather than render-then-flip: `save()` reads the live checkbox, so a box that ticks itself between the visitor reading it and clicking Save would record the opposite of what they consented to. The wait is ~free because `consent.js` loads in `<head>` and the banner already deferred to `DOMContentLoaded`.
+4. Verified with `wrangler pages dev` + Playwright against system Chrome: **26/26** consent tests (US checked / DE unchecked / `??` unchecked / GPC unchecked / blocked endpoint fails closed in 414 ms / `×` writes no `k9_consent` and the banner returns in a new session / decided visitors make zero `/api/geo` calls / stored choice beats US default / Google CTA absent while placeholder) and **6/6** gate tests (zero tracker requests before consent, after `×`, and after Reject All; GA + Clarity + `/api/track` all fire after Accept and again on the next load, proving the synchronous gate is intact).
+
+### Files Touched
+**Created (1):** `functions/api/geo.js`.
+**Modified (4):** `consent.js`, `index.html`, `privacy-policy.html`, `PROJECT_SUMMARY_PART3.md` (this entry).
+
+### Security Impact Note
+- **New endpoint `/api/geo`** — public by necessity (the banner must render pre-consent). Read-only: **no D1 access**, so unlike `/api/track` it cannot be used to write to the database; a bot hitting it costs one no-op invocation. Returns only a 2-letter country code — no city, region, postal code, or IP. Not matched by any `SCANNER_PATHS` regex in `_middleware.js` (verified: `/wp-`, `/wordpress`, `/xmlrpc.php`, phpmyadmin group, `/administrator`, `/vendor/`, `/cgi-bin/`, dotfiles, `.php|.asp|.aspx|.jsp|.cgi`); `/wp-login.php` still returns 403.
+- **No `?country=` debug override** was added — one would let anyone craft a URL that pre-ticks the analytics box for an EU visitor.
+- **Privacy posture unchanged or improved.** Strict opt-in still holds: geography affects only the checkbox's default state, never `analyticsAllowed()`, and nothing is tracked until a click. GPC is now honored (CPRA). The `×` fix stops recording a decision the visitor never made. Two new session-only storage keys, both disclosed in the privacy policy.
+- **No changes** to `_headers` (`connect-src 'self'` already covers the fetch), `_middleware.js`, `analytics.js`, `wrangler.toml`, auth, CORS, rate limits, or the DB schema.
+
+### Next Steps
+- **Off-code and blocking the rest:** confirm whether a Google Business Profile exists and is **verified** (unverified profiles do not display reviews publicly); set it up as a **service-area** business matching `areaServed`. If verified and the review is still missing it was almost certainly spam-filtered — check the GBP Reviews tab, and check whether the reviewer used a brand-new account, was on the same WiFi/IP as the business, or included a link/phone number in the text.
+- Once verified, paste the **Place ID** into `index.html` (the CTA href + a new `sameAs` entry) — the guard then reveals the button automatically.
+- Re-run Google's Rich Results Test to confirm LocalBusiness + FAQPage stay valid with the review markup gone.
+- Verify migration 031 actually ran in production — `/api/track` swallows DB errors and still returns 200, so a missing `page_views` table is indistinguishable from success: `npx wrangler d1 execute k9-vision-db --remote --command "SELECT COUNT(*) FROM page_views"`.
+
+## Session 16 — Make the Visitor Geography report trustworthy
+**Date:** August 15, 2026
+**Team Member:** Claude CLI (Supervisor + Backend/Data leads)
+**Session Focus:** User pushed back on the Session 15 closing note — "the location report is not empty in google analytics."
+
+---
+
+### What Was Said
+Session 15 ended by suggesting migration 031 might never have run in production. The user corrected that: GA4's location report has data. Asked what to do about the first-party report, they chose **"filter the junk out"**; Google Business Profile work stays parked pending a Place ID.
+
+### What Was Found
+- **The Session 15 suggestion was wrong.** A production query confirms migration 031 ran and `page_views` holds 10 rows.
+- **But the report is misleading.** All 10 rows: 3 = our own June 18 testing (`/`, `/portal`, `/admin-dashboard` from Cypress TX), 1 direct Houston, 3 Instagram (`l.instagram.com`, utm-tagged, Houston), and **3 geolocated to Meta data centers** — Prineville OR ×2 and Forest City NC ×1. The admin's Top States therefore rendered **TX 7, OR 2, NC 1**, presenting Oregon as the #2 market for a Houston dog trainer.
+- **The "bot traffic" read was also wrong.** Meta's crawler does not execute JavaScript, and this beacon is JS-only *and* consent-gated, so a crawler cannot reach it. All three rows carry `referrer: https://www.facebook.com/`, which only a real browser sets. These are **real people** in Facebook's in-app browser whose traffic egresses via Meta's network. Filtering them out would have discarded 30% of the real audience — the correct treatment is to keep the visit and suppress only the location.
+- **Root blocker:** `page_views` stored no user-agent and no network info, so nothing could be classified retroactively. GA4 looks healthy because it applies automatic bot filtering that cannot be disabled; the first-party beacon had none.
+
+### What Was Done
+- **New `migrations/032_page_views_classification.sql`** — adds `user_agent`, `asn`, `as_org`, `traffic_type TEXT DEFAULT 'visitor'` + `idx_page_views_traffic_type`, following the `029` ALTER-style convention. Two documented one-time backfills: `internal` by private path, `proxied` for the facebook.com-referrer OR/NC rows. Mirrored into `schema.sql`.
+- **`functions/api/track/index.js`** — now captures `User-Agent`, `cf.asn`, `cf.asOrganization` (all free-plan fields; the endpoint previously read no headers at all) and classifies each view: `bot` (crawler UA) → `internal` (auth-token hint or private path) → `proxied` (Meta/datacenter ASN or as_org) → `visitor`. Private-path list kept in sync with `robots.txt`. Dropped the dead `OPTIONS` branch (`_middleware.js` answers preflight first). Classification is wrapped in the existing swallow-all-errors-return-200 behavior so it can never break the beacon.
+- **`analytics.js`** — beacon now sends `internal: true` when an auth token is in localStorage, so the trainer browsing their own *public* pages is excluded too (path matching alone cannot catch that).
+- **`functions/api/analytics/geo.js`** — all four queries filtered (including the previously unfiltered `total`); returns `audience` (visitor + proxied), `mapped`, and an `excluded` breakdown so nothing is silently dropped.
+- **`admin-app.js` / `admin-dashboard.html`** — `#geo-total` now reads e.g. "10 views · 5 mapped · 2 yours, 3 location hidden"; the caption no longer promises "bot traffic may appear" and explains the in-app-browser case.
+
+### How It Was Done
+1. Queried production D1 directly to establish ground truth rather than reasoning from code, then checked the `referrer` column — which is what disproved the bot theory.
+2. Verified externally that Meta's crawler does not run JS and that `cf.asn`/`cf.asOrganization` are free-plan fields.
+3. Tested against an **isolated** local D1 (`--persist-to` a scratch dir) so the repo's `.wrangler` state stayed clean. Note `wrangler pages dev --d1` and `wrangler d1 execute --local` hash the same DB name to *different* local files — migrations had to be applied to the one the server actually opens.
+4. **21/21** classifier unit tests (Meta ASN → proxied; FB in-app browser on AT&T → visitor, not proxied; bot beats all; internal beats proxied; every robots.txt path; null/undefined inputs never throw). **9/9** live `/api/track` posts with forged user-agents. **7/7** browser end-to-end (visitor / no-consent-no-row / signed-in-on-homepage → internal / `/portal` → internal). Replaying production-shaped data through the real aggregation SQL turns **TX 7, OR 2, NC 1** into **Texas 5** only.
+5. Regression: Session 15's suites re-run clean — **26/26** consent, **6/6** gate, confirming the beacon still fires only after consent.
+
+### Files Touched
+**Created (1):** `migrations/032_page_views_classification.sql`.
+**Modified (6):** `functions/api/track/index.js`, `functions/api/analytics/geo.js`, `analytics.js`, `admin-app.js`, `admin-dashboard.html`, `schema.sql`, plus `PROJECT_SUMMARY_PART3.md` (this entry).
+
+### Security Impact Note
+- **No new endpoint; no new external integration.** `/api/track` remains public and unauthenticated as before.
+- **New data captured:** `user_agent`, `asn`, `as_org`. This is more than the table previously held, but still **no IP address and no PII** — ASN identifies a network operator, not a person. Consent gating is unchanged: nothing is recorded until the visitor opts in. Privacy policy already discloses approximate-location analytics; if user-agent retention is considered material, that section should be revisited.
+- **The `internal` flag is client-supplied** and deliberately carries no security weight — it is a reporting label only, and the worst a visitor can do by forging it is exclude themselves from the trainer's own stats.
+- `traffic_type` is written server-side from server-observed signals (UA header, `request.cf`), not from client claims apart from that one hint.
+- **Unchanged:** auth, CORS, CSP, rate limits, `_middleware.js`, `consent.js`.
+
+### Next Steps
+- **Blocked on permission:** applying 032 to production was denied by the sandbox classifier. Run it manually:
+  `npx wrangler d1 execute DB --env production --remote --file=migrations/032_page_views_classification.sql`
+  then verify: `SELECT traffic_type, COUNT(*) FROM page_views GROUP BY traffic_type` → expect **2 internal, 3 proxied, 5 visitor**. Until this runs, `/api/track` INSERTs will fail (silently, HTTP 200) against the un-migrated production table — apply it before or immediately after deploying.
+- **Known gaps, deliberately not addressed:** `/api/track` has no rate limit and `page_views` has no retention job (unbounded growth); the panel counts **views, not visitors** (three Houston rows 28s apart are almost certainly one person — there is no session identifier); `geo.js` still returns `countries`, which the UI discards.
+- Google Business Profile work still parked pending a Place ID.

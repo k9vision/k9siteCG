@@ -3630,7 +3630,15 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Failed to load');
 
-                totalEl.textContent = `${(data.total || 0).toLocaleString()} total views`;
+                // Be explicit about what was set aside, so the tables can be trusted.
+            const ex = data.excluded || {};
+            const notes = [];
+            if (ex.internal) notes.push(`${ex.internal} yours`);
+            if (ex.bot) notes.push(`${ex.bot} bots`);
+            if (ex.proxied) notes.push(`${ex.proxied} location hidden`);
+            const mapped = data.mapped != null ? data.mapped : (data.total || 0);
+            totalEl.textContent = `${(data.total || 0).toLocaleString()} views · ${mapped.toLocaleString()} mapped`
+                + (notes.length ? ` · ${notes.join(', ')}` : '');
 
                 const states = data.states || [];
                 statesBody.innerHTML = states.length === 0
